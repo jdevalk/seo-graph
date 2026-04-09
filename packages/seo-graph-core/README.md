@@ -106,29 +106,6 @@ both in production:
 
 Two different integration runtimes, one graph engine.
 
-## Known limitations
-
-The following will be fixed in `0.2.x` without breaking changes. They're
-documented here so you know what's coming.
-
-- **`WebPageInput.breadcrumb` is required.** Schema.org treats it as
-  optional, and consumers that don't have breadcrumbs can't use
-  `buildWebPage` without an `extra` override. Will become optional.
-- **`buildOrganization` takes a `subtype: string` parameter** instead of a
-  generic type parameter, which loses schema-dts autocomplete for subtype-
-  specific fields like `checkinTime` on a `Hotel`. Will gain a
-  `buildOrganization<T extends Organization>(...)` signature.
-- **`makeIds` is hardcoded to a single `@id` scheme** (`/#/schema.org/WebSite`,
-  etc.). All current consumers (`@jdevalk/astro-seo-graph` and
-  `@jdevalk/emdash-plugin-seo`) use this scheme, but any hypothetical
-  future consumer wanting different `@id` conventions would have to
-  build its own IdFactory by hand. Will accept custom ID pattern
-  overrides.
-
-If any of these block you, file an issue at
-https://github.com/jdevalk/seo-graph/issues — the fixes are already in the
-roadmap and prioritization follows real blockers.
-
 ## License
 
 MIT © Joost de Valk

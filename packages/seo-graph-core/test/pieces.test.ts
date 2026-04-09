@@ -180,6 +180,26 @@ describe('buildOrganization', () => {
         expect(hotel.checkinTime).toBe('16:00:00');
         expect(hotel.checkoutTime).toBe('10:00:00');
     });
+
+    it('flows schema-dts subtype types through the generic parameter', () => {
+        // This test is primarily a compile-time check — if the
+        // generic doesn't carry through to `extra`, this call site
+        // will either error or lose autocomplete on `checkinTime`.
+        // At runtime we still just verify the property lands on the
+        // output object.
+        type Hotel = import('schema-dts').Hotel;
+        const hotel = buildOrganization<Hotel>(
+            {
+                slug: 'la-limonaia',
+                name: 'La Limonaia',
+                extra: { checkinTime: '16:00:00' },
+            },
+            ids,
+            'Hotel',
+        );
+        expect(hotel['@type']).toBe('Hotel');
+        expect(hotel.checkinTime).toBe('16:00:00');
+    });
 });
 
 describe('buildSiteNavigationElement', () => {
@@ -257,6 +277,22 @@ describe('buildWebPage', () => {
         );
         expect(page.datePublished).toBe('2026-01-01T00:00:00.000Z');
         expect(page.dateModified).toBe('2026-02-01T00:00:00.000Z');
+    });
+
+    it('omits breadcrumb when not provided', () => {
+        const page = buildWebPage(
+            {
+                url: postUrl,
+                name: 'Hello',
+                isPartOf: { '@id': ids.website },
+            },
+            ids,
+        );
+        expect(page).not.toHaveProperty('breadcrumb');
+        // The rest of the shape is unaffected.
+        expect(page['@type']).toBe('WebPage');
+        expect(page['@id']).toBe(postUrl);
+        expect(page.isPartOf).toEqual({ '@id': ids.website });
     });
 });
 

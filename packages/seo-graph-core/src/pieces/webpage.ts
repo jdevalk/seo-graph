@@ -14,8 +14,13 @@ export interface WebPageInput {
     name: string;
     /** Reference to the site-wide WebSite (usually ids.website). */
     isPartOf: Reference;
-    /** Reference to the BreadcrumbList for this page (usually ids.breadcrumb(url)). */
-    breadcrumb: Reference;
+    /**
+     * Reference to the BreadcrumbList for this page (usually
+     * `ids.breadcrumb(url)`). Optional — schema.org treats `breadcrumb`
+     * as optional on `WebPage`, so consumers without breadcrumbs can
+     * simply omit it.
+     */
+    breadcrumb?: Reference;
     inLanguage?: string;
     /** Publish date — emitted as ISO string. */
     datePublished?: Date;
@@ -59,11 +64,13 @@ export function buildWebPage(
         url: input.url,
         name: input.name,
         isPartOf: input.isPartOf,
-        breadcrumb: input.breadcrumb,
         inLanguage: input.inLanguage ?? 'en-US',
         potentialAction,
     };
 
+    if (input.breadcrumb !== undefined) {
+        piece.breadcrumb = input.breadcrumb;
+    }
     if (input.datePublished !== undefined) {
         piece.datePublished = input.datePublished.toISOString();
     }
