@@ -181,4 +181,76 @@ describe('buildAstroSeoProps', () => {
         const out = buildAstroSeoProps({ title: 'Hello', locale: 'nl_NL' }, pageUrl);
         expect(out.openGraph.optional?.locale).toBe('nl_NL');
     });
+
+    describe('alternates (hreflang)', () => {
+        it('emits hreflang links via extend.link when alternates has ≥2 valid entries', () => {
+            const out = buildAstroSeoProps(
+                {
+                    title: 'Hello',
+                    alternates: {
+                        defaultLocale: 'en',
+                        entries: [
+                            { hreflang: 'en', href: 'https://example.com/' },
+                            { hreflang: 'fr', href: 'https://example.com/fr/' },
+                            { hreflang: 'nl', href: 'https://example.com/nl/' },
+                        ],
+                    },
+                },
+                pageUrl,
+            );
+            expect(out.extend?.link).toHaveLength(4);
+            expect(out.extend?.link?.[0]).toEqual({
+                rel: 'alternate',
+                href: 'https://example.com/',
+                hreflang: 'en',
+            });
+            expect(out.extend?.link?.[1]).toEqual({
+                rel: 'alternate',
+                href: 'https://example.com/fr/',
+                hreflang: 'fr',
+            });
+            expect(out.extend?.link?.[2]).toEqual({
+                rel: 'alternate',
+                href: 'https://example.com/nl/',
+                hreflang: 'nl',
+            });
+            expect(out.extend?.link?.[3]).toEqual({
+                rel: 'alternate',
+                href: 'https://example.com/',
+                hreflang: 'x-default',
+            });
+        });
+
+        it('combines alternates with extraLinks (extras first, alternates after)', () => {
+            const out = buildAstroSeoProps(
+                {
+                    title: 'Hello',
+                    extraLinks: [{ rel: 'icon', href: '/favicon.svg' }],
+                    alternates: {
+                        entries: [
+                            { hreflang: 'en', href: 'https://example.com/' },
+                            { hreflang: 'fr', href: 'https://example.com/fr/' },
+                        ],
+                    },
+                },
+                pageUrl,
+            );
+            expect(out.extend?.link).toHaveLength(4); // 1 extra + 2 alternates + x-default
+            expect(out.extend?.link?.[0]).toEqual({ rel: 'icon', href: '/favicon.svg' });
+            expect(out.extend?.link?.[1]?.rel).toBe('alternate');
+        });
+
+        it('does not mutate extend.link when alternates has fewer than 2 valid entries', () => {
+            const out = buildAstroSeoProps(
+                {
+                    title: 'Hello',
+                    alternates: {
+                        entries: [{ hreflang: 'en', href: 'https://example.com/' }],
+                    },
+                },
+                pageUrl,
+            );
+            expect(out.extend).toBeUndefined();
+        });
+    });
 });

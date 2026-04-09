@@ -6,6 +6,8 @@
  * easily accessible from vitest.
  */
 
+import { buildAlternateLinks, type BuildAlternateLinksInput } from '../alternates.js';
+
 /** Public props surface of the <Seo> component. */
 export interface SeoProps {
     /** Page title. Required. */
@@ -69,6 +71,28 @@ export interface SeoProps {
     extraLinks?: ReadonlyArray<Record<string, string>>;
     /** Extra `<meta>` tags (author, custom fields). */
     extraMeta?: ReadonlyArray<Record<string, string>>;
+    /**
+     * hreflang alternate-language annotations.
+     *
+     * Emits one `<link rel="alternate" hreflang="…" href="…">` per
+     * entry, plus an `x-default` entry pointing at the default-locale
+     * sibling (or the first entry, if no default match is found).
+     *
+     * All `href` values MUST be absolute `http(s)://` URLs — relative
+     * or other-scheme values are dropped silently. BCP 47 tags are
+     * normalized on output (`fr-ca` → `fr-CA`, `zh-hant-hk` →
+     * `zh-Hant-HK`). On duplicate normalized tags, the first entry
+     * wins.
+     *
+     * **The caller must include the current page itself** in the
+     * entries list — Google treats self-referential hreflang as
+     * required, not optional.
+     *
+     * When fewer than 2 entries survive validation, nothing is emitted
+     * (a single-locale page has no meaningful alternates). If you
+     * prefer strict input checking, validate before passing in.
+     */
+    alternates?: BuildAlternateLinksInput;
 }
 
 /**
@@ -209,16 +233,33 @@ export function buildAstroSeoProps(props: SeoProps, pageUrl: string): AstroSeoPr
         astroSeo.twitter = twitter;
     }
 
-    if (
-        (props.extraLinks !== undefined && props.extraLinks.length > 0) ||
-        (props.extraMeta !== undefined && props.extraMeta.length > 0)
-    ) {
+    // Resolve hreflang alternates (if any). Returns [] when fewer than
+    // 2 entries survive validation, so this is cheap to call.
+    const alternateLinks =
+        props.alternates !== undefined ? buildAlternateLinks(props.alternates) : [];
+
+    const hasExtraLinks = props.extraLinks !== undefined && props.extraLinks.length > 0;
+    const hasExtraMeta = props.extraMeta !== undefined && props.extraMeta.length > 0;
+    const hasAlternates = alternateLinks.length > 0;
+
+    if (hasExtraLinks || hasExtraMeta || hasAlternates) {
         const extend: NonNullable<AstroSeoProps['extend']> = {};
-        if (props.extraLinks !== undefined && props.extraLinks.length > 0) {
-            extend.link = props.extraLinks.map((link) => ({ ...link }));
+        const link: Array<Record<string, string>> = [];
+        if (hasExtraLinks) {
+            for (const entry of props.extraLinks!) link.push({ ...entry });
         }
-        if (props.extraMeta !== undefined && props.extraMeta.length > 0) {
-            extend.meta = props.extraMeta.map((meta) => ({ ...meta }));
+        if (hasAlternates) {
+            for (const entry of alternateLinks) {
+                link.push({
+                    rel: entry.rel,
+                    href: entry.href,
+                    hreflang: entry.hreflang,
+                });
+            }
+        }
+        if (link.length > 0) extend.link = link;
+        if (hasExtraMeta) {
+            extend.meta = props.extraMeta!.map((meta) => ({ ...meta }));
         }
         astroSeo.extend = extend;
     }

@@ -14,3 +14,6 @@ export { seoSchema, imageSchema } from './content-helpers.js';
 
 export { buildAstroSeoProps } from './components/seo-props.js';
 export type { SeoProps, AstroSeoProps } from './components/seo-props.js';
+
+export { buildAlternateLinks } from './alternates.js';
+export type { AlternateLink, BuildAlternateLinksInput } from './alternates.js';

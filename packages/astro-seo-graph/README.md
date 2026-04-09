@@ -11,14 +11,15 @@ content-collection aggregator, and Zod helpers for content schemas.
 
 ## What's in v0.1
 
-| API                            | Purpose                                                                                                                                                                                                          |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`<Seo>`** (`./Seo.astro`)    | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, and optional JSON-LD `@graph`. Wraps [`astro-seo`](https://github.com/jonasmerlin/astro-seo) for the meta tags. |
-| **`createSchemaEndpoint`**     | Factory returning an Astro `APIRoute` handler that serves a corpus-wide JSON-LD `@graph` for a content collection.                                                                                               |
-| **`createSchemaMap`**          | Factory returning an `APIRoute` handler that emits a sitemap-style XML listing of your site's schema endpoints — the discovery point for agent crawlers.                                                         |
-| **`aggregate`**                | Shared engine behind the endpoint factories. Walks a list of entries, runs a caller-supplied mapper, deduplicates by `@id`.                                                                                      |
-| **`seoSchema`, `imageSchema`** | Zod schemas for the `seo` and `image` fields on content collections. Import them into `src/content.config.ts`.                                                                                                   |
-| **`buildAstroSeoProps`**       | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component.                                                                                                              |
+| API                            | Purpose                                                                                                                                                                                                                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`<Seo>`** (`./Seo.astro`)    | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, hreflang alternates, and optional JSON-LD `@graph`. Wraps [`astro-seo`](https://github.com/jonasmerlin/astro-seo) for the meta tags.                                   |
+| **`createSchemaEndpoint`**     | Factory returning an Astro `APIRoute` handler that serves a corpus-wide JSON-LD `@graph` for a content collection.                                                                                                                                                      |
+| **`createSchemaMap`**          | Factory returning an `APIRoute` handler that emits a sitemap-style XML listing of your site's schema endpoints — the discovery point for agent crawlers.                                                                                                                |
+| **`aggregate`**                | Shared engine behind the endpoint factories. Walks a list of entries, runs a caller-supplied mapper, deduplicates by `@id`.                                                                                                                                             |
+| **`seoSchema`, `imageSchema`** | Zod schemas for the `seo` and `image` fields on content collections. Import them into `src/content.config.ts`.                                                                                                                                                          |
+| **`buildAstroSeoProps`**       | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component.                                                                                                                                                                     |
+| **`buildAlternateLinks`**      | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
 
 ## Not in `0.1.x` (coming in `0.2.x`)
 
@@ -76,6 +77,73 @@ const graph = buildSchemaGraph({
     <body>...</body>
 </html>
 ```
+
+## hreflang alternates
+
+For multilingual sites, pass an `alternates` prop with one entry per locale.
+`<Seo>` emits a `<link rel="alternate">` for every entry plus an
+`x-default`, normalizes BCP 47 tags on the way out, and drops entries with
+relative or non-http(s) URLs.
+
+```astro
+---
+import Seo from '@jdevalk/astro-seo-graph/Seo.astro';
+---
+
+<Seo
+    title="Hello"
+    alternates={{
+        defaultLocale: 'en',
+        entries: [
+            { hreflang: 'en',    href: 'https://example.com/hello/' },
+            { hreflang: 'fr-CA', href: 'https://example.com/fr-ca/bonjour/' },
+            { hreflang: 'nl',    href: 'https://example.com/nl/hallo/' },
+        ],
+    }}
+/>
+```
+
+Renders roughly:
+
+```html
+<link rel="alternate" hreflang="en" href="https://example.com/hello/" />
+<link rel="alternate" hreflang="fr-CA" href="https://example.com/fr-ca/bonjour/" />
+<link rel="alternate" hreflang="nl" href="https://example.com/nl/hallo/" />
+<link rel="alternate" hreflang="x-default" href="https://example.com/hello/" />
+```
+
+### Rules
+
+- **Absolute URLs only.** Relative (`/hello/`), protocol-relative (`//…`), and non-http schemes (`mailto:`) are dropped silently.
+- **Include the current page.** Google treats self-referential hreflang as required, not optional.
+- **BCP 47 normalization.** `fr-ca` becomes `fr-CA`, `zh-hant-hk` becomes `zh-Hant-HK`. Language subtag lowercase, script subtag title-case, region subtag uppercase.
+- **First entry wins.** Duplicate normalized tags are collapsed to the first one.
+- **Automatic `x-default`.** Points at `defaultLocale` if it matches an entry; otherwise falls back to the first entry.
+- **< 2 entries → nothing emitted.** A single-locale page has no meaningful alternates.
+- **`"x-default"` is reserved.** Passing it as an input `hreflang` gets dropped; it's only ever added automatically.
+
+### Feeding `buildAlternateLinks` from other renderers
+
+If you're not using `<Seo>` directly (e.g. you're writing a CMS plugin that
+contributes to its own metadata pipeline), import `buildAlternateLinks` from
+the main package entry:
+
+```ts
+import { buildAlternateLinks } from '@jdevalk/astro-seo-graph';
+
+const links = buildAlternateLinks({
+    defaultLocale: 'en',
+    entries: [
+        { hreflang: 'en', href: siteEn },
+        { hreflang: 'fr', href: siteFr },
+    ],
+});
+// → [{ rel: 'alternate', hreflang: 'en', href: ... }, ..., { hreflang: 'x-default', ... }]
+```
+
+The main package entry is pure TypeScript — importing `buildAlternateLinks`
+does not pull in any Astro runtime, so it's safe to use from non-Astro
+contexts.
 
 ## Schema endpoints
 
