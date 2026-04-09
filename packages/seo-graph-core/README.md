@@ -98,13 +98,13 @@ const graph = assembleGraph([
 The [agent-ready web](https://joost.blog/tag/agent-ready/) needs every
 publisher to expose a rich, linked knowledge graph for their content. Hand-
 writing JSON-LD is error-prone; writing it once per framework is worse.
-`@jdevalk/seo-graph-core` is the shared engine behind three real consumers:
+`@jdevalk/seo-graph-core` is the shared engine behind two downstream packages,
+both in production:
 
-- [joost.blog](https://joost.blog) (Astro) via a thin local adapter
-- [`@jdevalk/astro-seo-graph`](https://www.npmjs.com/package/@jdevalk/astro-seo-graph) (Astro integration) via `<Seo>` and the route factories
-- [`@jdevalk/emdash-plugin-seo`](https://www.npmjs.com/package/@jdevalk/emdash-plugin-seo) (EmDash CMS plugin) via `assembleGraph`
+- [`@jdevalk/astro-seo-graph`](https://www.npmjs.com/package/@jdevalk/astro-seo-graph) — the Astro integration (`<Seo>` + route factories). Used in production by [joost.blog](https://joost.blog) and [limonaia.house](https://limonaia.house).
+- [`@jdevalk/emdash-plugin-seo`](https://www.npmjs.com/package/@jdevalk/emdash-plugin-seo) — the EmDash CMS plugin. Uses `assembleGraph` directly (EmDash contributes metadata through hooks, not through templates, so it doesn't go through the `<Seo>` component).
 
-Two different runtimes, one graph engine.
+Two different integration runtimes, one graph engine.
 
 ## Known limitations
 
@@ -118,9 +118,11 @@ documented here so you know what's coming.
   generic type parameter, which loses schema-dts autocomplete for subtype-
   specific fields like `checkinTime` on a `Hotel`. Will gain a
   `buildOrganization<T extends Organization>(...)` signature.
-- **`makeIds` is hardcoded to joost.blog's `@id` scheme** (`/#/schema.org/WebSite`,
-  etc.). Sites with different conventions (like EmDash-style plugins using
-  `/#website`) can't use the factory as-is. Will accept custom ID pattern
+- **`makeIds` is hardcoded to a single `@id` scheme** (`/#/schema.org/WebSite`,
+  etc.). All current consumers (`@jdevalk/astro-seo-graph` and
+  `@jdevalk/emdash-plugin-seo`) use this scheme, but any hypothetical
+  future consumer wanting different `@id` conventions would have to
+  build its own IdFactory by hand. Will accept custom ID pattern
   overrides.
 
 If any of these block you, file an issue at
