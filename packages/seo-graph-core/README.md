@@ -2,27 +2,130 @@
 
 Pure schema.org JSON-LD graph builders. Runtime-agnostic core for agent-ready SEO.
 
-> **Status:** pre-v1, scaffolding phase. No stable API yet. See the
-> [roadmap](https://github.com/jdevalk/seo-graph#roadmap) in the monorepo root.
+> **Status:** `0.1.0` (pre-1.0). The API works and has three real consumers
+> in production, but a few known warts (listed below) will be smoothed out in
+> `0.2.x` without breaking changes before a stable `1.0`.
 
 ## What this is
 
-A small, dependency-light library that builds a valid schema.org `@graph` from
-a set of typed inputs. It does one thing: turn structured page data into
-byte-correct JSON-LD that search engines and agents can consume.
+A small, dependency-light library that builds a valid schema.org `@graph`
+from a set of typed inputs. It does one thing: turn structured page data
+into byte-correct JSON-LD that search engines and agents can consume.
 
-It does **not** know anything about Astro, Next.js, EmDash, WordPress, or any
-other runtime. Use `@jdevalk/astro-seo-graph` for the Astro integration, or
-consume this directly from your own CMS/framework.
+It does **not** know anything about Astro, Next.js, EmDash, WordPress, or
+any other runtime. Use [`@jdevalk/astro-seo-graph`](https://www.npmjs.com/package/@jdevalk/astro-seo-graph)
+for the Astro integration, or consume this directly from your own CMS or
+framework.
+
+## Install
+
+```sh
+npm install @jdevalk/seo-graph-core
+```
+
+## What you get
+
+| API                                                                                                                                                                                                 | Purpose                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `makeIds({ siteUrl, personUrl? })`                                                                                                                                                                  | `IdFactory` for stable `@id` references across site-wide and per-page entities.           |
+| `assembleGraph(pieces)`                                                                                                                                                                             | Wraps pieces in a `{ @context, @graph }` envelope with first-wins deduplication by `@id`. |
+| `deduplicateByGraphId(entities)`                                                                                                                                                                    | The dedup engine on its own, in case you need custom assembly.                            |
+| `buildArticle`, `buildWebPage`, `buildWebSite`, `buildBreadcrumbList`, `buildImageObject`, `buildPerson`, `buildOrganization`, `buildVideoObject`, `buildSiteNavigationElement`, `buildCustomPiece` | Piece builders. All return schema-dts typed objects.                                      |
+
+## Usage
+
+```ts
+import {
+    makeIds,
+    assembleGraph,
+    buildWebSite,
+    buildArticle,
+    buildWebPage,
+    buildBreadcrumbList,
+} from '@jdevalk/seo-graph-core';
+
+const ids = makeIds({ siteUrl: 'https://example.com' });
+const url = 'https://example.com/my-post/';
+
+const graph = assembleGraph([
+    buildWebSite(
+        {
+            url: 'https://example.com/',
+            name: 'Example',
+            publisher: { '@id': ids.person },
+        },
+        ids,
+    ),
+    buildWebPage(
+        {
+            url,
+            name: 'My Post',
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+            datePublished: new Date('2026-04-07'),
+        },
+        ids,
+    ),
+    buildArticle(
+        {
+            url,
+            isPartOf: { '@id': ids.webPage(url) },
+            author: { '@id': ids.person },
+            publisher: { '@id': ids.person },
+            headline: 'My Post',
+            description: '…',
+            datePublished: new Date('2026-04-07'),
+        },
+        ids,
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: 'https://example.com/' },
+                { name: 'My Post', url },
+            ],
+        },
+        ids,
+    ),
+]);
+
+// graph === { '@context': 'https://schema.org', '@graph': [...] }
+```
 
 ## Why
 
 The [agent-ready web](https://joost.blog/tag/agent-ready/) needs every
 publisher to expose a rich, linked knowledge graph for their content. Hand-
 writing JSON-LD is error-prone; writing it once per framework is worse.
-`@jdevalk/seo-graph-core` is the shared core that two real consumers — this
-blog (Astro) and [`@jdevalk/emdash-plugin-seo`](https://www.npmjs.com/package/@jdevalk/emdash-plugin-seo)
-(EmDash CMS) — will both depend on, so the graph they emit stays consistent.
+`@jdevalk/seo-graph-core` is the shared engine behind three real consumers:
+
+- [joost.blog](https://joost.blog) (Astro) via a thin local adapter
+- [`@jdevalk/astro-seo-graph`](https://www.npmjs.com/package/@jdevalk/astro-seo-graph) (Astro integration) via `<Seo>` and the route factories
+- [`@jdevalk/emdash-plugin-seo`](https://www.npmjs.com/package/@jdevalk/emdash-plugin-seo) (EmDash CMS plugin) via `assembleGraph`
+
+Two different runtimes, one graph engine.
+
+## Known limitations
+
+The following will be fixed in `0.2.x` without breaking changes. They're
+documented here so you know what's coming.
+
+- **`WebPageInput.breadcrumb` is required.** Schema.org treats it as
+  optional, and consumers that don't have breadcrumbs can't use
+  `buildWebPage` without an `extra` override. Will become optional.
+- **`buildOrganization` takes a `subtype: string` parameter** instead of a
+  generic type parameter, which loses schema-dts autocomplete for subtype-
+  specific fields like `checkinTime` on a `Hotel`. Will gain a
+  `buildOrganization<T extends Organization>(...)` signature.
+- **`makeIds` is hardcoded to joost.blog's `@id` scheme** (`/#/schema.org/WebSite`,
+  etc.). Sites with different conventions (like EmDash-style plugins using
+  `/#website`) can't use the factory as-is. Will accept custom ID pattern
+  overrides.
+
+If any of these block you, file an issue at
+https://github.com/jdevalk/seo-graph/issues — the fixes are already in the
+roadmap and prioritization follows real blockers.
 
 ## License
 

@@ -4,8 +4,10 @@ Astro integration for [`@jdevalk/seo-graph-core`](../seo-graph-core). Ships a
 `<Seo>` component, route factories for agent-ready schema endpoints, a
 content-collection aggregator, and Zod helpers for content schemas.
 
-> **Status:** pre-v1, alpha track. The API may still shift. See the
-> [roadmap](https://github.com/jdevalk/seo-graph#roadmap) in the monorepo root.
+> **Status:** `0.1.0` (pre-1.0). The API works and has two real consumers
+> in production (joost.blog and limonaia.house), but a few known warts in
+> the core will be smoothed out in `0.2.x` without breaking changes. See
+> `@jdevalk/seo-graph-core`'s README for the full list.
 
 ## What's in v0.1
 
@@ -18,10 +20,10 @@ content-collection aggregator, and Zod helpers for content schemas.
 | **`seoSchema`, `imageSchema`** | Zod schemas for the `seo` and `image` fields on content collections. Import them into `src/content.config.ts`.                                                                                                   |
 | **`buildAstroSeoProps`**       | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component.                                                                                                              |
 
-## Not in v0.1 (deferred to v0.2)
+## Not in `0.1.x` (coming in `0.2.x`)
 
 - **`createOgRenderer`** — a themeable `satori` + `sharp` wrapper for generating
-  Open Graph images at build time. Pulled out of v0.1 to keep the dep tree
+  Open Graph images at build time. Pulled out of `0.1` to keep the dep tree
   free of native binaries. Keep using your own `og-image.ts` for now.
 
 ## Installation

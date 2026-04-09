@@ -27,16 +27,18 @@ The thesis is argued in more detail in these posts:
 
 ## Roadmap
 
-| Phase                           | Status          | Summary                                                                                                                                                                                              |
-| ------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 — Scaffold monorepo           | **In progress** | pnpm workspace, tsconfig base, changesets, CI, package skeletons.                                                                                                                                    |
-| 1 — `seo-graph-core` v0.1       | Pending         | Piece builders (article, webpage, website, breadcrumb, image, person, organization, video, navigation, custom), `makeIds`, `assembleGraph`, `deduplicateByGraphId`. Unit tests with golden fixtures. |
-| 2 — joost.blog migration        | Pending         | Replace joost.blog's local schema pieces with core imports. Regression-diff against captured fixtures.                                                                                               |
-| 3 — `astro-seo-graph` v0.1      | Pending         | `<Seo>` component, `createSchemaEndpoint` + `createSchemaMap` factories, aggregator, `createOgRenderer`, Zod content helpers, integration wiring.                                                    |
-| 4 — limonaia.house migration    | Pending         | First external consumer. Add JSON-LD (`LodgingBusiness`) to a primitive Astro site. If the abstraction needs to change for this, the design is wrong.                                                |
-| 5 — joost.blog full integration | Pending         | joost.blog migrates from core-only to the full integration. Drop local aggregator and route code.                                                                                                    |
-| 6 — emdash-plugin-seo port      | Pending         | `@jdevalk/emdash-plugin-seo` delegates to `seo-graph-core`. Gains four pieces it currently lacks (breadcrumb, image, video, navigation).                                                             |
-| 7 — v1.0 + positioning post     | Pending         | Tag v1.0.0 across all three packages. Publish _"Agent-ready SEO, the same way on Astro and EmDash"_ on joost.blog.                                                                                   |
+| Phase                           | Status   | Summary                                                                                                                                                   |
+| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 — Scaffold monorepo           | Done     | pnpm workspace, tsconfig base, changesets, CI, package skeletons.                                                                                         |
+| 1 — `seo-graph-core` v0.1       | Done     | Ten piece builders, `makeIds`, `assembleGraph`, `deduplicateByGraphId`. 31 tests, including byte-identical integration test against a joost.blog fixture. |
+| 2 — joost.blog core migration   | Done     | joost.blog consumes `seo-graph-core` through a thin adapter; schema endpoint output byte-identical to pre-migration fixtures.                             |
+| 3 — `astro-seo-graph` v0.1      | Done     | `<Seo>`, `createSchemaEndpoint`, `createSchemaMap`, `aggregate`, Zod content helpers. 37 tests. `createOgRenderer` deferred to `0.2`.                     |
+| 4 — limonaia.house migration    | Done     | First external consumer. `VacationRental` JSON-LD graph rendered via `<Seo>` with zero changes required to core or the integration.                       |
+| 5 — joost.blog full integration | Done     | `BaseHead.astro` uses `<Seo>` from astro-seo-graph. Schema endpoints still byte-identical against golden fixtures.                                        |
+| 6 — emdash-plugin-seo port      | Done     | `@jdevalk/emdash-plugin-seo@0.2.0` published; shares `assembleGraph` + `GraphEntity` type with the core, keeps its own EmDash-specific piece builders.    |
+| 7 — `0.1.0` stable + blog post  | Shipping | Exit alpha, publish `0.1.0` on the `latest` dist tag. Write the positioning post on [joost.blog](https://joost.blog).                                     |
+
+**Not yet:** `1.0.0` stable. The API has a few known warts (see each package's README "Known limitations" section). They'll be addressed in `0.2.x` without breaking changes. `1.0.0` comes when those are resolved and the API surface has been stable across a few minor releases.
 
 ## Develop
 
