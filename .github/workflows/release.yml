@@ -55,6 +55,12 @@ jobs:
                   echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
                   npm install -g npm@latest
                   "$HOME/.npm-global/bin/npm" --version
+            - name: Diagnose npm on PATH
+              run: |
+                  echo "PATH: $PATH"
+                  which npm
+                  npm --version
+                  node --version
             - run: pnpm install --frozen-lockfile
             - run: pnpm build
             - uses: changesets/action@v1
