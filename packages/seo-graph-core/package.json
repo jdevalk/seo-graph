@@ -1,0 +1,49 @@
+{
+    "name": "@jdevalk/seo-graph-core",
+    "version": "0.0.0",
+    "description": "Pure schema.org JSON-LD graph builders. Runtime-agnostic core for agent-ready SEO.",
+    "keywords": [
+        "schema.org",
+        "json-ld",
+        "seo",
+        "agent-ready",
+        "structured-data"
+    ],
+    "author": "Joost de Valk <joost@joost.blog>",
+    "license": "MIT",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jdevalk/seo-graph.git",
+        "directory": "packages/seo-graph-core"
+    },
+    "bugs": "https://github.com/jdevalk/seo-graph/issues",
+    "homepage": "https://github.com/jdevalk/seo-graph/tree/main/packages/seo-graph-core#readme",
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "echo \"no tests yet\" && exit 0"
+    },
+    "dependencies": {
+        "schema-dts": "^2.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.6.0"
+    }
+}

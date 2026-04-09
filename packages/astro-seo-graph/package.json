@@ -1,0 +1,58 @@
+{
+    "name": "@jdevalk/astro-seo-graph",
+    "version": "0.0.0",
+    "description": "Astro integration for @jdevalk/seo-graph-core. Seo component, route factories, Zod helpers, themeable OG image renderer.",
+    "keywords": [
+        "astro",
+        "astro-integration",
+        "astro-component",
+        "schema.org",
+        "json-ld",
+        "seo",
+        "agent-ready",
+        "structured-data"
+    ],
+    "author": "Joost de Valk <joost@joost.blog>",
+    "license": "MIT",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jdevalk/seo-graph.git",
+        "directory": "packages/astro-seo-graph"
+    },
+    "bugs": "https://github.com/jdevalk/seo-graph/issues",
+    "homepage": "https://github.com/jdevalk/seo-graph/tree/main/packages/astro-seo-graph#readme",
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "echo \"no tests yet\" && exit 0"
+    },
+    "peerDependencies": {
+        "astro": "^5.0.0 || ^6.0.0"
+    },
+    "dependencies": {
+        "@jdevalk/seo-graph-core": "workspace:*",
+        "schema-dts": "^2.0.0",
+        "zod": "^3.24.0"
+    },
+    "devDependencies": {
+        "astro": "^6.0.5",
+        "typescript": "^5.6.0"
+    }
+}
