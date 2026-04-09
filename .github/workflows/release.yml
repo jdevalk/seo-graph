@@ -1,9 +1,12 @@
 name: Release
 
-# Manual trigger only until Phase 7 (v1.0).
-# Flip back to `on: push: branches: [main]` once NPM_TOKEN is configured
-# and the first real changeset exists.
+# Standard changesets two-step flow:
+#   1. Push to main with pending changesets → workflow opens a Version Packages PR.
+#   2. Merge the Version Packages PR → workflow publishes bumped packages to npm.
+# `workflow_dispatch` is kept as a manual recovery lever.
 on:
+    push:
+        branches: [main]
     workflow_dispatch:
 
 concurrency:
