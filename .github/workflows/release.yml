@@ -38,6 +38,12 @@ jobs:
                   # means no `.npmrc` is created, pnpm uses the default
                   # registry (npmjs.org), and trusted publishing can
                   # authenticate via the GitHub Actions OIDC token.
+            # Node 22 ships with npm 10.x, which doesn't support OIDC
+            # trusted publishing. Upgrade to 11.5.1+ so `changeset publish`
+            # (which spawns `npm publish` per package) can complete the
+            # OIDC token exchange with the npm registry. Without this,
+            # publishes fail with ENEEDAUTH even though OIDC is available.
+            - run: npm install -g npm@latest
             - run: pnpm install --frozen-lockfile
             - run: pnpm build
             - uses: changesets/action@v1
