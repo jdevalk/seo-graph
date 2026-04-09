@@ -2,3 +2,7 @@ node_modules
 dist
 coverage
 pnpm-lock.yaml
+
+# Managed by changesets — changesets rewrites this file in its own format
+# (2-space indent) on every version bump, so prettier shouldn't check it.
+.changeset/pre.json
