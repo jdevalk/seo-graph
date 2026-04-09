@@ -1,8 +1,10 @@
 name: Release
 
+# Manual trigger only until Phase 7 (v1.0).
+# Flip back to `on: push: branches: [main]` once NPM_TOKEN is configured
+# and the first real changeset exists.
 on:
-    push:
-        branches: [main]
+    workflow_dispatch:
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
