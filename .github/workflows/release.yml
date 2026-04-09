@@ -57,36 +57,52 @@ jobs:
                   "$HOME/.npm-global/bin/npm" --version
             - run: pnpm install --frozen-lockfile
             - run: pnpm build
-            # One-shot recovery: after publishing failed in earlier runs,
-            # publish the bumped-but-unpublished packages directly with
-            # npm 11.12.1 so OIDC trusted publishing has a chance to work
-            # without going through pnpm / changesets-cli spawn chain.
-            # Each step `|| true`'s because if the version is already
-            # published, npm exits non-zero and we want subsequent steps
-            # to run.
-            - name: Publish seo-graph-core via npm directly
-              working-directory: packages/seo-graph-core
-              run: npm publish --access=public --provenance || echo "skipped (likely already published)"
-            - name: Publish astro-seo-graph via npm directly
-              working-directory: packages/astro-seo-graph
-              run: npm publish --access=public --provenance || echo "skipped (likely already published)"
+            # Publish any packages whose local version isn't on npm yet.
+            #
+            # Why this two-step (pnpm pack + npm publish) dance:
+            # - `pnpm pack` correctly rewrites `workspace:*` deps to real
+            #   version ranges in the packed tarball. `npm pack` and
+            #   `npm publish` don't — they'd ship the literal `workspace:*`
+            #   string, which consumers can't install (EUNSUPPORTEDPROTOCOL).
+            # - `npm publish <tarball>` (npm 11.5.1+) performs the OIDC
+            #   trusted publishing token exchange with the npm registry.
+            #   `pnpm publish` doesn't do OIDC, and the changesets-cli
+            #   spawn chain silently loses the OIDC env somewhere so its
+            #   invocation of `npm publish` also fails with ENEEDAUTH.
+            # Combining the two gives us: correct tarball contents +
+            # working auth.
+            #
+            # The helper script skips packages whose current version is
+            # already published, so reruns of the workflow are safe.
+            - name: Publish packages (pnpm pack + npm publish)
+              run: |
+                  set -euo pipefail
+                  for pkg in seo-graph-core astro-seo-graph; do
+                      cd "packages/$pkg"
+                      name=$(node -p "require('./package.json').name")
+                      version=$(node -p "require('./package.json').version")
+                      if npm view "$name@$version" version >/dev/null 2>&1; then
+                          echo "::notice::$name@$version already published, skipping"
+                      else
+                          echo "::notice::publishing $name@$version"
+                          tarball=$(pnpm pack 2>/dev/null | tail -1)
+                          npm publish "$tarball" --access=public --provenance
+                          rm "$tarball"
+                      fi
+                      cd ../..
+                  done
+            # changesets/action handles the "Version Packages" PR only:
+            # running `pnpm changeset version` to consume pending
+            # changesets, bump versions, update CHANGELOGs, and open a
+            # PR. Publishing is done by the dedicated `Publish packages`
+            # step above — NOT by changesets/action — because
+            # @changesets/publish spawns `npm publish` via pnpm in a way
+            # that loses the OIDC env, so trusted publishing can't
+            # complete. Our pack+publish loop runs `npm publish` directly
+            # with OIDC intact.
             - uses: changesets/action@v1
               with:
-                  publish: pnpm release
                   version: pnpm changeset version
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  # No NPM_TOKEN by design: both @jdevalk/seo-graph-core
-                  # and @jdevalk/astro-seo-graph use OIDC trusted
-                  # publishing (configured on npmjs.com → Settings →
-                  # Publishing access → Trusted publisher → GitHub
-                  # Actions → jdevalk/seo-graph → release.yml). If a
-                  # token were set here it would take precedence over
-                  # OIDC and trusted publishing would never be reached —
-                  # that was the cause of the E404 publish failures on
-                  # versions 0.2.0 / 0.2.1 / 0.2.2 before this fix.
-                  #
-                  # To add a new publishable package, configure trusted
-                  # publishing for it on npmjs.com first, then add its
-                  # changeset.
                   NPM_CONFIG_PROVENANCE: 'true'
