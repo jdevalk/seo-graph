@@ -37,4 +37,13 @@ jobs:
                   version: pnpm changeset version
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  # NPM_TOKEN remains as a fallback for packages that don't
+                  # yet have trusted publishing configured. When trusted
+                  # publishing is active (seo-graph-core), OIDC takes
+                  # precedence and NPM_TOKEN is unused.
                   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  # Enable provenance attestation via GitHub's OIDC token.
+                  # Requires `id-token: write` (set above) and trusted
+                  # publisher configuration on npm for each published
+                  # package. Adds a "verified publisher" badge on npmjs.com.
+                  NPM_CONFIG_PROVENANCE: 'true'
