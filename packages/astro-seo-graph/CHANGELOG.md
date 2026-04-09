@@ -1,5 +1,12 @@
 # @jdevalk/astro-seo-graph
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [c59de35]
+    - @jdevalk/seo-graph-core@0.2.0
+
 ## 0.2.1
 
 ### Patch Changes
