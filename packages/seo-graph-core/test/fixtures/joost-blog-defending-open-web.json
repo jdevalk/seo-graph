@@ -1,0 +1,91 @@
+[
+    {
+        "@type": "BreadcrumbList",
+        "@id": "https://joost.blog/defending-open-web-not-enough/#breadcrumb",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://joost.blog/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Blog",
+                "item": "https://joost.blog/blog/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": "Open Source",
+                "item": "https://joost.blog/blog/category/open-source/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Defending the open web is not enough",
+                "item": "https://joost.blog/defending-open-web-not-enough/"
+            }
+        ]
+    },
+    {
+        "@type": "WebPage",
+        "@id": "https://joost.blog/defending-open-web-not-enough/",
+        "url": "https://joost.blog/defending-open-web-not-enough/",
+        "name": "Defending the open web is not enough",
+        "isPartOf": {
+            "@id": "https://joost.blog/#/schema.org/WebSite"
+        },
+        "breadcrumb": {
+            "@id": "https://joost.blog/defending-open-web-not-enough/#breadcrumb"
+        },
+        "inLanguage": "en-US",
+        "potentialAction": [
+            {
+                "@type": "ReadAction",
+                "target": ["https://joost.blog/defending-open-web-not-enough/"]
+            }
+        ],
+        "datePublished": "2026-04-07T00:00:00.000Z",
+        "primaryImageOfPage": {
+            "@id": "https://joost.blog/defending-open-web-not-enough/#primaryimage"
+        }
+    },
+    {
+        "@type": "Article",
+        "@id": "https://joost.blog/defending-open-web-not-enough/#article",
+        "isPartOf": {
+            "@id": "https://joost.blog/defending-open-web-not-enough/"
+        },
+        "author": {
+            "name": "Joost de Valk",
+            "@id": "https://joost.blog/about-me/#/schema.org/Person"
+        },
+        "headline": "Defending the open web is not enough",
+        "mainEntityOfPage": {
+            "@id": "https://joost.blog/defending-open-web-not-enough/"
+        },
+        "publisher": {
+            "@id": "https://joost.blog/about-me/#/schema.org/Person"
+        },
+        "inLanguage": "en-US",
+        "description": "Anil Dash calls it the endgame for the open web, and he's right. But the structural collapse has already started. The indie web is mostly gone, the winners have already left, and defense alone won't fix it. The question isn't how to protect what remains. It's what to build next.",
+        "datePublished": "2026-04-07T00:00:00.000Z",
+        "image": {
+            "@id": "https://joost.blog/defending-open-web-not-enough/#primaryimage"
+        },
+        "articleSection": "Open Source",
+        "wordCount": 2366,
+        "articleBody": "Anil Dash recently published Endgame for the Open Web, and it's a piece worth reading. His argument: Big Tech is systematically dismantling the open web through AI scraping, API lockdowns, and the erosion of open source norms. His prescription: defend the institutions. Support the Internet Archive, donate to the EFF, volunteer for Wikipedia.\nHe's right about the threats. And his title, \"endgame,\" is the right word. We're not in the opening moves. We're deep into a collapse that's already well underway, and the game board looks very different from what most people defending the open web still picture.\nLet me start with what we're actually talking about. The open web is the part of the internet anyone can access without permission: websites you can visit without an app or an account, content you can link to, read, and build on. A personal blog is the open web. A Squarespace site is the open web. A WordPress site is the open web. A post that lives primarily inside a walled platform like Facebook or TikTok, where the platform controls who sees it and whether it's linkable, is not. The open web is defined by access, not by what software powers it.\nThat distinction matters, because Anil, and most people in this conversation, conflate the open web with open source. They're related, but they're not the same thing. Open source is about who controls the tools. The open web is about who can access the content. You can publish to the open web with proprietary software, and you can run open source software behind a login wall.\nThe two get conflated because for a long time they went hand in hand. If you wanted to really own your content and infrastructure on the open web, self-hosting open source software was the path of least resistance. Open source was how you made the open web yours. But that's a historical pairing, not a definition, and it's worth keeping the concepts separate when what's happening to one isn't what's happening to the other.\nAnd it matters because the technical open web is fine. Protocols still work. You can still put up an Astro site. You're reading this on one. What's collapsing is the economic open web: the idea that you can publish independently, reach an audience, and build a sustainable business on open standards. That's the part in the endgame. Most people haven't noticed how far it's gone because the URLs still resolve.\nHow the endgame started\nAnil documents real threats: AI scrapers that take everything and send nothing back. Traffic drops of 50%, 90% for some publishers. Conventions like robots.txt being ignored. Open APIs getting shut down. Open source projects drowning in AI-generated junk contributions.\nBut he mostly frames these as attacks. They're not just attacks. They're incentives. And publishers are following them exactly where you'd expect:\n- Bots scrape content and send no traffic back. Publishers lose their audiences. Then they lose their revenue. Then they paywall or quit.\n- Conventions like robots.txt get ignored. Publishers can't set terms anyone respects. Their only options are locking content behind authentication or accepting the loss.\n- Revenue collapses. Publishers move to Substack, Spotify, and YouTube, where the platforms monetize for them. They trade ownership for survival.\n- Open source projects drown in AI-generated junk contributions. They close to outsiders. Development slows. The tools powering the open web stagnate.\nAnd there's a fifth chain that Anil doesn't mention: AI makes generic content free to produce. Just like generic code is now basically free, generic articles, summaries, and how-to guides cost nothing to generate. That collapses the value of commodity content to zero. Publishers who were already struggling to monetize now have to compete with infinite free alternatives to their work. There's an irony here: SEOs, the people who once helped grow the open web by making content discoverable, spent years flooding it with content optimized for search engines rather than readers. AI just automated what they were already doing, and made the economics of it collapse.\nNone of this is a prediction. A lot of it has already happened. 77% of news publishers now focus on subscriptions, and Press Gazette tracks the 100+ outlets with over 100,000 paying digital subscribers. Independent journalists are moving to Substack at scale, from Bari Weiss and Casey Newton to Jim Acosta, Chuck Todd, and Derek Thompson. Podcasters went exclusive on Spotify in nine-figure deals, leaving the open podcast ecosystem behind. Not because they opposed openness, but because openness stopped paying the bills. The open web isn't being killed by a single dramatic attack. It's emptying out, slowly, as millions of publishers individually and rationally decide that publishing openly is a bad deal.\nAnil says we should fight back \"with the same ferocity with which we're being attacked.\" But this isn't a battle. It's an exodus. And you don't stop an exodus by fighting harder.\nThe winners already left\nLook at who's getting the AI training deals. The Financial Times, News Corp, Axel Springer, The Atlantic, Cond\u00e9 Nast, Reddit. Most of them already paywalled their way out of the open web years ago. They have distribution, they have legal teams, they have leverage. They're getting paid because they already left. The open web is fine if you're already not really on it. It's the people who stayed who are losing.\nThis was never really about the open web broadly. It's about the indie web: the solo experts, the niche publishers, the bloggers who knew more about one specific thing than almost anyone else in the world. The indie web is the part that's mostly already gone.\nAnd the dividing line is distribution. If you already have it, you get a deal. If you don't, how do you build one now? Not by ranking in search that increasingly summarizes your content without sending traffic. Not by publishing openly in a market flooded with free AI-generated alternatives.\nMaybe by moving to a managed platform that has its own audience. But then you have to ask whether you still own the training rights to your own work, or whether the platform already sold them. In 2024, Automattic sold WordPress.com and Tumblr user content to OpenAI and Midjourney for AI training. Users had to opt out after the fact, if they noticed. That's the implicit deal on any managed platform: the platform decides what your content is worth, and to whom.\nAI companies are the canaries here. They've already figured out the open web isn't producing enough quality to train frontier models on, and they're paying expert contractors directly through Scale AI, Surge AI, and in-house expert networks to fill the gap. That's not a sign the open web is fine. It's a sign the collapse is already priced in, and the survivors are being picked.\nMeanwhile, the biggest open source project on the web is busy suing itself\nWordPress powers a huge chunk of the open web. If any project should be leading the response to these threats, it's WordPress. Instead, two of the ecosystem's biggest players have spent years suing each other.\nWhile the open web's economics collapse and AI reshapes how content gets consumed, WordPress is still litigating trademark disputes. Not building trust infrastructure. Not making content machine-readable. Not competing with managed platforms on experience. The leadership that should be defending and advancing the open web is too busy fighting to do either, and too distracted to address the deep architectural problems that have been holding the platform back for years.\nThis isn't just a WordPress problem. It's a symptom. The open web's biggest institutions aren't focused on the existential threats. They're distracted by internal politics while the ground shifts beneath them.\nBuilding what comes next\nSo: the indie web is mostly gone, the structural collapse of the economic open web is well underway, and defending the remains isn't a strategy. What is?\nNot \"defend harder\" or \"fund the Internet Archive more.\" Those are necessary, but they don't rebuild anything. The real question is what the next open web looks like: one that's actually competitive, economically sustainable, and legible to both humans and machines from the start.\nHere's what that takes.\nTrust infrastructure.<br /\nThe open web has no native way to prove who published something first, or whether content has been modified since publication. Provenance isn't a nice-to-have anymore. When AI can generate content indistinguishable from human writing, cryptographic proof of origin becomes foundational. Author credibility, entity consistency, first-party verification: these are the signals that platforms are already weighting more heavily.\nMachine-readable architecture.<br /\nContent on the open web needs to be structured for machines, not just rendered for browsers. Honestly, clean semantic HTML would already be a massive improvement over most of what's out there. You don't need exotic formats if your markup is actually readable. From there, proper content models, typed data, and formats that AI agents can consume without reverse-engineering HTML are the next step. And agents need to be able to act, not just read. Standards like WebMCP and WordPress's new Abilities API point in the right direction: make open source platforms' capabilities discoverable and composable by machines, not just by humans clicking through admin panels.\nCompetitive defaults.<br /\nOpen source projects need to ship with sane, performant defaults that compete with managed platforms out of the box. I've been talking about the devastating power of defaults for over a decade. Not \"you can configure it to be fast,\" but fast by default. Not \"you can add structured data with a plugin,\" but structured data as a core feature. WordPress became famous for its five-minute install, a defining default that set the bar for its era. But it hasn't grasped what the 2026 version of that looks like.\nOpenness has to pay for itself\u2026"
+    },
+    {
+        "@type": "ImageObject",
+        "@id": "https://joost.blog/defending-open-web-not-enough/#primaryimage",
+        "url": "https://joost.blog/og/defending-open-web-not-enough.png",
+        "contentUrl": "https://joost.blog/og/defending-open-web-not-enough.png",
+        "width": 1200,
+        "height": 630,
+        "inLanguage": "en-US"
+    }
+]

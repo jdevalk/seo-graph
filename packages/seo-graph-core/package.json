@@ -36,14 +36,16 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.json",
-        "typecheck": "tsc -p tsconfig.json --noEmit",
-        "test": "echo \"no tests yet\" && exit 0"
+        "build": "tsc -p tsconfig.build.json",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "vitest run"
     },
     "dependencies": {
         "schema-dts": "^2.0.0"
     },
     "devDependencies": {
-        "typescript": "^5.6.0"
+        "@types/node": "^22.0.0",
+        "typescript": "^5.6.0",
+        "vitest": "^2.0.0"
     }
 }
