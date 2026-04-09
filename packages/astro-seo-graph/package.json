@@ -1,7 +1,6 @@
 {
     "name": "@jdevalk/astro-seo-graph",
-    "version": "0.0.1-alpha.0",
-    "private": true,
+    "version": "0.1.0-alpha.1",
     "description": "Astro integration for @jdevalk/seo-graph-core. Seo component, route factories, content-collection aggregator, Zod content helpers.",
     "keywords": [
         "astro",

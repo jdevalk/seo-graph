@@ -6,6 +6,7 @@
     "@jdevalk/seo-graph-core": "0.0.0"
   },
   "changesets": [
+    "astro-seo-graph-first-alpha",
     "initial-alpha"
   ]
 }
