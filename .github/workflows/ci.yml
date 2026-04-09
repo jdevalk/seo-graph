@@ -17,7 +17,10 @@ jobs:
                   node-version: 22
                   cache: 'pnpm'
             - run: pnpm install --frozen-lockfile
-            - run: pnpm typecheck
+            # Build first: packages downstream from seo-graph-core need its
+            # dist/*.d.ts to exist before their typecheck can resolve the
+            # workspace dep.
             - run: pnpm build
+            - run: pnpm typecheck
             - run: pnpm test
             - run: pnpm format:check
