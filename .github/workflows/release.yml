@@ -43,7 +43,18 @@ jobs:
             # (which spawns `npm publish` per package) can complete the
             # OIDC token exchange with the npm registry. Without this,
             # publishes fail with ENEEDAUTH even though OIDC is available.
-            - run: npm install -g npm@latest
+            #
+            # Install into a separate global prefix so npm isn't trying
+            # to upgrade itself in place — that hits a known bug where
+            # npm removes its own dependencies mid-install and then
+            # can't finish (MODULE_NOT_FOUND: promise-retry).
+            - name: Install npm 11.x into a separate prefix
+              run: |
+                  mkdir -p "$HOME/.npm-global"
+                  npm config set prefix "$HOME/.npm-global"
+                  echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
+                  npm install -g npm@latest
+                  "$HOME/.npm-global/bin/npm" --version
             - run: pnpm install --frozen-lockfile
             - run: pnpm build
             - uses: changesets/action@v1
