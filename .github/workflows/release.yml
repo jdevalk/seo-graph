@@ -28,7 +28,16 @@ jobs:
               with:
                   node-version: 22
                   cache: 'pnpm'
-                  registry-url: 'https://registry.npmjs.org/'
+                  # Deliberately no `registry-url` here. When set, setup-node
+                  # writes a `.npmrc` containing
+                  # `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
+                  # and injects NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX as a
+                  # placeholder. pnpm publish then reads that placeholder
+                  # and tries to authenticate with garbage, which bypasses
+                  # OIDC trusted publishing. Leaving `registry-url` off
+                  # means no `.npmrc` is created, pnpm uses the default
+                  # registry (npmjs.org), and trusted publishing can
+                  # authenticate via the GitHub Actions OIDC token.
             - run: pnpm install --frozen-lockfile
             - run: pnpm build
             - uses: changesets/action@v1
