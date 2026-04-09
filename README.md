@@ -23,7 +23,6 @@ The thesis is argued in more detail in these posts:
 
 - [Defending the open web is not enough](https://joost.blog/defending-open-web-not-enough/)
 - [From installation to integration: making plugins agent-ready](https://joost.blog/agent-ready-plugins/)
-- [EmDash plugins are not locked to Cloudflare](https://joost.blog/emdash-plugins-not-locked-to-cloudflare/)
 - [The silence is deafening: Google's agentic future leaves WordPress behind](https://joost.blog/deafening-silence-google-wordpress-agentic/)
 
 ## Roadmap
