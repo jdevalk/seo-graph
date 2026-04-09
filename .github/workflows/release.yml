@@ -55,18 +55,21 @@ jobs:
                   echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
                   npm install -g npm@latest
                   "$HOME/.npm-global/bin/npm" --version
-            - name: Diagnose npm + OIDC env
-              run: |
-                  echo "PATH: $PATH"
-                  which npm
-                  npm --version
-                  node --version
-                  echo "---"
-                  echo "ACTIONS_ID_TOKEN_REQUEST_URL set: ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}"
-                  echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN set: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+yes}"
-                  env | grep -E "^(ACTIONS_ID_TOKEN|NPM_|NODE_|GITHUB_)" | sed 's/=.*/=<set>/' | sort
             - run: pnpm install --frozen-lockfile
             - run: pnpm build
+            # One-shot recovery: after publishing failed in earlier runs,
+            # publish the bumped-but-unpublished packages directly with
+            # npm 11.12.1 so OIDC trusted publishing has a chance to work
+            # without going through pnpm / changesets-cli spawn chain.
+            # Each step `|| true`'s because if the version is already
+            # published, npm exits non-zero and we want subsequent steps
+            # to run.
+            - name: Publish seo-graph-core via npm directly
+              working-directory: packages/seo-graph-core
+              run: npm publish --access=public --provenance || echo "skipped (likely already published)"
+            - name: Publish astro-seo-graph via npm directly
+              working-directory: packages/astro-seo-graph
+              run: npm publish --access=public --provenance || echo "skipped (likely already published)"
             - uses: changesets/action@v1
               with:
                   publish: pnpm release
