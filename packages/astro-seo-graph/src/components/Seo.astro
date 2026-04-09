@@ -1,0 +1,14 @@
+---
+import { SEO } from 'astro-seo';
+import { buildAstroSeoProps, type SeoProps } from './seo-props.js';
+
+const props = Astro.props as SeoProps;
+const astroSeo = buildAstroSeoProps(props, Astro.url.href);
+---
+
+<SEO {...astroSeo} />
+{
+    props.graph && (
+        <script type="application/ld+json" set:html={JSON.stringify(props.graph)} />
+    )
+}

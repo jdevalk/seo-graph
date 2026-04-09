@@ -2,7 +2,7 @@
     "name": "@jdevalk/astro-seo-graph",
     "version": "0.0.1-alpha.0",
     "private": true,
-    "description": "Astro integration for @jdevalk/seo-graph-core. Seo component, route factories, Zod helpers, themeable OG image renderer.",
+    "description": "Astro integration for @jdevalk/seo-graph-core. Seo component, route factories, content-collection aggregator, Zod content helpers.",
     "keywords": [
         "astro",
         "astro-integration",
@@ -22,7 +22,8 @@
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
-        }
+        },
+        "./Seo.astro": "./dist/components/Seo.astro"
     },
     "files": [
         "dist",
@@ -40,20 +41,23 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.json",
-        "typecheck": "tsc -p tsconfig.json --noEmit",
-        "test": "echo \"no tests yet\" && exit 0"
+        "build": "tsc -p tsconfig.build.json && mkdir -p dist/components && cp src/components/*.astro dist/components/",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "vitest run"
     },
     "peerDependencies": {
         "astro": "^5.0.0 || ^6.0.0"
     },
     "dependencies": {
         "@jdevalk/seo-graph-core": "workspace:*",
+        "astro-seo": "^1.1.0",
         "schema-dts": "^2.0.0",
         "zod": "^3.24.0"
     },
     "devDependencies": {
+        "@types/node": "^22.0.0",
         "astro": "^6.0.5",
-        "typescript": "^5.6.0"
+        "typescript": "^5.6.0",
+        "vitest": "^2.0.0"
     }
 }
