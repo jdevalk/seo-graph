@@ -93,7 +93,7 @@ describe('assembleGraph', () => {
 });
 
 describe('buildWebSite', () => {
-    it('builds a minimal WebSite', () => {
+    it('builds a minimal WebSite without inLanguage when none provided', () => {
         const site = buildWebSite(
             {
                 url: 'https://example.com/',
@@ -108,8 +108,21 @@ describe('buildWebSite', () => {
             url: 'https://example.com/',
             name: 'Example',
             publisher: { '@id': ids.person },
-            inLanguage: 'en-US',
         });
+        expect(site).not.toHaveProperty('inLanguage');
+    });
+
+    it('emits inLanguage when explicitly provided', () => {
+        const site = buildWebSite(
+            {
+                url: 'https://example.com/',
+                name: 'Example',
+                publisher: { '@id': ids.person },
+                inLanguage: 'nl-NL',
+            },
+            ids,
+        );
+        expect(site.inLanguage).toBe('nl-NL');
     });
 
     it('includes optional hasPart and description', () => {
@@ -294,6 +307,31 @@ describe('buildWebPage', () => {
         expect(page['@id']).toBe(postUrl);
         expect(page.isPartOf).toEqual({ '@id': ids.website });
     });
+
+    it('omits inLanguage when not provided, and emits it when given', () => {
+        const without = buildWebPage(
+            {
+                url: postUrl,
+                name: 'Hello',
+                isPartOf: { '@id': ids.website },
+                breadcrumb: { '@id': ids.breadcrumb(postUrl) },
+            },
+            ids,
+        );
+        expect(without).not.toHaveProperty('inLanguage');
+
+        const withLocale = buildWebPage(
+            {
+                url: postUrl,
+                name: 'Hello',
+                isPartOf: { '@id': ids.website },
+                breadcrumb: { '@id': ids.breadcrumb(postUrl) },
+                inLanguage: 'nl-NL',
+            },
+            ids,
+        );
+        expect(withLocale.inLanguage).toBe('nl-NL');
+    });
 });
 
 describe('buildArticle', () => {
@@ -316,6 +354,7 @@ describe('buildArticle', () => {
         expect(article.datePublished).toBe('2026-01-01T00:00:00.000Z');
         expect(article.dateModified).toBeUndefined();
         expect(article.articleBody).toBeUndefined();
+        expect(article).not.toHaveProperty('inLanguage');
     });
 
     it('includes optional fields when provided', () => {
@@ -386,6 +425,7 @@ describe('buildImageObject', () => {
         expect(img.contentUrl).toBe('https://example.com/og/hello.png');
         expect(img.width).toBe(1200);
         expect(img.height).toBe(630);
+        expect(img).not.toHaveProperty('inLanguage');
     });
 
     it('accepts an explicit id override', () => {

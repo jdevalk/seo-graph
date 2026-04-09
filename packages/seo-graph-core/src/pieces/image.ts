@@ -39,7 +39,7 @@ export function buildImageObject(input: ImageObjectInput, ids: IdFactory): Recor
         height: input.height,
     };
     if (input.caption !== undefined) piece.caption = input.caption;
-    piece.inLanguage = input.inLanguage ?? 'en-US';
+    if (input.inLanguage !== undefined) piece.inLanguage = input.inLanguage;
 
     return { ...piece, ...input.extra };
 }

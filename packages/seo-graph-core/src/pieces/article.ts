@@ -43,11 +43,11 @@ export function buildArticle(input: ArticleInput, ids: IdFactory): Record<string
         headline: input.headline,
         mainEntityOfPage: { '@id': ids.webPage(input.url) },
         publisher: input.publisher,
-        inLanguage: input.inLanguage ?? 'en-US',
         description: input.description,
         datePublished: input.datePublished.toISOString(),
     };
 
+    if (input.inLanguage !== undefined) piece.inLanguage = input.inLanguage;
     if (input.dateModified !== undefined) {
         piece.dateModified = input.dateModified.toISOString();
     }

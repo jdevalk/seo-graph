@@ -64,10 +64,12 @@ export function buildWebPage(
         url: input.url,
         name: input.name,
         isPartOf: input.isPartOf,
-        inLanguage: input.inLanguage ?? 'en-US',
         potentialAction,
     };
 
+    if (input.inLanguage !== undefined) {
+        piece.inLanguage = input.inLanguage;
+    }
     if (input.breadcrumb !== undefined) {
         piece.breadcrumb = input.breadcrumb;
     }

@@ -29,7 +29,7 @@ export function buildWebSite(input: WebSiteInput, ids: IdFactory): Record<string
     };
     if (input.description !== undefined) piece.description = input.description;
     piece.publisher = input.publisher;
-    piece.inLanguage = input.inLanguage ?? 'en-US';
+    if (input.inLanguage !== undefined) piece.inLanguage = input.inLanguage;
     if (input.hasPart !== undefined) piece.hasPart = input.hasPart;
     return { ...piece, ...input.extra };
 }

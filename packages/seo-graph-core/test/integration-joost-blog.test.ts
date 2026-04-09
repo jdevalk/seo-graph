@@ -67,6 +67,7 @@ describe('integration: joost.blog — Defending the open web is not enough', () 
                 breadcrumb: { '@id': ids.breadcrumb(url) },
                 datePublished: new Date('2026-04-07T00:00:00.000Z'),
                 primaryImage: { '@id': ids.primaryImage(url) },
+                inLanguage: 'en-US',
             },
             ids,
         );
@@ -87,6 +88,7 @@ describe('integration: joost.blog — Defending the open web is not enough', () 
                 articleSection: 'Open Source',
                 wordCount: 2366,
                 articleBody: expectedArticle.articleBody as string,
+                inLanguage: 'en-US',
             },
             ids,
         );
@@ -100,6 +102,7 @@ describe('integration: joost.blog — Defending the open web is not enough', () 
                 url: 'https://joost.blog/og/defending-open-web-not-enough.png',
                 width: 1200,
                 height: 630,
+                inLanguage: 'en-US',
             },
             ids,
         );
