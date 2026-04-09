@@ -55,12 +55,16 @@ jobs:
                   echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
                   npm install -g npm@latest
                   "$HOME/.npm-global/bin/npm" --version
-            - name: Diagnose npm on PATH
+            - name: Diagnose npm + OIDC env
               run: |
                   echo "PATH: $PATH"
                   which npm
                   npm --version
                   node --version
+                  echo "---"
+                  echo "ACTIONS_ID_TOKEN_REQUEST_URL set: ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}"
+                  echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN set: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+yes}"
+                  env | grep -E "^(ACTIONS_ID_TOKEN|NPM_|NODE_|GITHUB_)" | sed 's/=.*/=<set>/' | sort
             - run: pnpm install --frozen-lockfile
             - run: pnpm build
             - uses: changesets/action@v1
