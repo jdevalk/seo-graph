@@ -8,6 +8,8 @@ export interface BreadcrumbItem {
     name: string;
     /** URL for this crumb. */
     url: string;
+    /** Optional @id override. When set, the `item` value uses this @id instead of the URL. */
+    id?: string;
 }
 
 interface BreadcrumbListCoreFields {
@@ -34,7 +36,11 @@ export function buildBreadcrumbList(
         '@type': 'ListItem',
         position: index + 1,
         name: item.name,
-        item: index === lastIndex ? { '@id': ids.webPage(item.url) } : item.url,
+        item: item.id
+            ? { '@id': item.id }
+            : index === lastIndex
+              ? { '@id': ids.webPage(item.url) }
+              : item.url,
     }));
 
     const piece: Record<string, unknown> = {
