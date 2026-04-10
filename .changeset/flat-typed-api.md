@@ -1,6 +1,6 @@
 ---
-"@jdevalk/seo-graph-core": major
-"@jdevalk/astro-seo-graph": major
+"@jdevalk/seo-graph-core": minor
+"@jdevalk/astro-seo-graph": minor
 ---
 
 **Breaking changes:**
