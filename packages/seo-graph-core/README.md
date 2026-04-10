@@ -52,7 +52,7 @@ object with `@type` and `@id`. Builders for CreativeWork subtypes (`WebSite`,
 | `buildImageObject`           | `ImageObject`           | —                                                                                                          |
 | `buildVideoObject`           | `VideoObject`           | —                                                                                                          |
 | `buildSiteNavigationElement` | `SiteNavigationElement` | —                                                                                                          |
-| `buildCustomPiece`           | Any                     | Pass `@type` directly in the input object                                                                  |
+| `buildCustomPiece`           | Any                     | Pass `@type` in input; optional `schema-dts` generic for autocomplete (e.g. `buildCustomPiece<Product>`)   |
 
 Every builder accepts an `extra` escape hatch for schema.org properties not
 covered by the typed interface.

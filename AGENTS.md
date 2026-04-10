@@ -480,9 +480,14 @@ buildSiteNavigationElement(
 ### buildCustomPiece
 
 Escape hatch for any schema.org type not covered by the built-in builders.
+Pass a `schema-dts` type as the generic parameter to get full autocomplete
+for that type's properties — this way TypeScript surfaces missing fields
+instead of silently accepting whatever you pass.
 
 ```ts
-buildCustomPiece({
+import type { Recipe } from 'schema-dts';
+
+buildCustomPiece<Recipe>({
     '@type': 'Recipe',
     '@id': 'https://example.com/recipes/pasta/#recipe',
     name: 'Simple Pasta',
@@ -499,9 +504,23 @@ buildCustomPiece({
 });
 ```
 
+Without a generic, the input is untyped — any properties are accepted:
+
+```ts
+buildCustomPiece({
+    '@type': 'Recipe',
+    '@id': 'https://example.com/recipes/pasta/#recipe',
+    name: 'Simple Pasta',
+});
+```
+
 **When to use:** `Product`, `Event`, `Recipe`, `Course`, `SoftwareApplication`,
-`VacationRental`, `FAQPage`, `HowTo`, or any other schema.org type. You're
-responsible for correct structure; the builder just passes it through.
+`VacationRental`, `FAQPage`, `HowTo`, or any other schema.org type.
+
+**Always prefer the typed generic** (`buildCustomPiece<Recipe>`) over the
+untyped form. The generic gives you autocomplete for every property on the
+chosen type, making it much harder to miss recommended fields like
+`potentialAction`, `geo`, or `offers`.
 
 ### assembleGraph
 
@@ -761,6 +780,8 @@ builder because product schemas vary wildly.
 **Simple product (single variant):**
 
 ```ts
+import type { Product } from 'schema-dts';
+
 const ids = makeIds({ siteUrl: 'https://shop.example.com' });
 
 const pieces = [
@@ -789,7 +810,7 @@ const pieces = [
         },
         ids,
     ),
-    buildCustomPiece({
+    buildCustomPiece<Product>({
         '@type': 'Product',
         '@id': `${url}#product`,
         name: productName,
@@ -828,6 +849,8 @@ When a product has multiple variants (e.g. sizes, colors), use `ProductGroup`
 as the parent and individual `Product` entities for each variant:
 
 ```ts
+import type { Product, ProductGroup } from 'schema-dts';
+
 const variants = [
     {
         sku: 'SHOE-BLK-10',
@@ -857,7 +880,7 @@ const variants = [
 
 const pieces = [
     // ...site-wide + WebPage + BreadcrumbList...
-    buildCustomPiece({
+    buildCustomPiece<ProductGroup>({
         '@type': 'ProductGroup',
         '@id': `${url}#product-group`,
         name: 'Running Shoe',
@@ -868,7 +891,7 @@ const pieces = [
         hasVariant: variants.map((v) => ({ '@id': `${url}#variant-${v.sku}` })),
     }),
     ...variants.map((v) =>
-        buildCustomPiece({
+        buildCustomPiece<Product>({
             '@type': 'Product',
             '@id': `${url}#variant-${v.sku}`,
             name: v.name,
@@ -1109,6 +1132,8 @@ container for `PodcastEpisode`. Include the series as a site-wide entity.
 **Video podcast (YouTube-based):**
 
 ```ts
+import type { PodcastSeries } from 'schema-dts';
+
 const ids = makeIds({ siteUrl: 'https://podcast.example.com' });
 const seriesId = `${siteUrl}#podcast-series`;
 
@@ -1117,7 +1142,7 @@ const pieces = [
     buildPerson({ name: 'Host Name', url: aboutUrl, image: { '@id': ids.personImage } }, ids),
     buildImageObject({ id: ids.personImage, url: hostPhotoUrl, width: 400, height: 400 }, ids),
     buildWebSite({ url: siteUrl, name: 'My Podcast', publisher: { '@id': ids.person } }, ids),
-    buildCustomPiece({
+    buildCustomPiece<PodcastSeries>({
         '@type': 'PodcastSeries',
         '@id': seriesId,
         name: 'My Podcast',
@@ -1170,12 +1195,14 @@ const pieces = [
 Use `PodcastEpisode` linked to the `PodcastSeries`:
 
 ```ts
+import type { PodcastEpisode } from 'schema-dts';
+
 const seriesId = `${siteUrl}#podcast-series`;
 
 const pieces = [
     // ...site-wide entities including PodcastSeries...
     buildWebPage({ url, name: episodeTitle, isPartOf: { '@id': ids.website }, datePublished }, ids),
-    buildCustomPiece({
+    buildCustomPiece<PodcastEpisode>({
         '@type': 'PodcastEpisode',
         '@id': `${url}#episode`,
         name: episodeTitle,
@@ -1225,6 +1252,8 @@ const pieces = [
 ### Vacation rental / accommodation
 
 ```ts
+import type { VacationRental } from 'schema-dts';
+
 const ids = makeIds({ siteUrl: 'https://myhouse.example.com' });
 
 const pieces = [
@@ -1238,7 +1267,7 @@ const pieces = [
         },
         ids,
     ),
-    buildCustomPiece({
+    buildCustomPiece<VacationRental>({
         '@type': 'VacationRental',
         '@id': `${siteUrl}#rental`,
         name: 'Villa Example',
@@ -1353,7 +1382,9 @@ const pieces = [
 ### Event page
 
 ```ts
-buildCustomPiece({
+import type { Event } from 'schema-dts';
+
+buildCustomPiece<Event>({
     '@type': 'Event',
     '@id': `${url}#event`,
     name: 'JavaScript Conference 2026',
@@ -1389,6 +1420,8 @@ buildCustomPiece({
 ### SaaS / software product landing page
 
 ```ts
+import type { SoftwareApplication } from 'schema-dts';
+
 const pieces = [
     buildOrganization({ slug: 'myapp', name: 'MyApp Inc', url: siteUrl, logo: logoUrl }, ids),
     buildWebSite(
@@ -1403,7 +1436,7 @@ const pieces = [
         },
         ids,
     ),
-    buildCustomPiece({
+    buildCustomPiece<SoftwareApplication>({
         '@type': 'SoftwareApplication',
         '@id': `${siteUrl}#app`,
         name: 'MyApp',
@@ -1443,13 +1476,15 @@ const pieces = [
 Combine `WebPage` with a `FAQPage` custom piece:
 
 ```ts
+import type { FAQPage } from 'schema-dts';
+
 const pieces = [
     // ...site-wide entities...
     buildWebPage(
         { url, name: 'Frequently Asked Questions', isPartOf: { '@id': ids.website } },
         ids,
     ),
-    buildCustomPiece({
+    buildCustomPiece<FAQPage>({
         '@type': 'FAQPage',
         '@id': `${url}#faq`,
         mainEntity: [
@@ -1479,7 +1514,9 @@ const pieces = [
 ### Course / educational content
 
 ```ts
-buildCustomPiece({
+import type { Course } from 'schema-dts';
+
+buildCustomPiece<Course>({
     '@type': 'Course',
     '@id': `${url}#course`,
     name: 'Introduction to TypeScript',
@@ -1771,7 +1808,9 @@ potentialAction: {
 Add to the `Product` or `ProductGroup` entity:
 
 ```ts
-buildCustomPiece({
+import type { Product } from 'schema-dts';
+
+buildCustomPiece<Product>({
     '@type': 'Product',
     '@id': `${url}#product`,
     name: productName,
@@ -1824,7 +1863,9 @@ potentialAction: {
 Add to the `VacationRental`, `Product`, or `Car` entity:
 
 ```ts
-buildCustomPiece({
+import type { VacationRental } from 'schema-dts';
+
+buildCustomPiece<VacationRental>({
     '@type': 'VacationRental',
     '@id': `${siteUrl}#rental`,
     name: 'Villa Example',
@@ -1933,6 +1974,8 @@ Many entities benefit from multiple actions. A WebSite typically has a
 `SearchAction`; the entities within it have trade actions:
 
 ```ts
+import type { Product } from 'schema-dts';
+
 // WebSite: how to search
 buildWebSite({
     url: siteUrl,
@@ -1955,7 +1998,7 @@ buildWebSite({
 }, ids),
 
 // Product: how to buy
-buildCustomPiece({
+buildCustomPiece<Product>({
     '@type': 'Product',
     '@id': `${url}#product`,
     name: productName,
