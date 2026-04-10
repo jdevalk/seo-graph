@@ -1,5 +1,13 @@
 # @jdevalk/astro-seo-graph
 
+## 0.3.1
+
+### Patch Changes
+
+- c7ac7fe: Ship AGENTS.md in the npm package so AI coding agents can read the full reference locally. Fix README links to point to the GitHub URL instead of a relative monorepo path.
+- Updated dependencies [c7ac7fe]
+    - @jdevalk/seo-graph-core@0.4.1
+
 ## 0.3.0
 
 ### Minor Changes
