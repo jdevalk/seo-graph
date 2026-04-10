@@ -20,17 +20,7 @@ agents.
 
 ## Why
 
-The agent-ready web needs publishers to expose a rich, linked JSON-LD graph.
-Hand-writing it is error-prone; writing it once per framework is worse. This
-project extracts the graph-building logic out of [joost.blog](https://joost.blog)
-and [`@jdevalk/emdash-plugin-seo`](https://github.com/jdevalk/emdash-plugin-seo)
-into a shared core so both consumers (and any future ones) stay byte-consistent.
-
-The thesis is argued in more detail in these posts:
-
-- [Defending the open web is not enough](https://joost.blog/defending-open-web-not-enough/)
-- [From installation to integration: making plugins agent-ready](https://joost.blog/agent-ready-plugins/)
-- [The silence is deafening: Google's agentic future leaves WordPress behind](https://joost.blog/deafening-silence-google-wordpress-agentic/)
+Read more about [why this project exists](https://joost.blog/seo-graph/).
 
 ## Develop
 

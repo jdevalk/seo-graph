@@ -125,16 +125,7 @@ const graph = assembleGraph([
 
 ## Why
 
-The [agent-ready web](https://joost.blog/tag/agent-ready/) needs every
-publisher to expose a rich, linked knowledge graph for their content. Hand-
-writing JSON-LD is error-prone; writing it once per framework is worse.
-`@jdevalk/seo-graph-core` is the shared engine behind two downstream packages,
-both in production:
-
-- [`@jdevalk/astro-seo-graph`](https://www.npmjs.com/package/@jdevalk/astro-seo-graph) — the Astro integration (`<Seo>` + route factories). Used in production by [joost.blog](https://joost.blog) and [limonaia.house](https://limonaia.house).
-- [`@jdevalk/emdash-plugin-seo`](https://www.npmjs.com/package/@jdevalk/emdash-plugin-seo) — the EmDash CMS plugin. Uses `assembleGraph` directly (EmDash contributes metadata through hooks, not through templates, so it doesn't go through the `<Seo>` component).
-
-Two different integration runtimes, one graph engine.
+Read more about [why this project exists](https://joost.blog/seo-graph/).
 
 ## License
 
