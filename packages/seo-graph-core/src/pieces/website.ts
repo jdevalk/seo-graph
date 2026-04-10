@@ -1,8 +1,14 @@
+import type { WebSiteLeaf } from 'schema-dts';
+
 import type { IdFactory } from '../ids.js';
 import type { Reference, CreativeWorkFields } from '../types.js';
-import { applyCreativeWorkFields } from '../types.js';
+import {
+    applyCreativeWorkFields,
+    spreadRemainingProperties,
+    CREATIVE_WORK_KEYS,
+} from '../types.js';
 
-export interface WebSiteInput extends CreativeWorkFields {
+interface WebSiteCoreFields extends CreativeWorkFields {
     /** Site URL, typically with trailing slash. */
     url: string;
     name: string;
@@ -10,9 +16,18 @@ export interface WebSiteInput extends CreativeWorkFields {
     publisher: Reference;
     /** Optional navigation reference (e.g. ids.navigation). */
     hasPart?: Reference;
-    /** Escape hatch for extra schema.org properties. */
-    extra?: Record<string, unknown>;
 }
+
+export type WebSiteInput = WebSiteCoreFields &
+    Omit<Partial<WebSiteLeaf>, keyof WebSiteCoreFields | '@type'>;
+
+const HANDLED_KEYS = new Set<string>([
+    ...CREATIVE_WORK_KEYS,
+    'url',
+    'name',
+    'publisher',
+    'hasPart',
+]);
 
 /**
  * Build a schema.org WebSite piece. This is the site-wide singleton;
@@ -24,9 +39,12 @@ export function buildWebSite(input: WebSiteInput, ids: IdFactory): Record<string
         '@id': ids.website,
         url: input.url,
         name: input.name,
+        publisher: input.publisher,
     };
-    piece.publisher = input.publisher;
+
     applyCreativeWorkFields(piece, input);
     if (input.hasPart !== undefined) piece.hasPart = input.hasPart;
-    return { ...piece, ...input.extra };
+    spreadRemainingProperties(piece, input, HANDLED_KEYS);
+
+    return piece;
 }

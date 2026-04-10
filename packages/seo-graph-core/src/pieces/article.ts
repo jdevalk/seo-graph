@@ -1,8 +1,28 @@
+import type { ArticleLeaf } from 'schema-dts';
+
 import type { IdFactory } from '../ids.js';
 import type { Reference, CreativeWorkFields } from '../types.js';
-import { applyCreativeWorkFields } from '../types.js';
+import {
+    applyCreativeWorkFields,
+    spreadRemainingProperties,
+    CREATIVE_WORK_KEYS,
+} from '../types.js';
 
-export interface ArticleInput extends CreativeWorkFields {
+/**
+ * Concrete Article subtype. `Article` is the default; use `BlogPosting`
+ * for blog posts, `NewsArticle` for journalism, `TechArticle` for
+ * technical docs, `ScholarlyArticle` for academic papers, or `Report`
+ * for data/research reports.
+ */
+export type ArticleType =
+    | 'Article'
+    | 'BlogPosting'
+    | 'NewsArticle'
+    | 'TechArticle'
+    | 'ScholarlyArticle'
+    | 'Report';
+
+interface ArticleCoreFields extends CreativeWorkFields {
     /** Canonical URL of the article's page. The @id is `${url}#article`. */
     url: string;
     /** Reference to the enclosing WebPage (usually ids.webPage(url)). */
@@ -21,33 +41,27 @@ export interface ArticleInput extends CreativeWorkFields {
     /** Top-level category, emitted as `articleSection`. */
     articleSection?: string;
     wordCount?: number;
-    /**
-     * Full or truncated article body, emitted as `articleBody`. Pass from
-     * the aggregator / build step; core doesn't derive it from anything.
-     */
     articleBody?: string;
-    extra?: Record<string, unknown>;
 }
 
-/**
- * Concrete Article subtype. `Article` is the default; use `BlogPosting`
- * for blog posts, `NewsArticle` for journalism, `TechArticle` for
- * technical docs, `ScholarlyArticle` for academic papers, or `Report`
- * for data/research reports.
- */
-export type ArticleType =
-    | 'Article'
-    | 'BlogPosting'
-    | 'NewsArticle'
-    | 'TechArticle'
-    | 'ScholarlyArticle'
-    | 'Report';
+export type ArticleInput = ArticleCoreFields &
+    Omit<Partial<ArticleLeaf>, keyof ArticleCoreFields | '@type'>;
+
+const HANDLED_KEYS = new Set<string>([
+    ...CREATIVE_WORK_KEYS,
+    'url',
+    'isPartOf',
+    'author',
+    'publisher',
+    'headline',
+    'image',
+    'articleSection',
+    'wordCount',
+    'articleBody',
+]);
 
 /**
- * Build a schema.org Article piece. The caller is responsible for pre-
- * computing the references (author, publisher, isPartOf, image) using the
- * IdFactory, so core doesn't have to know anything about how the site
- * models its Person/Organization/WebPage entities.
+ * Build a schema.org Article piece.
  */
 export function buildArticle(
     input: ArticleInput,
@@ -69,6 +83,7 @@ export function buildArticle(
     if (input.articleSection !== undefined) piece.articleSection = input.articleSection;
     if (input.wordCount !== undefined) piece.wordCount = input.wordCount;
     if (input.articleBody !== undefined) piece.articleBody = input.articleBody;
+    spreadRemainingProperties(piece, input, HANDLED_KEYS);
 
-    return { ...piece, ...input.extra };
+    return piece;
 }

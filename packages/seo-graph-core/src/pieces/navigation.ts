@@ -1,19 +1,24 @@
+import type { SiteNavigationElementLeaf } from 'schema-dts';
+
 import type { IdFactory } from '../ids.js';
 import type { Reference } from '../types.js';
+import { spreadRemainingProperties } from '../types.js';
 
 export interface NavigationItem {
     name: string;
     url: string;
 }
 
-export interface SiteNavigationInput {
-    /** Human-readable nav name, e.g. 'Main navigation'. */
+interface SiteNavigationCoreFields {
     name: string;
-    /** Parent WebSite reference (usually ids.website). */
     isPartOf: Reference;
     items: readonly NavigationItem[];
-    extra?: Record<string, unknown>;
 }
+
+export type SiteNavigationInput = SiteNavigationCoreFields &
+    Omit<Partial<SiteNavigationElementLeaf>, keyof SiteNavigationCoreFields | '@type'>;
+
+const HANDLED_KEYS = new Set<string>(['name', 'isPartOf', 'items']);
 
 /**
  * Build a schema.org SiteNavigationElement whose `hasPart` is a list of
@@ -28,12 +33,16 @@ export function buildSiteNavigationElement(
         name: item.name,
         url: item.url,
     }));
-    return {
+
+    const piece: Record<string, unknown> = {
         '@type': 'SiteNavigationElement',
         '@id': ids.navigation,
         name: input.name,
         isPartOf: input.isPartOf,
         hasPart,
-        ...input.extra,
     };
+
+    spreadRemainingProperties(piece, input, HANDLED_KEYS);
+
+    return piece;
 }

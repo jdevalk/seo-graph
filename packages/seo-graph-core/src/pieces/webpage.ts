@@ -1,6 +1,12 @@
+import type { WebPageLeaf } from 'schema-dts';
+
 import type { IdFactory } from '../ids.js';
 import type { Reference, CreativeWorkFields } from '../types.js';
-import { applyCreativeWorkFields } from '../types.js';
+import {
+    applyCreativeWorkFields,
+    spreadRemainingProperties,
+    CREATIVE_WORK_KEYS,
+} from '../types.js';
 
 /**
  * Concrete WebPage subtype. `WebPage` is the default; use `ProfilePage`
@@ -8,19 +14,14 @@ import { applyCreativeWorkFields } from '../types.js';
  */
 export type WebPageType = 'WebPage' | 'ProfilePage' | 'CollectionPage';
 
-export interface WebPageInput extends CreativeWorkFields {
+interface WebPageCoreFields extends CreativeWorkFields {
     /** Canonical URL of the page. The WebPage @id equals this URL. */
     url: string;
     /** Page title (becomes `name`). */
     name: string;
     /** Reference to the site-wide WebSite (usually ids.website). */
     isPartOf: Reference;
-    /**
-     * Reference to the BreadcrumbList for this page (usually
-     * `ids.breadcrumb(url)`). Optional — schema.org treats `breadcrumb`
-     * as optional on `WebPage`, so consumers without breadcrumbs can
-     * simply omit it.
-     */
+    /** Reference to the BreadcrumbList for this page. */
     breadcrumb?: Reference;
     /** Reference to the primary ImageObject, if any. */
     primaryImage?: Reference;
@@ -29,16 +30,23 @@ export interface WebPageInput extends CreativeWorkFields {
      * targeting the page URL.
      */
     potentialAction?: ReadonlyArray<Record<string, unknown>>;
-    extra?: Record<string, unknown>;
 }
+
+export type WebPageInput = WebPageCoreFields &
+    Omit<Partial<WebPageLeaf>, keyof WebPageCoreFields | '@type'>;
+
+const HANDLED_KEYS = new Set<string>([
+    ...CREATIVE_WORK_KEYS,
+    'url',
+    'name',
+    'isPartOf',
+    'breadcrumb',
+    'primaryImage',
+    'potentialAction',
+]);
 
 /**
  * Build a schema.org WebPage (or ProfilePage / CollectionPage) piece.
- *
- * Choose the concrete subtype via the second argument; defaults to
- * `WebPage`. Dispatch (e.g. "blog listing pages use CollectionPage")
- * is a caller concern, not a core concern — core ships the primitives
- * and lets the caller decide.
  */
 export function buildWebPage(
     input: WebPageInput,
@@ -58,13 +66,10 @@ export function buildWebPage(
         potentialAction,
     };
 
-    if (input.breadcrumb !== undefined) {
-        piece.breadcrumb = input.breadcrumb;
-    }
-    if (input.primaryImage !== undefined) {
-        piece.primaryImageOfPage = input.primaryImage;
-    }
+    if (input.breadcrumb !== undefined) piece.breadcrumb = input.breadcrumb;
+    if (input.primaryImage !== undefined) piece.primaryImageOfPage = input.primaryImage;
     applyCreativeWorkFields(piece, input);
+    spreadRemainingProperties(piece, input, HANDLED_KEYS);
 
-    return { ...piece, ...input.extra };
+    return piece;
 }

@@ -1,39 +1,38 @@
 import type { Thing } from 'schema-dts';
 
 /**
- * Escape hatch: build an arbitrary schema.org piece from a raw object.
+ * Build an arbitrary schema.org piece from a raw object.
  *
- * Use this when the built-in piece builders don't cover what you need —
- * e.g. a Recipe, Event, Product, or a LocalBusiness subtype that needs
- * a specific shape not captured by `buildOrganization`.
- *
- * Pass a `schema-dts` type as the generic parameter to get autocomplete
- * for that type's properties:
+ * Pass a `schema-dts` type as the generic parameter to get autocomplete.
+ * The `@type` value in your input narrows the union to the matching leaf
+ * type, so `buildPiece<Product>` with `'@type': 'Product'` gives you
+ * full ProductLeaf autocomplete — no need to import Leaf types.
  *
  * ```ts
- * import type { VacationRental } from 'schema-dts';
- * buildCustomPiece<VacationRental>({
- *     '@type': 'VacationRental',
- *     '@id': `${siteUrl}#rental`,
- *     name: 'Villa Example',
- *     numberOfRooms: 4,         // ← autocomplete from schema-dts
- *     petsAllowed: true,        // ← autocomplete from schema-dts
+ * import type { Product } from 'schema-dts';
+ * buildPiece<Product>({
+ *     '@type': 'Product',
+ *     '@id': `${url}#product`,
+ *     name: 'Running Shoe',
+ *     color: 'Black',           // ← autocomplete from schema-dts
+ *     sku: 'ABC123',            // ← autocomplete from schema-dts
  * });
  * ```
  *
- * Without a generic, the input is untyped — any `@type` + properties
- * are accepted. This keeps simple call sites (`buildCustomPiece({...})`)
- * working without extra ceremony.
+ * Without a generic, the input is untyped — any properties are accepted.
  */
-export function buildCustomPiece<T extends Thing>(
-    raw: Partial<T> & { '@type': string | readonly string[]; '@id'?: string },
+export function buildPiece<T extends Thing, TType extends string = string>(
+    raw: Partial<Extract<T, { '@type': TType }>> & {
+        '@type': TType;
+        '@id'?: string;
+    },
 ): Record<string, unknown>;
-export function buildCustomPiece(
+export function buildPiece(
     raw: Record<string, unknown> & {
         '@type': string | readonly string[];
         '@id'?: string;
     },
 ): Record<string, unknown>;
-export function buildCustomPiece(raw: Record<string, unknown>): Record<string, unknown> {
+export function buildPiece(raw: Record<string, unknown>): Record<string, unknown> {
     return raw;
 }

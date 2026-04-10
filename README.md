@@ -46,17 +46,18 @@ pnpm test
 - **No page-type enum in core.** Core exposes piece builders. Dispatch lives in
   callers (joost.blog, EmDash, limonaia.house, …). This keeps the core's API
   surface small and avoids baking a specific content model into a shared lib.
-- **`schema-dts` is the type substrate.** All piece builders return strongly-
-  typed schema.org values. Every `Organization` and `LocalBusiness` subtype is
-  already typed; the core doesn't hand-maintain a subtype list.
-- **Shared `CreativeWorkFields`.** Properties common to all `CreativeWork`
-  subtypes (`description`, `inLanguage`, `datePublished`, `dateModified`,
-  `about`, copyright/licensing fields) live in a single interface that
-  `WebSiteInput`, `WebPageInput`, and `ArticleInput` extend.
-- **Subtypes via parameter.** `buildWebPage`, `buildArticle`, and
-  `buildOrganization` all accept a third argument for the concrete schema.org
-  type (e.g. `'CollectionPage'`, `'BlogPosting'`, `'Restaurant'`). Defaults
-  are the base type.
+- **`schema-dts` is the type substrate.** All builders accept schema.org
+  properties at the top level with full autocomplete from `schema-dts`.
+  `buildPiece<Product>` gives you every Product property typed; the `@type`
+  value narrows union types to the matching leaf automatically.
+- **Dedicated builders for non-trivial work.** Seven builders handle ID
+  generation, date conversion, and transforms (`buildWebSite`, `buildWebPage`,
+  `buildArticle`, `buildBreadcrumbList`, `buildImageObject`, `buildVideoObject`,
+  `buildSiteNavigationElement`). Everything else — Person, Organization, Blog,
+  Product, Recipe, Event, etc. — uses `buildPiece<Type>`.
+- **Dangling reference validation.** `assembleGraph(pieces, { warnOnDanglingReferences: true })`
+  warns when a `{ '@id': '...' }` reference doesn't resolve to any entity in
+  the graph.
 - **Breadcrumbs are an input, not a derivation.** Callers pre-compute the
   breadcrumb list. The Astro integration ships `breadcrumbsFromUrl` to
   derive crumbs from an `Astro.url`, but the core itself has no

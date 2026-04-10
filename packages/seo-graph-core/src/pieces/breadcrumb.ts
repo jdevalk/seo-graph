@@ -1,4 +1,7 @@
+import type { BreadcrumbListLeaf } from 'schema-dts';
+
 import type { IdFactory } from '../ids.js';
+import { spreadRemainingProperties } from '../types.js';
 
 export interface BreadcrumbItem {
     /** Display name for this crumb, e.g. 'Home', 'Blog', 'Open Source'. */
@@ -7,24 +10,20 @@ export interface BreadcrumbItem {
     url: string;
 }
 
-export interface BreadcrumbListInput {
-    /**
-     * The URL of the page this breadcrumb belongs to. The @id is
-     * `${url}#breadcrumb`.
-     */
+interface BreadcrumbListCoreFields {
+    /** The URL of the page this breadcrumb belongs to. */
     url: string;
     /** Pre-computed ordered list of crumbs, root first. */
     items: readonly BreadcrumbItem[];
-    extra?: Record<string, unknown>;
 }
+
+export type BreadcrumbListInput = BreadcrumbListCoreFields &
+    Omit<Partial<BreadcrumbListLeaf>, keyof BreadcrumbListCoreFields | '@type'>;
+
+const HANDLED_KEYS = new Set<string>(['url', 'items']);
 
 /**
  * Build a schema.org BreadcrumbList piece.
- *
- * Breadcrumbs are an input to core, not a derivation. The caller knows
- * its routing conventions; core just wraps the pre-computed items in the
- * right schema.org shape. If you need to derive breadcrumbs from an
- * Astro URL, use `@jdevalk/astro-seo-graph`'s breadcrumb helper instead.
  */
 export function buildBreadcrumbList(
     input: BreadcrumbListInput,
@@ -37,10 +36,14 @@ export function buildBreadcrumbList(
         name: item.name,
         item: index === lastIndex ? { '@id': ids.webPage(item.url) } : item.url,
     }));
-    return {
+
+    const piece: Record<string, unknown> = {
         '@type': 'BreadcrumbList',
         '@id': ids.breadcrumb(input.url),
         itemListElement,
-        ...input.extra,
     };
+
+    spreadRemainingProperties(piece, input, HANDLED_KEYS);
+
+    return piece;
 }

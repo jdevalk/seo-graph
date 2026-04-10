@@ -31,13 +31,11 @@ Two packages:
 │  @jdevalk/seo-graph-core                          │
 │                                                   │
 │  makeIds()                     IdFactory          │
-│  buildArticle()                buildPerson()      │
 │  buildWebSite()                buildWebPage()     │
-│  buildOrganization()                              │
+│  buildArticle()                buildPiece()       │
 │  buildBreadcrumbList()                            │
 │  buildImageObject()            buildVideoObject() │
 │  buildSiteNavigationElement()                     │
-│  buildCustomPiece()                               │
 │  assembleGraph()                                  │
 │  deduplicateByGraphId()                           │
 └──────────────┬────────────────────────────────────┘
@@ -153,8 +151,11 @@ resolution.
 
 ## Piece builders reference
 
-Every builder takes an input object and the `IdFactory`, and returns a
-`GraphEntity` (a plain object with `@type` and usually `@id`).
+Every builder takes an input object and returns a `GraphEntity` (a plain object
+with `@type` and usually `@id`). The specialized builders (`buildWebSite`,
+`buildWebPage`, `buildArticle`, etc.) also take the `IdFactory` as a second
+parameter. The generic `buildPiece` builder takes only the input object — you
+set the `@id` directly in the input.
 
 ### buildWebSite
 
@@ -170,7 +171,7 @@ buildWebSite(
         about: { '@id': ids.person }, // optional — what this site is about
         inLanguage: 'en-US', // optional — default content language
         hasPart: { '@id': ids.navigation }, // optional — navigation ref
-        extra: {}, // optional — escape hatch for any schema.org property
+        // ...additional schema-dts properties accepted at top level
     },
     ids,
 );
@@ -178,7 +179,7 @@ buildWebSite(
 
 **Adding a SearchAction** (recommended for sites with search):
 
-Use the `extra` field to add a `potentialAction` with a `SearchAction`. This
+Add a `potentialAction` with a `SearchAction` directly at the top level. This
 tells search engines and agents how to search your site:
 
 ```ts
@@ -187,18 +188,16 @@ buildWebSite(
         url: 'https://example.com/',
         name: 'My Site',
         publisher: { '@id': ids.person },
-        extra: {
-            potentialAction: {
-                '@type': 'SearchAction',
-                target: {
-                    '@type': 'EntryPoint',
-                    urlTemplate: 'https://example.com/?s={search_term_string}',
-                },
-                'query-input': {
-                    '@type': 'PropertyValueSpecification',
-                    valueRequired: true,
-                    valueName: 'search_term_string',
-                },
+        potentialAction: {
+            '@type': 'SearchAction',
+            target: {
+                '@type': 'EntryPoint',
+                urlTemplate: 'https://example.com/?s={search_term_string}',
+            },
+            'query-input': {
+                '@type': 'PropertyValueSpecification',
+                valueRequired: true,
+                valueName: 'search_term_string',
             },
         },
     },
@@ -207,102 +206,6 @@ buildWebSite(
 ```
 
 This is the pattern used by most WordPress sites and many other CMSes.
-
-### buildPerson
-
-Creates a `Person` entity. Typically the site owner or author.
-
-```ts
-buildPerson(
-    {
-        name: 'Jane Doe', // required
-        familyName: 'Doe', // optional
-        birthDate: '1990-01-15', // optional
-        gender: 'female', // optional
-        nationality: { '@id': ids.country('US') }, // optional
-        description: 'Software engineer...', // optional
-        jobTitle: 'Lead Engineer', // optional
-        knowsLanguage: ['en', 'es'], // optional
-        url: 'https://example.com/about/', // optional
-        image: { '@id': ids.personImage }, // optional — ref to ImageObject
-        sameAs: [
-            // optional — social/professional profiles
-            'https://twitter.com/janedoe',
-            'https://github.com/janedoe',
-            'https://linkedin.com/in/janedoe',
-        ],
-        worksFor: [
-            // optional — EmployeeRole objects
-            {
-                '@type': 'EmployeeRole',
-                roleName: 'Lead Engineer',
-                startDate: '2022-01-01',
-                worksFor: { '@id': ids.organization('acme') },
-            },
-        ],
-        extra: {}, // optional — escape hatch
-    },
-    ids,
-);
-```
-
-### buildOrganization
-
-Creates an `Organization` or any subtype (`LocalBusiness`, `Restaurant`, etc.).
-
-```ts
-import type { LocalBusiness } from 'schema-dts';
-
-// Basic organization
-buildOrganization(
-    {
-        slug: 'acme', // required — stable slug for @id
-        name: 'Acme Corp', // required
-        url: 'https://acme.com/', // optional
-        description: 'We make things.', // optional
-        logo: 'https://acme.com/logo.png', // optional — URL string or ImageObject ref
-        sameAs: ['https://twitter.com/acme'], // optional
-        extra: {}, // optional — escape hatch
-    },
-    ids,
-);
-
-// Subtype (e.g. LocalBusiness, Restaurant, etc.)
-buildOrganization<LocalBusiness>(
-    {
-        slug: 'my-restaurant',
-        name: 'Chez Example',
-        url: 'https://example.com/',
-        extra: {
-            address: {
-                '@type': 'PostalAddress',
-                streetAddress: '123 Main St',
-                addressLocality: 'Springfield',
-                addressRegion: 'IL',
-                postalCode: '62701',
-                addressCountry: 'US',
-            },
-            telephone: '+1-555-123-4567',
-            priceRange: '$$',
-            servesCuisine: 'French',
-            openingHoursSpecification: [
-                {
-                    '@type': 'OpeningHoursSpecification',
-                    dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                    opens: '11:00',
-                    closes: '22:00',
-                },
-            ],
-        },
-    },
-    ids,
-    'Restaurant',
-);
-```
-
-**The `subtype` parameter:** Pass the schema.org type name as the third argument
-(e.g. `'Restaurant'`, `'LocalBusiness'`, `'Dentist'`). Use the matching
-`schema-dts` type as the generic parameter for autocomplete on `extra`.
 
 ### buildWebPage
 
@@ -326,7 +229,7 @@ buildWebPage(
         license: 'https://creativecommons.org/licenses/by/4.0/', // optional — license URL
         isAccessibleForFree: true, // optional
         potentialAction: [], // optional — defaults to ReadAction
-        extra: {}, // optional — escape hatch
+        // ...additional schema-dts properties accepted at top level
     },
     ids,
     'WebPage',
@@ -361,7 +264,7 @@ buildArticle(
         articleSection: 'Technology', // optional — top-level category
         wordCount: 1500, // optional
         articleBody: 'The full text...', // optional — plain text, max ~10K chars
-        extra: {}, // optional — escape hatch
+        // ...additional schema-dts properties accepted at top level
     },
     ids,
     'Article',
@@ -387,7 +290,7 @@ buildBreadcrumbList({
         { name: 'Blog', url: 'https://example.com/blog/' },
         { name: 'My Post', url: 'https://example.com/blog/my-post/' },
     ],
-    extra: {},                                 // optional
+    // ...additional schema-dts properties accepted at top level
 }, ids);
 ````
 
@@ -411,7 +314,7 @@ buildImageObject(
         height: 630, // required
         inLanguage: 'en-US', // optional
         caption: 'A photo of...', // optional
-        extra: {}, // optional
+        // ...additional schema-dts properties accepted at top level
     },
     ids,
 );
@@ -445,7 +348,7 @@ buildVideoObject(
         uploadDate: new Date('2026-01-15'), // optional
         duration: 'PT30M', // optional — ISO 8601
         transcript: 'Full transcript text...', // optional
-        extra: {}, // optional
+        // ...additional schema-dts properties accepted at top level
     },
     ids,
 );
@@ -471,53 +374,140 @@ buildSiteNavigationElement(
             { name: 'Blog', url: 'https://example.com/blog/' },
             { name: 'About', url: 'https://example.com/about/' },
         ],
-        extra: {}, // optional
+        // ...additional schema-dts properties accepted at top level
     },
     ids,
 );
 ```
 
-### buildCustomPiece
+### buildPiece
 
-Escape hatch for any schema.org type not covered by the built-in builders.
-Pass a `schema-dts` type as the generic parameter to get full autocomplete
-for that type's properties — this way TypeScript surfaces missing fields
-instead of silently accepting whatever you pass.
+The generic typed builder for any schema.org type. This is the go-to builder
+for `Person`, `Organization`, `Blog`, `Product`, `Recipe`, `Event`, `Course`,
+`SoftwareApplication`, `VacationRental`, `FAQPage`, `PodcastSeries`,
+`PodcastEpisode`, and any other schema.org type not covered by the specialized
+builders (`buildWebSite`, `buildWebPage`, `buildArticle`, etc.).
+
+Pass a `schema-dts` type as the generic parameter for full autocomplete.
+The `@type` value in the input narrows union types to the matching leaf — so
+`buildPiece<Product>` with `'@type': 'Product'` gives `ProductLeaf` autocomplete.
+No need to import Leaf types separately.
+
+Callers are responsible for setting `@id` using the `IdFactory` (e.g.
+`ids.person`, `ids.organization('slug')`) or a custom ID string.
 
 ```ts
-import type { Recipe } from 'schema-dts';
+import type { Person, Organization, Restaurant, Blog, Product, Recipe, Event } from 'schema-dts';
 
-buildCustomPiece<Recipe>({
-    '@type': 'Recipe',
-    '@id': 'https://example.com/recipes/pasta/#recipe',
-    name: 'Simple Pasta',
-    author: { '@id': ids.person },
-    prepTime: 'PT15M',
-    cookTime: 'PT20M',
-    recipeIngredient: ['200g pasta', '2 cloves garlic', '...'],
-    recipeInstructions: [
+// Person (site-wide)
+buildPiece<Person>({
+    '@type': 'Person',
+    '@id': ids.person,
+    name: 'Jane Doe',
+    url: 'https://example.com/about/',
+    image: { '@id': ids.personImage },
+    sameAs: ['https://twitter.com/janedoe', 'https://github.com/janedoe'],
+    jobTitle: 'Lead Engineer',
+    worksFor: [
         {
-            '@type': 'HowToStep',
-            text: 'Boil the pasta.',
+            '@type': 'EmployeeRole',
+            roleName: 'Lead Engineer',
+            startDate: '2022-01-01',
+            worksFor: { '@id': ids.organization('acme') },
         },
     ],
+});
+
+// Organization
+buildPiece<Organization>({
+    '@type': 'Organization',
+    '@id': ids.organization('acme'),
+    name: 'Acme Corp',
+    url: 'https://acme.com/',
+    logo: 'https://acme.com/logo.png',
+    sameAs: ['https://twitter.com/acme'],
+});
+
+// Organization subtype (e.g. Restaurant) — use the subtype directly as the generic
+buildPiece<Restaurant>({
+    '@type': 'Restaurant',
+    '@id': ids.organization('chez-example'),
+    name: 'Chez Example',
+    url: 'https://chezexample.com/',
+    servesCuisine: 'French',
+    priceRange: '$$$',
+    address: {
+        '@type': 'PostalAddress',
+        streetAddress: '123 Rue de la Paix',
+        addressLocality: 'Paris',
+        addressCountry: 'FR',
+    },
+});
+
+// Product
+buildPiece<Product>({
+    '@type': 'Product',
+    '@id': `${url}#product`,
+    name: 'Running Shoe',
+    brand: 'Nike',
+    sku: 'ABC123',
+    offers: { '@type': 'Offer', price: 99.99, priceCurrency: 'USD' },
+});
+
+// Blog
+buildPiece<Blog>({
+    '@type': 'Blog',
+    '@id': `${siteUrl}/blog/#blog`,
+    name: 'My Blog',
+    url: `${siteUrl}/blog/`,
+    publisher: { '@id': ids.person },
+    inLanguage: 'en-US',
+});
+
+// Recipe
+buildPiece<Recipe>({
+    '@type': 'Recipe',
+    '@id': `${url}#recipe`,
+    name: 'Simple Pasta',
+    author: { '@id': ids.person },
+    prepTime: 'PT10M',
+    cookTime: 'PT20M',
+    totalTime: 'PT30M',
+    recipeYield: '4 servings',
+    recipeCategory: 'Main course',
+    recipeCuisine: 'Italian',
+    recipeIngredient: ['400g spaghetti', '200g guanciale', '4 egg yolks'],
+    recipeInstructions: [
+        { '@type': 'HowToStep', text: 'Boil the spaghetti.' },
+        { '@type': 'HowToStep', text: 'Fry the guanciale.' },
+    ],
+});
+
+// Event
+buildPiece<Event>({
+    '@type': 'Event',
+    '@id': 'https://example.com/events/conf/#event',
+    name: 'JavaScript Conference 2026',
+    startDate: '2026-09-15T09:00:00+02:00',
+    endDate: '2026-09-17T18:00:00+02:00',
+    location: {
+        '@type': 'Place',
+        name: 'Congress Center',
+    },
 });
 ```
 
 Without a generic, the input is untyped — any properties are accepted:
 
 ```ts
-buildCustomPiece({
-    '@type': 'Recipe',
-    '@id': 'https://example.com/recipes/pasta/#recipe',
-    name: 'Simple Pasta',
+buildPiece({
+    '@type': 'Event',
+    '@id': 'https://example.com/events/conf/#event',
+    name: 'JavaScript Conference 2026',
 });
 ```
 
-**When to use:** `Product`, `Event`, `Recipe`, `Course`, `SoftwareApplication`,
-`VacationRental`, `FAQPage`, `HowTo`, or any other schema.org type.
-
-**Always prefer the typed generic** (`buildCustomPiece<Recipe>`) over the
+**Always prefer the typed generic** (`buildPiece<Event>`) over the
 untyped form. The generic gives you autocomplete for every property on the
 chosen type, making it much harder to miss recommended fields like
 `potentialAction`, `geo`, or `offers`.
@@ -541,6 +531,16 @@ const graph = assembleGraph([
 
 **Always call this last.** It handles deduplication: if multiple pages produce
 the same `WebSite` or `Person` entity (same `@id`), the first occurrence wins.
+
+**Dangling reference validation:** Pass `warnOnDanglingReferences: true` to
+validate that every `{ '@id': '...' }` reference in the graph resolves to an
+actual entity. This helps catch broken links — for example, a `WebSite`
+referencing a `Person` that was never included in the pieces array.
+
+```ts
+const graph = assembleGraph(pieces, { warnOnDanglingReferences: true });
+// Warns: [seo-graph] Dangling reference in WebSite: { "@id": "..." } does not match any entity in the graph.
+```
 
 ### deduplicateByGraphId
 
@@ -568,19 +568,21 @@ about page.
 **For every page** (site-wide entities):
 
 - `buildWebSite` — publisher points to Person
-- `buildPerson` — the blog author
+- `buildPiece<Person>` — the blog author
 - `buildImageObject` — person's profile photo (use `id: ids.personImage`)
-- `buildCustomPiece` — a `Blog` entity representing the blog as a publication
+- `buildPiece<Blog>` — a `Blog` entity representing the blog as a publication
 
 The `Blog` entity is a `CreativeWork` that represents the blog as a whole,
 separate from the `WebSite`. Individual `BlogPosting` entries reference the
 Blog via `isPartOf`. This is the pattern used by jonoalderson.com.
 
 ```ts
+import type { Blog } from 'schema-dts';
+
 const blogId = `${siteUrl}/blog/#blog`;
 
 // Include on every page as a site-wide entity
-buildCustomPiece({
+buildPiece<Blog>({
     '@type': 'Blog',
     '@id': blogId,
     name: 'My Blog',
@@ -596,13 +598,15 @@ buildCustomPiece({
 Use `BlogPosting` instead of `Article` and link it to the Blog:
 
 ```ts
+import type { Person, Blog } from 'schema-dts';
+
 const blogId = `${siteUrl}/blog/#blog`;
 
 const pieces = [
     buildWebSite({ url: siteUrl, name: 'My Blog', publisher: { '@id': ids.person } }, ids),
-    buildPerson({ name: 'Jane Doe', url: aboutUrl, image: { '@id': ids.personImage }, sameAs: [...] }, ids),
+    buildPiece<Person>({ '@type': 'Person', '@id': ids.person, name: 'Jane Doe', url: aboutUrl, image: { '@id': ids.personImage }, sameAs: [...] }),
     buildImageObject({ id: ids.personImage, url: profilePhotoUrl, width: 400, height: 400 }, ids),
-    buildCustomPiece({
+    buildPiece<Blog>({
         '@type': 'Blog',
         '@id': blogId,
         name: 'My Blog',
@@ -618,11 +622,10 @@ const pieces = [
         dateModified,
         author: { '@id': ids.person },
         publisher: { '@id': ids.person },
-        isPartOf: { '@id': ids.webPage(url) },
+        isPartOf: [{ '@id': ids.webPage(url) }, { '@id': blogId }],
         image: { '@id': ids.primaryImage(url) },
         articleSection: category,
         wordCount,
-        extra: { isPartOf: [{ '@id': ids.webPage(url) }, { '@id': blogId }] },
     }, ids, 'BlogPosting'),
     buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Blog', url: blogUrl }, { name: title, url }] }, ids),
     buildImageObject({ pageUrl: url, url: featureImageUrl, width: 1200, height: 630 }, ids),
@@ -630,9 +633,9 @@ const pieces = [
 const graph = assembleGraph(pieces);
 ```
 
-**Note:** The `extra.isPartOf` override replaces the default `isPartOf` to link
-the posting to both the `WebPage` and the `Blog`. If you don't need the `Blog`
-link, just use `isPartOf: { '@id': ids.webPage(url) }` directly.
+**Note:** The `isPartOf` array links the posting to both the `WebPage` and the
+`Blog`. If you don't need the `Blog` link, just use
+`isPartOf: { '@id': ids.webPage(url) }` directly.
 
 **Blog listing** (`/blog/`):
 
@@ -734,14 +737,16 @@ A multi-author blog owned by a company.
 entities.
 
 ```ts
+import type { Organization, Blog, Person } from 'schema-dts';
+
 const ids = makeIds({ siteUrl: 'https://acme.com' });
 
 // Site-wide
 const blogId = 'https://acme.com/blog/#blog';
 const siteEntities = [
-    buildOrganization({ slug: 'acme', name: 'Acme Corp', url: 'https://acme.com/', logo: logoUrl, sameAs: [...] }, ids),
+    buildPiece<Organization>({ '@type': 'Organization', '@id': ids.organization('acme'), name: 'Acme Corp', url: 'https://acme.com/', logo: logoUrl, sameAs: [...] }),
     buildWebSite({ url: 'https://acme.com/', name: 'Acme Blog', publisher: { '@id': ids.organization('acme') } }, ids),
-    buildCustomPiece({
+    buildPiece<Blog>({
         '@type': 'Blog',
         '@id': blogId,
         name: 'The Acme Blog',
@@ -754,7 +759,7 @@ const siteEntities = [
 const authorId = 'https://acme.com/team/jane/#person';
 const postPieces = [
     ...siteEntities,
-    buildCustomPiece({ '@type': 'Person', '@id': authorId, name: 'Jane Doe', url: 'https://acme.com/team/jane/' }),
+    buildPiece<Person>({ '@type': 'Person', '@id': authorId, name: 'Jane Doe', url: 'https://acme.com/team/jane/' }),
     buildWebPage({ url, name: title, isPartOf: { '@id': ids.website }, datePublished }, ids),
     buildArticle({
         url,
@@ -763,8 +768,7 @@ const postPieces = [
         datePublished,
         author: { '@id': authorId },
         publisher: { '@id': ids.organization('acme') },
-        isPartOf: { '@id': ids.webPage(url) },
-        extra: { isPartOf: [{ '@id': ids.webPage(url) }, { '@id': blogId }] },
+        isPartOf: [{ '@id': ids.webPage(url) }, { '@id': blogId }],
     }, ids, 'BlogPosting'),
     buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Blog', url: blogUrl }, { name: title, url }] }, ids),
 ];
@@ -774,18 +778,23 @@ const postPieces = [
 
 ### E-commerce / product page
 
-Use `buildCustomPiece` for `Product`. The core doesn't have a built-in product
-builder because product schemas vary wildly.
+Use `buildPiece<Product>` for `Product` and `buildPiece<ProductGroup>` for `ProductGroup` entities.
 
 **Simple product (single variant):**
 
 ```ts
-import type { Product } from 'schema-dts';
+import type { Organization, Product } from 'schema-dts';
 
 const ids = makeIds({ siteUrl: 'https://shop.example.com' });
 
 const pieces = [
-    buildOrganization({ slug: 'shop', name: 'Example Shop', url: siteUrl, logo: logoUrl }, ids),
+    buildPiece<Organization>({
+        '@type': 'Organization',
+        '@id': ids.organization('shop'),
+        name: 'Example Shop',
+        url: siteUrl,
+        logo: logoUrl,
+    }),
     buildWebSite(
         { url: siteUrl, name: 'Example Shop', publisher: { '@id': ids.organization('shop') } },
         ids,
@@ -810,13 +819,12 @@ const pieces = [
         },
         ids,
     ),
-    buildCustomPiece<Product>({
+    buildPiece<Product>({
         '@type': 'Product',
         '@id': `${url}#product`,
         name: productName,
         description: productDescription,
-        image: productImageUrl,
-        brand: { '@type': 'Brand', name: 'Nike' },
+        brand: 'Nike',
         sku: 'ABC123',
         offers: {
             '@type': 'Offer',
@@ -839,6 +847,7 @@ const pieces = [
             },
             seller: { '@id': ids.organization('shop') },
         },
+        image: productImageUrl,
     }),
 ];
 ```
@@ -880,25 +889,23 @@ const variants = [
 
 const pieces = [
     // ...site-wide + WebPage + BreadcrumbList...
-    buildCustomPiece<ProductGroup>({
+    buildPiece<ProductGroup>({
         '@type': 'ProductGroup',
-        '@id': `${url}#product-group`,
+        '@id': `${url}#product`,
         name: 'Running Shoe',
         description: productDescription,
-        brand: { '@type': 'Brand', name: 'Nike' },
+        brand: 'Nike',
+        url,
         productGroupID: 'running-shoe',
         variesBy: ['https://schema.org/color', 'https://schema.org/size'],
-        hasVariant: variants.map((v) => ({ '@id': `${url}#variant-${v.sku}` })),
+        hasVariant: variants.map((v) => ({ '@id': `${url}#product-${v.sku}` })),
     }),
     ...variants.map((v) =>
-        buildCustomPiece<Product>({
+        buildPiece<Product>({
             '@type': 'Product',
-            '@id': `${url}#variant-${v.sku}`,
+            '@id': `${url}#product-${v.sku}`,
             name: v.name,
             sku: v.sku,
-            color: v.color,
-            size: v.size,
-            image: [productImageUrl],
             offers: {
                 '@type': 'Offer',
                 price: v.price,
@@ -919,6 +926,9 @@ const pieces = [
                     shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'US' },
                 },
             },
+            color: v.color,
+            size: v.size,
+            image: [productImageUrl],
         }),
     ),
 ];
@@ -936,48 +946,43 @@ import type { Restaurant } from 'schema-dts';
 const ids = makeIds({ siteUrl: 'https://chezexample.com' });
 
 const pieces = [
-    buildOrganization<Restaurant>(
-        {
-            slug: 'chez-example',
-            name: 'Chez Example',
-            url: 'https://chezexample.com/',
-            logo: logoUrl,
-            sameAs: ['https://instagram.com/chezexample'],
-            extra: {
-                address: {
-                    '@type': 'PostalAddress',
-                    streetAddress: '123 Rue de la Paix',
-                    addressLocality: 'Paris',
-                    postalCode: '75002',
-                    addressCountry: 'FR',
-                },
-                telephone: '+33-1-23-45-67-89',
-                priceRange: '$$$',
-                servesCuisine: 'French',
-                geo: {
-                    '@type': 'GeoCoordinates',
-                    latitude: 48.8698,
-                    longitude: 2.3311,
-                },
-                openingHoursSpecification: [
-                    {
-                        '@type': 'OpeningHoursSpecification',
-                        dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-                        opens: '12:00',
-                        closes: '14:30',
-                    },
-                    {
-                        '@type': 'OpeningHoursSpecification',
-                        dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-                        opens: '19:00',
-                        closes: '22:30',
-                    },
-                ],
-            },
+    buildPiece<Restaurant>({
+        '@type': 'Restaurant',
+        '@id': ids.organization('chez-example'),
+        name: 'Chez Example',
+        url: 'https://chezexample.com/',
+        logo: logoUrl,
+        sameAs: ['https://instagram.com/chezexample'],
+        address: {
+            '@type': 'PostalAddress',
+            streetAddress: '123 Rue de la Paix',
+            addressLocality: 'Paris',
+            postalCode: '75002',
+            addressCountry: 'FR',
         },
-        ids,
-        'Restaurant',
-    ),
+        telephone: '+33-1-23-45-67-89',
+        priceRange: '$$$',
+        servesCuisine: 'French',
+        geo: {
+            '@type': 'GeoCoordinates',
+            latitude: 48.8698,
+            longitude: 2.3311,
+        },
+        openingHoursSpecification: [
+            {
+                '@type': 'OpeningHoursSpecification',
+                dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                opens: '12:00',
+                closes: '14:30',
+            },
+            {
+                '@type': 'OpeningHoursSpecification',
+                dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                opens: '19:00',
+                closes: '22:30',
+            },
+        ],
+    }),
     buildWebSite(
         {
             url: siteUrl,
@@ -1004,20 +1009,21 @@ const pieces = [
 A freelancer or agency showcasing work.
 
 ```ts
+import type { Person } from 'schema-dts';
+
 const ids = makeIds({ siteUrl: 'https://janedoe.design' });
 
 // Homepage — CollectionPage showcasing work
 const pieces = [
-    buildPerson(
-        {
-            name: 'Jane Doe',
-            jobTitle: 'Product Designer',
-            url: siteUrl,
-            image: { '@id': ids.personImage },
-            sameAs: [dribbble, linkedin],
-        },
-        ids,
-    ),
+    buildPiece<Person>({
+        '@type': 'Person',
+        '@id': ids.person,
+        name: 'Jane Doe',
+        jobTitle: 'Product Designer',
+        url: siteUrl,
+        image: { '@id': ids.personImage },
+        sameAs: [dribbble, linkedin],
+    }),
     buildImageObject({ id: ids.personImage, url: headshot, width: 400, height: 400 }, ids),
     buildWebSite({ url: siteUrl, name: 'Jane Doe Design', publisher: { '@id': ids.person } }, ids),
     buildWebPage(
@@ -1078,13 +1084,18 @@ const projectPieces = [
 A docs site for a software project or API.
 
 ```ts
+import type { Organization } from 'schema-dts';
+
 const ids = makeIds({ siteUrl: 'https://docs.example.com' });
 
 const pieces = [
-    buildOrganization(
-        { slug: 'example', name: 'Example Inc', url: 'https://example.com/', logo: logoUrl },
-        ids,
-    ),
+    buildPiece<Organization>({
+        '@type': 'Organization',
+        '@id': ids.organization('example'),
+        name: 'Example Inc',
+        url: 'https://example.com/',
+        logo: logoUrl,
+    }),
     buildWebSite(
         {
             url: siteUrl,
@@ -1132,17 +1143,23 @@ container for `PodcastEpisode`. Include the series as a site-wide entity.
 **Video podcast (YouTube-based):**
 
 ```ts
-import type { PodcastSeries } from 'schema-dts';
+import type { Person, PodcastSeries } from 'schema-dts';
 
 const ids = makeIds({ siteUrl: 'https://podcast.example.com' });
 const seriesId = `${siteUrl}#podcast-series`;
 
 // Episode page
 const pieces = [
-    buildPerson({ name: 'Host Name', url: aboutUrl, image: { '@id': ids.personImage } }, ids),
+    buildPiece<Person>({
+        '@type': 'Person',
+        '@id': ids.person,
+        name: 'Host Name',
+        url: aboutUrl,
+        image: { '@id': ids.personImage },
+    }),
     buildImageObject({ id: ids.personImage, url: hostPhotoUrl, width: 400, height: 400 }, ids),
     buildWebSite({ url: siteUrl, name: 'My Podcast', publisher: { '@id': ids.person } }, ids),
-    buildCustomPiece<PodcastSeries>({
+    buildPiece<PodcastSeries>({
         '@type': 'PodcastSeries',
         '@id': seriesId,
         name: 'My Podcast',
@@ -1202,7 +1219,7 @@ const seriesId = `${siteUrl}#podcast-series`;
 const pieces = [
     // ...site-wide entities including PodcastSeries...
     buildWebPage({ url, name: episodeTitle, isPartOf: { '@id': ids.website }, datePublished }, ids),
-    buildCustomPiece<PodcastEpisode>({
+    buildPiece<PodcastEpisode>({
         '@type': 'PodcastEpisode',
         '@id': `${url}#episode`,
         name: episodeTitle,
@@ -1252,12 +1269,12 @@ const pieces = [
 ### Vacation rental / accommodation
 
 ```ts
-import type { VacationRental } from 'schema-dts';
+import type { Person, VacationRental } from 'schema-dts';
 
 const ids = makeIds({ siteUrl: 'https://myhouse.example.com' });
 
 const pieces = [
-    buildPerson({ name: 'Owner Name', url: siteUrl }, ids),
+    buildPiece<Person>({ '@type': 'Person', '@id': ids.person, name: 'Owner Name', url: siteUrl }),
     buildWebSite({ url: siteUrl, name: 'Villa Example', publisher: { '@id': ids.person } }, ids),
     buildWebPage(
         {
@@ -1267,7 +1284,7 @@ const pieces = [
         },
         ids,
     ),
-    buildCustomPiece<VacationRental>({
+    buildPiece<VacationRental>({
         '@type': 'VacationRental',
         '@id': `${siteUrl}#rental`,
         name: 'Villa Example',
@@ -1318,6 +1335,8 @@ const pieces = [
 ### Recipe site
 
 ```ts
+import type { Recipe } from 'schema-dts';
+
 const ids = makeIds({ siteUrl: 'https://recipes.example.com' });
 
 const pieces = [
@@ -1343,14 +1362,11 @@ const pieces = [
         },
         ids,
     ),
-    buildCustomPiece({
+    buildPiece<Recipe>({
         '@type': 'Recipe',
         '@id': `${url}#recipe`,
         name: recipeName,
-        description: recipeDescription,
-        image: recipeImageUrl,
         author: { '@id': ids.person },
-        datePublished: publishDate.toISOString(),
         prepTime: 'PT15M',
         cookTime: 'PT45M',
         totalTime: 'PT1H',
@@ -1373,6 +1389,9 @@ const pieces = [
             { '@type': 'HowToStep', text: 'Mix egg yolks with pecorino.' },
             { '@type': 'HowToStep', text: 'Combine and serve immediately.' },
         ],
+        description: recipeDescription,
+        image: recipeImageUrl,
+        datePublished: publishDate.toISOString(),
     }),
 ];
 ```
@@ -1384,7 +1403,7 @@ const pieces = [
 ```ts
 import type { Event } from 'schema-dts';
 
-buildCustomPiece<Event>({
+buildPiece<Event>({
     '@type': 'Event',
     '@id': `${url}#event`,
     name: 'JavaScript Conference 2026',
@@ -1420,10 +1439,16 @@ buildCustomPiece<Event>({
 ### SaaS / software product landing page
 
 ```ts
-import type { SoftwareApplication } from 'schema-dts';
+import type { Organization, SoftwareApplication } from 'schema-dts';
 
 const pieces = [
-    buildOrganization({ slug: 'myapp', name: 'MyApp Inc', url: siteUrl, logo: logoUrl }, ids),
+    buildPiece<Organization>({
+        '@type': 'Organization',
+        '@id': ids.organization('myapp'),
+        name: 'MyApp Inc',
+        url: siteUrl,
+        logo: logoUrl,
+    }),
     buildWebSite(
         { url: siteUrl, name: 'MyApp', publisher: { '@id': ids.organization('myapp') } },
         ids,
@@ -1436,7 +1461,7 @@ const pieces = [
         },
         ids,
     ),
-    buildCustomPiece<SoftwareApplication>({
+    buildPiece<SoftwareApplication>({
         '@type': 'SoftwareApplication',
         '@id': `${siteUrl}#app`,
         name: 'MyApp',
@@ -1484,7 +1509,7 @@ const pieces = [
         { url, name: 'Frequently Asked Questions', isPartOf: { '@id': ids.website } },
         ids,
     ),
-    buildCustomPiece<FAQPage>({
+    buildPiece<FAQPage>({
         '@type': 'FAQPage',
         '@id': `${url}#faq`,
         mainEntity: [
@@ -1516,7 +1541,7 @@ const pieces = [
 ```ts
 import type { Course } from 'schema-dts';
 
-buildCustomPiece<Course>({
+buildPiece<Course>({
     '@type': 'Course',
     '@id': `${url}#course`,
     name: 'Introduction to TypeScript',
@@ -1571,17 +1596,19 @@ policies. It can be applied to `Organization`, `Person`, or `CreativeWork`
 search engines and AI agents about your content's credibility.
 
 ```ts
+import type { Person, Blog, Organization } from 'schema-dts';
+
 // On a Person entity (personal blog)
-buildPerson({
+buildPiece<Person>({
+    '@type': 'Person',
+    '@id': ids.person,
     name: 'Jane Doe',
     url: aboutUrl,
-    extra: {
-        publishingPrinciples: `${siteUrl}/editorial-policy/`,
-    },
-}, ids),
+    publishingPrinciples: `${siteUrl}/editorial-policy/`,
+}),
 
 // On a Blog entity
-buildCustomPiece({
+buildPiece<Blog>({
     '@type': 'Blog',
     '@id': blogId,
     name: 'My Blog',
@@ -1591,13 +1618,12 @@ buildCustomPiece({
 }),
 
 // On an Organization (news site, company blog)
-buildOrganization({
-    slug: 'newsroom',
+buildPiece<Organization>({
+    '@type': 'Organization',
+    '@id': ids.organization('newsroom'),
     name: 'The Daily Example',
-    extra: {
-        publishingPrinciples: `${siteUrl}/ethics/`,
-    },
-}, ids),
+    publishingPrinciples: `${siteUrl}/ethics/`,
+}),
 ```
 
 ### Specialized policy sub-properties
@@ -1606,21 +1632,22 @@ For news and media organizations, schema.org has more specific sub-properties
 of `publishingPrinciples`:
 
 ```ts
-buildOrganization({
-    slug: 'newsroom',
+import type { Organization } from 'schema-dts';
+
+buildPiece<Organization>({
+    '@type': 'Organization',
+    '@id': ids.organization('newsroom'),
     name: 'The Daily Example',
     url: siteUrl,
-    extra: {
-        publishingPrinciples: `${siteUrl}/editorial-policy/`,
-        correctionsPolicy: `${siteUrl}/corrections/`,
-        verificationFactCheckingPolicy: `${siteUrl}/fact-checking/`,
-        actionableFeedbackPolicy: `${siteUrl}/feedback/`,
-        unnamedSourcesPolicy: `${siteUrl}/sources-policy/`,
-        ownershipFundingInfo: `${siteUrl}/about/ownership/`,
-        diversityStaffingReport: `${siteUrl}/diversity-report/`,
-        masthead: `${siteUrl}/team/`,
-    },
-}, ids),
+    publishingPrinciples: `${siteUrl}/editorial-policy/`,
+    correctionsPolicy: `${siteUrl}/corrections/`,
+    verificationFactCheckingPolicy: `${siteUrl}/fact-checking/`,
+    actionableFeedbackPolicy: `${siteUrl}/feedback/`,
+    unnamedSourcesPolicy: `${siteUrl}/sources-policy/`,
+    ownershipFundingInfo: `${siteUrl}/about/ownership/`,
+    diversityStaffingReport: `${siteUrl}/diversity-report/`,
+    masthead: `${siteUrl}/team/`,
+}),
 ```
 
 ### When to use which
@@ -1658,9 +1685,7 @@ buildWebPage({
     copyrightNotice: '© 2026 Jane Doe. All rights reserved.',
     license: 'https://creativecommons.org/licenses/by/4.0/',
     isAccessibleForFree: true,
-    extra: {
-        creditText: 'Jane Doe / janedoe.com',
-    },
+    creditText: 'Jane Doe / janedoe.com',
 }, ids),
 ```
 
@@ -1671,11 +1696,9 @@ buildArticle({
     url,
     headline: title,
     // ...other article properties...
-    extra: {
-        copyrightHolder: { '@id': ids.person },
-        copyrightYear: 2026,
-        license: 'https://creativecommons.org/licenses/by-sa/4.0/',
-    },
+    copyrightHolder: { '@id': ids.person },
+    copyrightYear: 2026,
+    license: 'https://creativecommons.org/licenses/by-sa/4.0/',
 }, ids, 'BlogPosting'),
 ```
 
@@ -1810,7 +1833,7 @@ Add to the `Product` or `ProductGroup` entity:
 ```ts
 import type { Product } from 'schema-dts';
 
-buildCustomPiece<Product>({
+buildPiece<Product>({
     '@type': 'Product',
     '@id': `${url}#product`,
     name: productName,
@@ -1865,7 +1888,7 @@ Add to the `VacationRental`, `Product`, or `Car` entity:
 ```ts
 import type { VacationRental } from 'schema-dts';
 
-buildCustomPiece<VacationRental>({
+buildPiece<VacationRental>({
     '@type': 'VacationRental',
     '@id': `${siteUrl}#rental`,
     name: 'Villa Example',
@@ -1981,24 +2004,22 @@ buildWebSite({
     url: siteUrl,
     name: 'My Shop',
     publisher: { '@id': ids.organization('shop') },
-    extra: {
-        potentialAction: {
-            '@type': 'SearchAction',
-            target: {
-                '@type': 'EntryPoint',
-                urlTemplate: `${siteUrl}search?q={search_term_string}`,
-            },
-            'query-input': {
-                '@type': 'PropertyValueSpecification',
-                valueRequired: true,
-                valueName: 'search_term_string',
-            },
+    potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${siteUrl}search?q={search_term_string}`,
+        },
+        'query-input': {
+            '@type': 'PropertyValueSpecification',
+            valueRequired: true,
+            valueName: 'search_term_string',
         },
     },
 }, ids),
 
 // Product: how to buy
-buildCustomPiece<Product>({
+buildPiece<Product>({
     '@type': 'Product',
     '@id': `${url}#product`,
     name: productName,
@@ -2037,7 +2058,7 @@ An entity can have multiple `@type` values. This is useful when an entity
 legitimately belongs to more than one type:
 
 ```ts
-buildCustomPiece({
+buildPiece({
     '@type': ['Organization', 'Brand'],
     '@id': ids.organization('acme'),
     name: 'Acme',
@@ -2058,18 +2079,15 @@ Common multi-type combinations:
 - `['WebPage', 'ItemPage']` — Product detail pages
 - `['WebPage', 'FAQPage']` — FAQ pages (alternative to separate FAQPage entity)
 
-**Note:** When using multi-type with `buildOrganization`, pass the primary
-subtype as the third argument and add additional types via `extra`:
+**Note:** With `buildPiece`, pass the `@type` array directly:
 
 ```ts
-buildOrganization(
-    {
-        slug: 'acme',
-        name: 'Acme',
-        extra: { '@type': ['Organization', 'Brand'] },
-    },
-    ids,
-);
+buildPiece({
+    '@type': ['Organization', 'Brand'],
+    '@id': ids.organization('acme'),
+    name: 'Acme',
+    url: 'https://acme.com/',
+});
 ```
 
 ---
@@ -2080,49 +2098,47 @@ For established businesses, a richer Organization entity improves knowledge
 graph representation. Here's the full pattern:
 
 ```ts
-buildOrganization(
-    {
-        slug: 'acme',
-        name: 'Acme Corp',
-        url: 'https://acme.com/',
-        logo: 'https://acme.com/logo.png',
-        description: 'We build developer tools.',
-        sameAs: [
-            'https://twitter.com/acme',
-            'https://linkedin.com/company/acme',
-            'https://github.com/acme',
-            'https://en.wikipedia.org/wiki/Acme_Corp',
-        ],
-        extra: {
-            legalName: 'Acme Corp B.V.',
-            foundingDate: '2015-03-01',
-            founder: {
-                '@type': 'Person',
-                name: 'Jane Doe',
-                sameAs: 'https://en.wikipedia.org/wiki/Jane_Doe',
-            },
-            numberOfEmployees: 45,
-            slogan: 'Tools for the modern web',
-            parentOrganization: {
-                '@type': 'Organization',
-                name: 'Parent Holdings Inc',
-                url: 'https://parent.com/',
-            },
-            memberOf: {
-                '@type': 'Organization',
-                name: 'World Wide Web Consortium (W3C)',
-                url: 'https://w3.org/',
-            },
-            address: {
-                '@type': 'PostalAddress',
-                streetAddress: '123 Tech Lane',
-                addressLocality: 'Amsterdam',
-                addressCountry: 'NL',
-            },
-        },
+import type { Organization } from 'schema-dts';
+
+buildPiece<Organization>({
+    '@type': 'Organization',
+    '@id': ids.organization('acme'),
+    name: 'Acme Corp',
+    url: 'https://acme.com/',
+    logo: 'https://acme.com/logo.png',
+    description: 'We build developer tools.',
+    sameAs: [
+        'https://twitter.com/acme',
+        'https://linkedin.com/company/acme',
+        'https://github.com/acme',
+        'https://en.wikipedia.org/wiki/Acme_Corp',
+    ],
+    legalName: 'Acme Corp B.V.',
+    foundingDate: '2015-03-01',
+    founder: {
+        '@type': 'Person',
+        name: 'Jane Doe',
+        sameAs: 'https://en.wikipedia.org/wiki/Jane_Doe',
     },
-    ids,
-);
+    numberOfEmployees: 45,
+    slogan: 'Tools for the modern web',
+    parentOrganization: {
+        '@type': 'Organization',
+        name: 'Parent Holdings Inc',
+        url: 'https://parent.com/',
+    },
+    memberOf: {
+        '@type': 'Organization',
+        name: 'World Wide Web Consortium (W3C)',
+        url: 'https://w3.org/',
+    },
+    address: {
+        '@type': 'PostalAddress',
+        streetAddress: '123 Tech Lane',
+        addressLocality: 'Amsterdam',
+        addressCountry: 'NL',
+    },
+});
 ```
 
 Include as much as is factually accurate. Don't fabricate data. Properties like
@@ -2137,63 +2153,57 @@ For personal sites, a detailed Person entity establishes identity and
 credibility. jonoalderson.com uses 80+ entities. Here's the extended pattern:
 
 ```ts
-buildPerson(
-    {
-        name: 'Jane Doe',
-        familyName: 'Doe',
-        birthDate: '1990-01-15',
-        gender: 'female',
-        nationality: { '@id': ids.country('US') },
-        description: 'Software engineer and technical writer.',
-        jobTitle: 'Lead Engineer',
-        knowsLanguage: ['en', 'es', 'pt'],
-        url: 'https://janedoe.com/about/',
-        image: { '@id': ids.personImage },
-        sameAs: [
-            'https://twitter.com/janedoe',
-            'https://github.com/janedoe',
-            'https://linkedin.com/in/janedoe',
-            'https://bsky.app/profile/janedoe.com',
-            'https://mastodon.social/@janedoe',
-            'https://en.wikipedia.org/wiki/Jane_Doe',
-        ],
-        worksFor: [
-            {
-                '@type': 'EmployeeRole',
-                roleName: 'Lead Engineer',
-                startDate: '2022-01',
-                worksFor: { '@id': ids.organization('acme') },
-            },
-            {
-                '@type': 'EmployeeRole',
-                roleName: 'Advisor',
-                startDate: '2024-06',
-                worksFor: { '@id': ids.organization('startup') },
-            },
-        ],
-        spouse: {
-            '@type': 'Person',
-            '@id': `${siteUrl}/#/schema.org/Person/john`,
-            name: 'John Doe',
+import type { Person } from 'schema-dts';
+
+buildPiece<Person>({
+    '@type': 'Person',
+    '@id': ids.person,
+    name: 'Jane Doe',
+    familyName: 'Doe',
+    birthDate: '1990-01-15',
+    gender: 'female',
+    nationality: { '@id': ids.country('US') },
+    description: 'Software engineer and technical writer.',
+    jobTitle: 'Lead Engineer',
+    knowsLanguage: ['en', 'es', 'pt'],
+    url: 'https://janedoe.com/about/',
+    image: { '@id': ids.personImage },
+    sameAs: [
+        'https://twitter.com/janedoe',
+        'https://github.com/janedoe',
+        'https://linkedin.com/in/janedoe',
+        'https://bsky.app/profile/janedoe.com',
+        'https://mastodon.social/@janedoe',
+        'https://en.wikipedia.org/wiki/Jane_Doe',
+    ],
+    worksFor: [
+        {
+            '@type': 'EmployeeRole',
+            roleName: 'Lead Engineer',
+            startDate: '2022-01',
+            worksFor: { '@id': ids.organization('acme') },
         },
-        extra: {
-            knowsAbout: [
-                'TypeScript',
-                'Schema.org',
-                'Search Engine Optimization',
-                'Web Performance',
-            ],
-            honorificPrefix: 'Dr.',
-            alumniOf: {
-                '@type': 'EducationalOrganization',
-                name: 'MIT',
-                url: 'https://mit.edu/',
-            },
-            award: ['Best Developer Blog 2025', 'Open Source Contributor of the Year 2024'],
+        {
+            '@type': 'EmployeeRole',
+            roleName: 'Advisor',
+            startDate: '2024-06',
+            worksFor: { '@id': ids.organization('startup') },
         },
+    ],
+    spouse: {
+        '@type': 'Person',
+        '@id': `${siteUrl}/#/schema.org/Person/john`,
+        name: 'John Doe',
     },
-    ids,
-);
+    knowsAbout: ['TypeScript', 'Schema.org', 'Search Engine Optimization', 'Web Performance'],
+    honorificPrefix: 'Dr.',
+    alumniOf: {
+        '@type': 'EducationalOrganization',
+        name: 'MIT',
+        url: 'https://mit.edu/',
+    },
+    award: ['Best Developer Blog 2025', 'Open Source Contributor of the Year 2024'],
+});
 ```
 
 **Practical advice:**
@@ -2576,13 +2586,14 @@ import {
     makeIds,
     assembleGraph,
     buildWebSite,
-    buildPerson,
+    buildPiece,
     buildWebPage,
     buildArticle,
     buildBreadcrumbList,
     buildImageObject,
     buildSiteNavigationElement,
 } from '@jdevalk/seo-graph-core';
+import type { Person } from 'schema-dts';
 
 const SITE_URL = 'https://example.com';
 export const ids = makeIds({ siteUrl: SITE_URL, personUrl: `${SITE_URL}/about/` });
@@ -2594,15 +2605,14 @@ function siteWideEntities() {
             { url: `${SITE_URL}/`, name: 'My Blog', publisher: { '@id': ids.person } },
             ids,
         ),
-        buildPerson(
-            {
-                name: 'Jane Doe',
-                url: `${SITE_URL}/about/`,
-                image: { '@id': ids.personImage },
-                sameAs: ['...'],
-            },
-            ids,
-        ),
+        buildPiece<Person>({
+            '@type': 'Person',
+            '@id': ids.person,
+            name: 'Jane Doe',
+            url: `${SITE_URL}/about/`,
+            image: { '@id': ids.personImage },
+            sameAs: ['...'],
+        }),
         buildImageObject(
             { id: ids.personImage, url: `${SITE_URL}/jane.jpg`, width: 400, height: 400 },
             ids,
@@ -2838,70 +2848,76 @@ export const GET = createSchemaMap({
 When a person works for several companies, create an organization for each:
 
 ```ts
+import type { Organization, Person } from 'schema-dts';
+
 const orgs = [
     { slug: 'acme', name: 'Acme Corp', url: 'https://acme.com/' },
     { slug: 'side-project', name: 'Side Project Inc', url: 'https://sideproject.com/' },
 ];
 
-const orgPieces = orgs.map((org) => buildOrganization(org, ids));
-
-const personPiece = buildPerson(
-    {
-        name: 'Jane Doe',
-        worksFor: [
-            {
-                '@type': 'EmployeeRole',
-                roleName: 'CEO',
-                startDate: '2020',
-                worksFor: { '@id': ids.organization('acme') },
-            },
-            {
-                '@type': 'EmployeeRole',
-                roleName: 'Advisor',
-                startDate: '2023',
-                worksFor: { '@id': ids.organization('side-project') },
-            },
-        ],
-    },
-    ids,
+const orgPieces = orgs.map((org) =>
+    buildPiece<Organization>({
+        '@type': 'Organization',
+        '@id': ids.organization(org.slug),
+        name: org.name,
+        url: org.url,
+    }),
 );
+
+const personPiece = buildPiece<Person>({
+    '@type': 'Person',
+    '@id': ids.person,
+    name: 'Jane Doe',
+    worksFor: [
+        {
+            '@type': 'EmployeeRole',
+            roleName: 'CEO',
+            startDate: '2020',
+            worksFor: { '@id': ids.organization('acme') },
+        },
+        {
+            '@type': 'EmployeeRole',
+            roleName: 'Advisor',
+            startDate: '2023',
+            worksFor: { '@id': ids.organization('side-project') },
+        },
+    ],
+});
 ```
 
 ### Organization subtypes
 
-Use `schema-dts` generics for full type safety on subtypes:
+Use the schema.org subtype directly as the `buildPiece` generic for full type safety:
 
 ```ts
-import type { Dentist, Hotel, EducationalOrganization } from 'schema-dts';
+import type { Dentist, Hotel } from 'schema-dts';
 
-buildOrganization<Dentist>(
-    { slug: 'clinic', name: 'Smile Dental', extra: { medicalSpecialty: 'Dentistry' } },
-    ids,
-    'Dentist',
-);
-buildOrganization<Hotel>(
-    {
-        slug: 'hotel',
-        name: 'Grand Hotel',
-        extra: {
-            starRating: { '@type': 'Rating', ratingValue: 4 },
-            checkinTime: '15:00',
-            checkoutTime: '11:00',
-        },
-    },
-    ids,
-    'Hotel',
-);
+buildPiece<Dentist>({
+    '@type': 'Dentist',
+    '@id': ids.organization('clinic'),
+    name: 'Smile Dental',
+    medicalSpecialty: 'Dentistry',
+});
+buildPiece<Hotel>({
+    '@type': 'Hotel',
+    '@id': ids.organization('hotel'),
+    name: 'Grand Hotel',
+    starRating: { '@type': 'Rating', ratingValue: 4 },
+    checkinTime: '15:00',
+    checkoutTime: '11:00',
+});
 ```
 
 ### Multi-author blogs
 
-When different posts have different authors, use `buildCustomPiece` for author
-Person entities (since `buildPerson` always uses `ids.person` as the `@id`):
+When different posts have different authors, use `buildPiece<Person>` with a
+custom `@id` for each author (reserving `ids.person` for the site-wide person):
 
 ```ts
+import type { Person } from 'schema-dts';
+
 const authorId = `${siteUrl}/authors/${authorSlug}/#person`;
-const authorPiece = buildCustomPiece({
+const authorPiece = buildPiece<Person>({
     '@type': 'Person',
     '@id': authorId,
     name: authorName,

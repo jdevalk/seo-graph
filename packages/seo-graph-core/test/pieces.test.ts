@@ -1,12 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
     assembleGraph,
     buildArticle,
     buildBreadcrumbList,
-    buildCustomPiece,
     buildImageObject,
-    buildOrganization,
-    buildPerson,
+    buildPiece,
     buildSiteNavigationElement,
     buildVideoObject,
     buildWebPage,
@@ -90,6 +88,35 @@ describe('assembleGraph', () => {
         ];
         expect(assembleGraph(pieces)['@graph']).toHaveLength(1);
     });
+
+    it('warns on dangling references when enabled', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const pieces = [
+            { '@type': 'WebSite', '@id': 'site', publisher: { '@id': 'missing-person' } },
+        ];
+        assembleGraph(pieces, { warnOnDanglingReferences: true });
+        expect(warn).toHaveBeenCalledWith(expect.stringMatching(/WebSite.*missing-person/));
+        warn.mockRestore();
+    });
+
+    it('does not warn when all references resolve', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const pieces = [
+            { '@type': 'WebSite', '@id': 'site', publisher: { '@id': 'person' } },
+            { '@type': 'Person', '@id': 'person', name: 'Jane' },
+        ];
+        assembleGraph(pieces, { warnOnDanglingReferences: true });
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+    });
+
+    it('does not warn when option is not set', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const pieces = [{ '@type': 'WebSite', '@id': 'site', publisher: { '@id': 'missing' } }];
+        assembleGraph(pieces);
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+    });
 });
 
 describe('buildWebSite', () => {
@@ -154,36 +181,34 @@ describe('buildWebSite', () => {
     });
 });
 
-describe('buildPerson', () => {
-    it('uses the site-wide Person @id', () => {
-        const person = buildPerson({ name: 'Jane Doe' }, ids);
+describe('buildPiece (Person)', () => {
+    it('passes through all schema.org properties', () => {
+        type Person = import('schema-dts').Person;
+        const person = buildPiece<Person>({
+            '@type': 'Person',
+            '@id': ids.person,
+            name: 'Jane Doe',
+            jobTitle: 'Engineer',
+            sameAs: ['https://example.com'],
+            knowsLanguage: ['en', 'nl'],
+        });
         expect(person['@type']).toBe('Person');
         expect(person['@id']).toBe(ids.person);
         expect(person.name).toBe('Jane Doe');
-    });
-
-    it('passes through all schema.org properties', () => {
-        const person = buildPerson(
-            {
-                name: 'Jane',
-                jobTitle: 'Engineer',
-                sameAs: ['https://example.com'],
-                knowsLanguage: ['en', 'nl'],
-            },
-            ids,
-        );
         expect(person.jobTitle).toBe('Engineer');
         expect(person.sameAs).toEqual(['https://example.com']);
-        expect(person.knowsLanguage).toEqual(['en', 'nl']);
     });
 });
 
-describe('buildOrganization', () => {
+describe('buildPiece (Organization)', () => {
     it('builds a plain Organization', () => {
-        const org = buildOrganization(
-            { slug: 'acme', name: 'ACME', url: 'https://acme.example' },
-            ids,
-        );
+        type Organization = import('schema-dts').Organization;
+        const org = buildPiece<Organization>({
+            '@type': 'Organization',
+            '@id': ids.organization('acme'),
+            name: 'ACME',
+            url: 'https://acme.example',
+        });
         expect(org).toEqual({
             '@type': 'Organization',
             '@id': ids.organization('acme'),
@@ -192,39 +217,18 @@ describe('buildOrganization', () => {
         });
     });
 
-    it('accepts a subtype and merges extra properties', () => {
-        const hotel = buildOrganization(
-            {
-                slug: 'la-limonaia',
-                name: 'La Limonaia',
-                extra: { checkinTime: '16:00:00', checkoutTime: '10:00:00' },
-            },
-            ids,
-            'Hotel',
-        );
+    it('narrows to subtype via @type and provides typed properties', () => {
+        type Hotel = import('schema-dts').Hotel;
+        const hotel = buildPiece<Hotel>({
+            '@type': 'Hotel',
+            '@id': ids.organization('la-limonaia'),
+            name: 'La Limonaia',
+            checkinTime: '16:00:00',
+            checkoutTime: '10:00:00',
+        });
         expect(hotel['@type']).toBe('Hotel');
         expect(hotel.checkinTime).toBe('16:00:00');
         expect(hotel.checkoutTime).toBe('10:00:00');
-    });
-
-    it('flows schema-dts subtype types through the generic parameter', () => {
-        // This test is primarily a compile-time check — if the
-        // generic doesn't carry through to `extra`, this call site
-        // will either error or lose autocomplete on `checkinTime`.
-        // At runtime we still just verify the property lands on the
-        // output object.
-        type Hotel = import('schema-dts').Hotel;
-        const hotel = buildOrganization<Hotel>(
-            {
-                slug: 'la-limonaia',
-                name: 'La Limonaia',
-                extra: { checkinTime: '16:00:00' },
-            },
-            ids,
-            'Hotel',
-        );
-        expect(hotel['@type']).toBe('Hotel');
-        expect(hotel.checkinTime).toBe('16:00:00');
     });
 });
 
@@ -502,9 +506,9 @@ describe('buildVideoObject', () => {
     });
 });
 
-describe('buildCustomPiece', () => {
+describe('buildPiece', () => {
     it('returns the input unchanged', () => {
         const raw = { '@type': 'Recipe', '@id': 'x', name: 'Bread' };
-        expect(buildCustomPiece(raw)).toBe(raw);
+        expect(buildPiece(raw)).toBe(raw);
     });
 });

@@ -79,3 +79,33 @@ export function applyCreativeWorkFields(
     if (input.isAccessibleForFree !== undefined)
         piece.isAccessibleForFree = input.isAccessibleForFree;
 }
+
+/** Keys that `applyCreativeWorkFields` handles. */
+export const CREATIVE_WORK_KEYS = new Set<string>([
+    'description',
+    'about',
+    'inLanguage',
+    'datePublished',
+    'dateModified',
+    'copyrightHolder',
+    'copyrightYear',
+    'copyrightNotice',
+    'license',
+    'isAccessibleForFree',
+]);
+
+/**
+ * Spread all properties from `input` into `piece`, skipping keys that
+ * the builder handles specially. Call after all explicit field handling.
+ */
+export function spreadRemainingProperties(
+    piece: Record<string, unknown>,
+    input: object,
+    handledKeys: ReadonlySet<string>,
+): void {
+    for (const [key, value] of Object.entries(input)) {
+        if (!handledKeys.has(key) && value !== undefined) {
+            piece[key] = value;
+        }
+    }
+}

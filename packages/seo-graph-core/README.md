@@ -46,16 +46,16 @@ object with `@type` and `@id`. Builders for CreativeWork subtypes (`WebSite`,
 | `buildWebSite`               | `WebSite`               | —                                                                                                          |
 | `buildWebPage`               | `WebPage`               | `'WebPage'` \| `'ProfilePage'` \| `'CollectionPage'`                                                       |
 | `buildArticle`               | `Article`               | `'Article'` \| `'BlogPosting'` \| `'NewsArticle'` \| `'TechArticle'` \| `'ScholarlyArticle'` \| `'Report'` |
-| `buildPerson`                | `Person`                | —                                                                                                          |
-| `buildOrganization`          | `Organization`          | Any subtype string (e.g. `'Restaurant'`, `'LocalBusiness'`)                                                |
 | `buildBreadcrumbList`        | `BreadcrumbList`        | —                                                                                                          |
 | `buildImageObject`           | `ImageObject`           | —                                                                                                          |
 | `buildVideoObject`           | `VideoObject`           | —                                                                                                          |
 | `buildSiteNavigationElement` | `SiteNavigationElement` | —                                                                                                          |
-| `buildCustomPiece`           | Any                     | Pass `@type` in input; optional `schema-dts` generic for autocomplete (e.g. `buildCustomPiece<Product>`)   |
+| `buildPiece`                 | Any                     | `schema-dts` generic for autocomplete (e.g. `buildPiece<Product>`, `buildPiece<Person>`)                   |
 
-Every builder accepts an `extra` escape hatch for schema.org properties not
-covered by the typed interface.
+All schema.org properties are accepted at the top level with full autocomplete
+from `schema-dts`. Dedicated builders handle ID generation, date conversion,
+and non-trivial transforms. Use `buildPiece<Type>` for everything else
+(Person, Organization, Blog, Product, Recipe, Event, etc.).
 
 ## Usage
 

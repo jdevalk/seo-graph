@@ -1,34 +1,37 @@
+import type { VideoObjectLeaf } from 'schema-dts';
+
 import type { IdFactory } from '../ids.js';
 import type { Reference } from '../types.js';
+import { spreadRemainingProperties } from '../types.js';
 
-export interface VideoObjectInput {
-    /**
-     * Canonical URL of the page the video lives on. The @id is
-     * `${url}#video`.
-     */
+interface VideoObjectCoreFields {
     url: string;
     name: string;
     description: string;
-    /** Reference to the enclosing WebPage (usually ids.webPage(url)). */
     isPartOf: Reference;
-    /** YouTube video id — used to derive thumbnailUrl and embedUrl. */
     youtubeId?: string;
-    /**
-     * Explicit thumbnail URL. If omitted and `youtubeId` is set, defaults
-     * to `https://img.youtube.com/vi/{id}/maxresdefault.jpg`.
-     */
     thumbnailUrl?: string;
-    /**
-     * Explicit embed URL. If omitted and `youtubeId` is set, defaults to
-     * `https://www.youtube-nocookie.com/embed/{id}`.
-     */
     embedUrl?: string;
     uploadDate?: Date;
-    /** ISO 8601 duration, e.g. 'PT30M'. */
     duration?: string;
     transcript?: string;
-    extra?: Record<string, unknown>;
 }
+
+export type VideoObjectInput = VideoObjectCoreFields &
+    Omit<Partial<VideoObjectLeaf>, keyof VideoObjectCoreFields | '@type'>;
+
+const HANDLED_KEYS = new Set<string>([
+    'url',
+    'name',
+    'description',
+    'isPartOf',
+    'youtubeId',
+    'thumbnailUrl',
+    'embedUrl',
+    'uploadDate',
+    'duration',
+    'transcript',
+]);
 
 /**
  * Build a schema.org VideoObject piece.
@@ -59,6 +62,7 @@ export function buildVideoObject(input: VideoObjectInput, ids: IdFactory): Recor
     if (input.uploadDate !== undefined) piece.uploadDate = input.uploadDate.toISOString();
     if (input.duration !== undefined) piece.duration = input.duration;
     if (input.transcript !== undefined) piece.transcript = input.transcript;
+    spreadRemainingProperties(piece, input, HANDLED_KEYS);
 
-    return { ...piece, ...input.extra };
+    return piece;
 }
