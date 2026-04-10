@@ -1,5 +1,11 @@
 # @jdevalk/seo-graph-core
 
+## 0.5.1
+
+### Patch Changes
+
+- a81df48: All dedicated builders now allow overriding the computed `@id` by passing `'@id'` directly in the input. Document the pattern in AGENTS.md.
+
 ## 0.5.0
 
 ### Minor Changes
