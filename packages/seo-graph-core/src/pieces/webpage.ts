@@ -1,5 +1,6 @@
 import type { IdFactory } from '../ids.js';
-import type { Reference } from '../types.js';
+import type { Reference, CreativeWorkFields } from '../types.js';
+import { applyCreativeWorkFields } from '../types.js';
 
 /**
  * Concrete WebPage subtype. `WebPage` is the default; use `ProfilePage`
@@ -7,7 +8,7 @@ import type { Reference } from '../types.js';
  */
 export type WebPageType = 'WebPage' | 'ProfilePage' | 'CollectionPage';
 
-export interface WebPageInput {
+export interface WebPageInput extends CreativeWorkFields {
     /** Canonical URL of the page. The WebPage @id equals this URL. */
     url: string;
     /** Page title (becomes `name`). */
@@ -21,18 +22,8 @@ export interface WebPageInput {
      * simply omit it.
      */
     breadcrumb?: Reference;
-    inLanguage?: string;
-    /** Publish date — emitted as ISO string. */
-    datePublished?: Date;
-    /** Update date — emitted as ISO string. */
-    dateModified?: Date;
     /** Reference to the primary ImageObject, if any. */
     primaryImage?: Reference;
-    /**
-     * Reference to the entity this page is "about" — used for ProfilePage
-     * (the Person) and homepage variants.
-     */
-    about?: Reference;
     /**
      * Custom potentialAction. If omitted, defaults to a single ReadAction
      * targeting the page URL.
@@ -67,24 +58,13 @@ export function buildWebPage(
         potentialAction,
     };
 
-    if (input.inLanguage !== undefined) {
-        piece.inLanguage = input.inLanguage;
-    }
     if (input.breadcrumb !== undefined) {
         piece.breadcrumb = input.breadcrumb;
-    }
-    if (input.datePublished !== undefined) {
-        piece.datePublished = input.datePublished.toISOString();
-    }
-    if (input.dateModified !== undefined) {
-        piece.dateModified = input.dateModified.toISOString();
     }
     if (input.primaryImage !== undefined) {
         piece.primaryImageOfPage = input.primaryImage;
     }
-    if (input.about !== undefined) {
-        piece.about = input.about;
-    }
+    applyCreativeWorkFields(piece, input);
 
     return { ...piece, ...input.extra };
 }

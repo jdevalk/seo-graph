@@ -30,11 +30,12 @@ export function buildBreadcrumbList(
     input: BreadcrumbListInput,
     ids: IdFactory,
 ): Record<string, unknown> {
+    const lastIndex = input.items.length - 1;
     const itemListElement = input.items.map((item, index) => ({
         '@type': 'ListItem',
         position: index + 1,
         name: item.name,
-        item: item.url,
+        item: index === lastIndex ? { '@id': ids.webPage(item.url) } : item.url,
     }));
     return {
         '@type': 'BreadcrumbList',

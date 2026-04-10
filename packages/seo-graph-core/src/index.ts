@@ -1,6 +1,7 @@
 // @jdevalk/seo-graph-core — agent-ready schema.org JSON-LD graph builders.
 
-export type { GraphEntity, Reference, SchemaGraph } from './types.js';
+export type { GraphEntity, Reference, SchemaGraph, CreativeWorkFields } from './types.js';
+export { applyCreativeWorkFields } from './types.js';
 export type { IdFactory, MakeIdsOptions } from './ids.js';
 export { makeIds } from './ids.js';
 export { deduplicateByGraphId } from './dedupe.js';
@@ -23,7 +24,7 @@ export { buildWebPage } from './pieces/webpage.js';
 export type { WebPageInput, WebPageType } from './pieces/webpage.js';
 
 export { buildArticle } from './pieces/article.js';
-export type { ArticleInput } from './pieces/article.js';
+export type { ArticleInput, ArticleType } from './pieces/article.js';
 
 export { buildBreadcrumbList } from './pieces/breadcrumb.js';
 export type { BreadcrumbItem, BreadcrumbListInput } from './pieces/breadcrumb.js';

@@ -2,30 +2,25 @@
 
 Astro integration for [`@jdevalk/seo-graph-core`](../seo-graph-core). Ships a
 `<Seo>` component, route factories for agent-ready schema endpoints, a
-content-collection aggregator, and Zod helpers for content schemas.
+content-collection aggregator, breadcrumb helpers, and Zod helpers for content
+schemas.
 
-> **Status:** `0.1.0` (pre-1.0). The API works and has two real consumers
-> in production (joost.blog and limonaia.house), but a few known warts in
-> the core will be smoothed out in `0.2.x` without breaking changes. See
-> `@jdevalk/seo-graph-core`'s README for the full list.
+For detailed usage — including all builder signatures, site-type recipes, and
+schema.org best practices — see [AGENTS.md](../../AGENTS.md) in the repository
+root.
 
-## What's in v0.1
+## What you get
 
-| API                            | Purpose                                                                                                                                                                                                                                                                 |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`<Seo>`** (`./Seo.astro`)    | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, hreflang alternates, and optional JSON-LD `@graph`. Wraps [`astro-seo`](https://github.com/jonasmerlin/astro-seo) for the meta tags.                                   |
-| **`createSchemaEndpoint`**     | Factory returning an Astro `APIRoute` handler that serves a corpus-wide JSON-LD `@graph` for a content collection.                                                                                                                                                      |
-| **`createSchemaMap`**          | Factory returning an `APIRoute` handler that emits a sitemap-style XML listing of your site's schema endpoints — the discovery point for agent crawlers.                                                                                                                |
-| **`aggregate`**                | Shared engine behind the endpoint factories. Walks a list of entries, runs a caller-supplied mapper, deduplicates by `@id`.                                                                                                                                             |
-| **`seoSchema`, `imageSchema`** | Zod schemas for the `seo` and `image` fields on content collections. Import them into `src/content.config.ts`.                                                                                                                                                          |
-| **`buildAstroSeoProps`**       | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component.                                                                                                                                                                     |
-| **`buildAlternateLinks`**      | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
-
-## Not in `0.1.x` (coming in `0.2.x`)
-
-- **`createOgRenderer`** — a themeable `satori` + `sharp` wrapper for generating
-  Open Graph images at build time. Pulled out of `0.1` to keep the dep tree
-  free of native binaries. Keep using your own `og-image.ts` for now.
+| API | Purpose |
+|---|---|
+| **`<Seo>`** (`./Seo.astro`) | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, hreflang alternates, and optional JSON-LD `@graph`. Wraps [`astro-seo`](https://github.com/jonasmerlin/astro-seo) for the meta tags. |
+| **`createSchemaEndpoint`** | Factory returning an Astro `APIRoute` handler that serves a corpus-wide JSON-LD `@graph` for a content collection. |
+| **`createSchemaMap`** | Factory returning an `APIRoute` handler that emits a sitemap-style XML listing of your site's schema endpoints — the discovery point for agent crawlers. |
+| **`aggregate`** | Shared engine behind the endpoint factories. Walks a list of entries, runs a caller-supplied mapper, deduplicates by `@id`. |
+| **`seoSchema`, `imageSchema`** | Zod schemas for the `seo` and `image` fields on content collections. Import them into `src/content.config.ts`. |
+| **`buildAstroSeoProps`** | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component. |
+| **`buildAlternateLinks`** | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
+| **`breadcrumbsFromUrl`** | Derives a breadcrumb trail from an Astro URL. Splits path segments, supports custom display names and segment skipping. Returns `BreadcrumbItem[]` ready to pass to `buildBreadcrumbList`. |
 
 ## Installation
 
@@ -77,6 +72,41 @@ const graph = buildSchemaGraph({
     <body>...</body>
 </html>
 ```
+
+## Breadcrumbs from URL
+
+Derive a breadcrumb trail from an Astro page URL instead of computing it
+manually:
+
+```ts
+import { breadcrumbsFromUrl } from '@jdevalk/astro-seo-graph';
+import { buildBreadcrumbList, makeIds } from '@jdevalk/seo-graph-core';
+
+const ids = makeIds({ siteUrl: 'https://example.com' });
+const url = 'https://example.com/blog/open-source/my-post/';
+
+const items = breadcrumbsFromUrl({
+    url: Astro.url,                          // or any URL / string
+    siteUrl: 'https://example.com',
+    pageName: 'My Post',                     // display name for the current page
+    // homeName: 'Home',                     // optional, defaults to 'Home'
+    // names: { blog: 'Articles' },          // optional, custom segment names
+    // skip: ['category'],                   // optional, segments to omit
+});
+
+const breadcrumb = buildBreadcrumbList({ url, items }, ids);
+// items === [
+//   { name: 'Home', url: 'https://example.com/' },
+//   { name: 'Blog', url: 'https://example.com/blog/' },
+//   { name: 'Open Source', url: 'https://example.com/blog/open-source/' },
+//   { name: 'My Post', url: 'https://example.com/blog/open-source/my-post/' },
+// ]
+```
+
+Segments without a `names` entry are title-cased from their slug
+(`open-source` → `Open Source`). Sites with a base path
+(e.g. `https://example.com/docs`) are supported — pass the base path as part
+of `siteUrl`.
 
 ## hreflang alternates
 
@@ -181,6 +211,7 @@ export const GET = createSchemaEndpoint({
                     datePublished: post.data.publishDate,
                 },
                 ids,
+                'BlogPosting',
             ),
         ];
     },

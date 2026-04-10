@@ -139,6 +139,19 @@ describe('buildWebSite', () => {
         expect(site.description).toBe('A site');
         expect(site.hasPart).toEqual({ '@id': ids.navigation });
     });
+
+    it('includes optional about reference', () => {
+        const site = buildWebSite(
+            {
+                url: 'https://example.com/',
+                name: 'Example',
+                publisher: { '@id': ids.person },
+                about: { '@id': ids.person },
+            },
+            ids,
+        );
+        expect(site.about).toEqual({ '@id': ids.person });
+    });
 });
 
 describe('buildPerson', () => {
@@ -406,6 +419,11 @@ describe('buildBreadcrumbList', () => {
             item: 'https://example.com/',
         });
         expect(items[2]?.position).toBe(3);
+        // Last item references the WebPage by @id instead of a plain URL.
+        expect(items[2]?.item).toEqual({ '@id': postUrl });
+        // Non-last items use plain URL strings.
+        expect(items[0]?.item).toBe('https://example.com/');
+        expect(items[1]?.item).toBe('https://example.com/blog/');
     });
 });
 

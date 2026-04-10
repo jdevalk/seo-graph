@@ -30,3 +30,51 @@ export interface GraphEntity {
     '@id'?: string;
     [key: string]: unknown;
 }
+
+/**
+ * Optional schema.org CreativeWork properties shared across WebSite,
+ * WebPage, and Article builders. Extend your input interface from this
+ * to inherit the fields.
+ */
+export interface CreativeWorkFields {
+    /** Short description / summary of this entity. */
+    description?: string;
+    /** What this entity is about — e.g. a Person, Organization, or other entity. */
+    about?: Reference;
+    /** Content language, e.g. 'en-US'. */
+    inLanguage?: string;
+    /** Publish date — emitted as ISO string. */
+    datePublished?: Date;
+    /** Update date — emitted as ISO string. */
+    dateModified?: Date;
+    /** Who holds the copyright — typically a Person or Organization reference. */
+    copyrightHolder?: Reference;
+    /** Year copyright was first asserted. */
+    copyrightYear?: number;
+    /** Human-readable copyright text, e.g. '© 2026 Jane Doe. All rights reserved.' */
+    copyrightNotice?: string;
+    /** License URL or CreativeWork reference (e.g. a Creative Commons URL). */
+    license?: string;
+    /** Whether the content is free to access. */
+    isAccessibleForFree?: boolean;
+}
+
+/**
+ * Apply shared CreativeWork fields to a piece under construction.
+ * Call from any builder whose input extends `CreativeWorkFields`.
+ */
+export function applyCreativeWorkFields(
+    piece: Record<string, unknown>,
+    input: CreativeWorkFields,
+): void {
+    if (input.description !== undefined) piece.description = input.description;
+    if (input.about !== undefined) piece.about = input.about;
+    if (input.inLanguage !== undefined) piece.inLanguage = input.inLanguage;
+    if (input.datePublished !== undefined) piece.datePublished = input.datePublished.toISOString();
+    if (input.dateModified !== undefined) piece.dateModified = input.dateModified.toISOString();
+    if (input.copyrightHolder !== undefined) piece.copyrightHolder = input.copyrightHolder;
+    if (input.copyrightYear !== undefined) piece.copyrightYear = input.copyrightYear;
+    if (input.copyrightNotice !== undefined) piece.copyrightNotice = input.copyrightNotice;
+    if (input.license !== undefined) piece.license = input.license;
+    if (input.isAccessibleForFree !== undefined) piece.isAccessibleForFree = input.isAccessibleForFree;
+}

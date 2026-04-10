@@ -17,3 +17,6 @@ export type { SeoProps, AstroSeoProps } from './components/seo-props.js';
 
 export { buildAlternateLinks } from './alternates.js';
 export type { AlternateLink, BuildAlternateLinksInput } from './alternates.js';
+
+export { breadcrumbsFromUrl } from './breadcrumbs.js';
+export type { BreadcrumbsFromUrlInput } from './breadcrumbs.js';

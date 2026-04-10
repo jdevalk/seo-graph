@@ -5,11 +5,18 @@
 
 This monorepo ships two packages (plus a third consumer living elsewhere):
 
-| Package                                                                      | Purpose                                                                                                                                     |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@jdevalk/seo-graph-core`](./packages/seo-graph-core)                       | Pure, runtime-agnostic schema.org piece builders and graph assembler. Depends only on [`schema-dts`](https://github.com/google/schema-dts). |
-| [`@jdevalk/astro-seo-graph`](./packages/astro-seo-graph)                     | Astro integration: `<Seo>` component, route factories for agent-ready endpoints, themeable OG renderer, Zod content helpers.                |
-| [`@jdevalk/emdash-plugin-seo`](https://github.com/jdevalk/emdash-plugin-seo) | EmDash CMS plugin. Lives in its own repo, will depend on `seo-graph-core`.                                                                  |
+| Package | Purpose |
+|---|---|
+| [`@jdevalk/seo-graph-core`](./packages/seo-graph-core) | Pure, runtime-agnostic schema.org piece builders and graph assembler. Depends only on [`schema-dts`](https://github.com/google/schema-dts). |
+| [`@jdevalk/astro-seo-graph`](./packages/astro-seo-graph) | Astro integration: `<Seo>` component, route factories for agent-ready endpoints, breadcrumb helper, Zod content helpers. |
+| [`@jdevalk/emdash-plugin-seo`](https://github.com/jdevalk/emdash-plugin-seo) | EmDash CMS plugin. Lives in its own repo, depends on `seo-graph-core`. |
+
+## Documentation
+
+See [AGENTS.md](./AGENTS.md) for the full reference: all builder signatures,
+site-type recipes (blog, e-commerce, local business, docs, podcast, etc.),
+and schema.org best practices. It's written for both humans and AI coding
+agents.
 
 ## Why
 
@@ -24,21 +31,6 @@ The thesis is argued in more detail in these posts:
 - [Defending the open web is not enough](https://joost.blog/defending-open-web-not-enough/)
 - [From installation to integration: making plugins agent-ready](https://joost.blog/agent-ready-plugins/)
 - [The silence is deafening: Google's agentic future leaves WordPress behind](https://joost.blog/deafening-silence-google-wordpress-agentic/)
-
-## Roadmap
-
-| Phase                           | Status   | Summary                                                                                                                                                   |
-| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 — Scaffold monorepo           | Done     | pnpm workspace, tsconfig base, changesets, CI, package skeletons.                                                                                         |
-| 1 — `seo-graph-core` v0.1       | Done     | Ten piece builders, `makeIds`, `assembleGraph`, `deduplicateByGraphId`. 31 tests, including byte-identical integration test against a joost.blog fixture. |
-| 2 — joost.blog core migration   | Done     | joost.blog consumes `seo-graph-core` through a thin adapter; schema endpoint output byte-identical to pre-migration fixtures.                             |
-| 3 — `astro-seo-graph` v0.1      | Done     | `<Seo>`, `createSchemaEndpoint`, `createSchemaMap`, `aggregate`, Zod content helpers. 37 tests. `createOgRenderer` deferred to `0.2`.                     |
-| 4 — limonaia.house migration    | Done     | First external consumer. `VacationRental` JSON-LD graph rendered via `<Seo>` with zero changes required to core or the integration.                       |
-| 5 — joost.blog full integration | Done     | `BaseHead.astro` uses `<Seo>` from astro-seo-graph. Schema endpoints still byte-identical against golden fixtures.                                        |
-| 6 — emdash-plugin-seo port      | Done     | `@jdevalk/emdash-plugin-seo@0.2.0` published; shares `assembleGraph` + `GraphEntity` type with the core, keeps its own EmDash-specific piece builders.    |
-| 7 — `0.1.0` stable + blog post  | Shipping | Exit alpha, publish `0.1.0` on the `latest` dist tag. Write the positioning post on [joost.blog](https://joost.blog).                                     |
-
-**Not yet:** `1.0.0` stable. The API has a few known warts (see each package's README "Known limitations" section). They'll be addressed in `0.2.x` without breaking changes. `1.0.0` comes when those are resolved and the API surface has been stable across a few minor releases.
 
 ## Develop
 
@@ -57,9 +49,18 @@ pnpm test
 - **`schema-dts` is the type substrate.** All piece builders return strongly-
   typed schema.org values. Every `Organization` and `LocalBusiness` subtype is
   already typed; the core doesn't hand-maintain a subtype list.
+- **Shared `CreativeWorkFields`.** Properties common to all `CreativeWork`
+  subtypes (`description`, `inLanguage`, `datePublished`, `dateModified`,
+  `about`, copyright/licensing fields) live in a single interface that
+  `WebSiteInput`, `WebPageInput`, and `ArticleInput` extend.
+- **Subtypes via parameter.** `buildWebPage`, `buildArticle`, and
+  `buildOrganization` all accept a third argument for the concrete schema.org
+  type (e.g. `'CollectionPage'`, `'BlogPosting'`, `'Restaurant'`). Defaults
+  are the base type.
 - **Breadcrumbs are an input, not a derivation.** Callers pre-compute the
-  breadcrumb list. The Astro integration will ship an optional helper that
-  derives breadcrumbs from an `Astro.url`, but it's not in core.
+  breadcrumb list. The Astro integration ships `breadcrumbsFromUrl` to
+  derive crumbs from an `Astro.url`, but the core itself has no
+  URL-parsing logic.
 
 ## License
 

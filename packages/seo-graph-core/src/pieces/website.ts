@@ -1,15 +1,13 @@
 import type { IdFactory } from '../ids.js';
-import type { Reference } from '../types.js';
+import type { Reference, CreativeWorkFields } from '../types.js';
+import { applyCreativeWorkFields } from '../types.js';
 
-export interface WebSiteInput {
+export interface WebSiteInput extends CreativeWorkFields {
     /** Site URL, typically with trailing slash. */
     url: string;
     name: string;
-    description?: string;
     /** Publisher entity — usually the site-wide Person or Organization. */
     publisher: Reference;
-    /** Default content language, e.g. 'en-US'. */
-    inLanguage?: string;
     /** Optional navigation reference (e.g. ids.navigation). */
     hasPart?: Reference;
     /** Escape hatch for extra schema.org properties. */
@@ -27,9 +25,8 @@ export function buildWebSite(input: WebSiteInput, ids: IdFactory): Record<string
         url: input.url,
         name: input.name,
     };
-    if (input.description !== undefined) piece.description = input.description;
     piece.publisher = input.publisher;
-    if (input.inLanguage !== undefined) piece.inLanguage = input.inLanguage;
+    applyCreativeWorkFields(piece, input);
     if (input.hasPart !== undefined) piece.hasPart = input.hasPart;
     return { ...piece, ...input.extra };
 }

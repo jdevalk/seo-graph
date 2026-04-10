@@ -25,7 +25,9 @@
                 "@type": "ListItem",
                 "position": 4,
                 "name": "Defending the open web is not enough",
-                "item": "https://joost.blog/defending-open-web-not-enough/"
+                "item": {
+                    "@id": "https://joost.blog/defending-open-web-not-enough/"
+                }
             }
         ]
     },

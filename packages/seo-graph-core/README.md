@@ -2,10 +2,6 @@
 
 Pure schema.org JSON-LD graph builders. Runtime-agnostic core for agent-ready SEO.
 
-> **Status:** `0.1.0` (pre-1.0). The API works and has three real consumers
-> in production, but a few known warts (listed below) will be smoothed out in
-> `0.2.x` without breaking changes before a stable `1.0`.
-
 ## What this is
 
 A small, dependency-light library that builds a valid schema.org `@graph`
@@ -17,6 +13,10 @@ any other runtime. Use [`@jdevalk/astro-seo-graph`](https://www.npmjs.com/packag
 for the Astro integration, or consume this directly from your own CMS or
 framework.
 
+For detailed usage — including all builder signatures, site-type recipes, and
+schema.org best practices — see [AGENTS.md](../../AGENTS.md) in the repository
+root.
+
 ## Install
 
 ```sh
@@ -25,12 +25,38 @@ npm install @jdevalk/seo-graph-core
 
 ## What you get
 
-| API                                                                                                                                                                                                 | Purpose                                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `makeIds({ siteUrl, personUrl? })`                                                                                                                                                                  | `IdFactory` for stable `@id` references across site-wide and per-page entities.           |
-| `assembleGraph(pieces)`                                                                                                                                                                             | Wraps pieces in a `{ @context, @graph }` envelope with first-wins deduplication by `@id`. |
-| `deduplicateByGraphId(entities)`                                                                                                                                                                    | The dedup engine on its own, in case you need custom assembly.                            |
-| `buildArticle`, `buildWebPage`, `buildWebSite`, `buildBreadcrumbList`, `buildImageObject`, `buildPerson`, `buildOrganization`, `buildVideoObject`, `buildSiteNavigationElement`, `buildCustomPiece` | Piece builders. All return schema-dts typed objects.                                      |
+### Graph assembly
+
+| API | Purpose |
+|---|---|
+| `makeIds({ siteUrl, personUrl? })` | `IdFactory` for stable `@id` references across site-wide and per-page entities. |
+| `assembleGraph(pieces)` | Wraps pieces in a `{ @context, @graph }` envelope with first-wins deduplication by `@id`. |
+| `deduplicateByGraphId(entities)` | The dedup engine on its own, in case you need custom assembly. |
+
+### Piece builders
+
+All builders take an input object and the `IdFactory`, and return a plain
+object with `@type` and `@id`. Builders for CreativeWork subtypes (`WebSite`,
+`WebPage`, `Article`) share a common set of optional fields via
+`CreativeWorkFields`: `description`, `inLanguage`, `datePublished`,
+`dateModified`, `about`, `copyrightHolder`, `copyrightYear`,
+`copyrightNotice`, `license`, and `isAccessibleForFree`.
+
+| Builder | Schema.org type | Subtype parameter |
+|---|---|---|
+| `buildWebSite` | `WebSite` | — |
+| `buildWebPage` | `WebPage` | `'WebPage'` \| `'ProfilePage'` \| `'CollectionPage'` |
+| `buildArticle` | `Article` | `'Article'` \| `'BlogPosting'` \| `'NewsArticle'` \| `'TechArticle'` \| `'ScholarlyArticle'` \| `'Report'` |
+| `buildPerson` | `Person` | — |
+| `buildOrganization` | `Organization` | Any subtype string (e.g. `'Restaurant'`, `'LocalBusiness'`) |
+| `buildBreadcrumbList` | `BreadcrumbList` | — |
+| `buildImageObject` | `ImageObject` | — |
+| `buildVideoObject` | `VideoObject` | — |
+| `buildSiteNavigationElement` | `SiteNavigationElement` | — |
+| `buildCustomPiece` | Any | Pass `@type` directly in the input object |
+
+Every builder accepts an `extra` escape hatch for schema.org properties not
+covered by the typed interface.
 
 ## Usage
 
@@ -53,6 +79,7 @@ const graph = assembleGraph([
             url: 'https://example.com/',
             name: 'Example',
             publisher: { '@id': ids.person },
+            inLanguage: 'en-US',
         },
         ids,
     ),
@@ -73,10 +100,11 @@ const graph = assembleGraph([
             author: { '@id': ids.person },
             publisher: { '@id': ids.person },
             headline: 'My Post',
-            description: '…',
+            description: 'A post about something interesting.',
             datePublished: new Date('2026-04-07'),
         },
         ids,
+        'BlogPosting',
     ),
     buildBreadcrumbList(
         {
