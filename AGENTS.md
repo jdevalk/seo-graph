@@ -512,6 +512,30 @@ untyped form. The generic gives you autocomplete for every property on the
 chosen type, making it much harder to miss recommended fields like
 `potentialAction`, `geo`, or `offers`.
 
+### Overriding `@id`
+
+Every dedicated builder computes an `@id` from the `IdFactory` (e.g.
+`ids.website`, `ids.article(url)`). You can override it by passing `'@id'`
+directly — the explicit value wins:
+
+```ts
+buildBreadcrumbList(
+    {
+        url,
+        items: [
+            { name: 'Home', url: siteUrl },
+            { name: 'Blog', url: blogUrl },
+        ],
+        '@id': `${blogUrl}#breadcrumb`, // overrides ids.breadcrumb(url)
+    },
+    ids,
+);
+```
+
+This works on all builders: `buildWebSite`, `buildWebPage`, `buildArticle`,
+`buildBreadcrumbList`, `buildImageObject`, `buildVideoObject`, and
+`buildSiteNavigationElement`.
+
 ### assembleGraph
 
 Wraps pieces in a `{ "@context": "https://schema.org", "@graph": [...] }`

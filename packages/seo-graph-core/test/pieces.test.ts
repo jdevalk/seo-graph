@@ -512,3 +512,60 @@ describe('buildPiece', () => {
         expect(buildPiece(raw)).toBe(raw);
     });
 });
+
+describe('@id override', () => {
+    it('allows overriding the computed @id on buildWebSite', () => {
+        const site = buildWebSite(
+            {
+                url: 'https://example.com/',
+                name: 'Example',
+                publisher: { '@id': ids.person },
+                '@id': 'custom-website-id',
+            },
+            ids,
+        );
+        expect(site['@id']).toBe('custom-website-id');
+    });
+
+    it('allows overriding the computed @id on buildWebPage', () => {
+        const page = buildWebPage(
+            {
+                url: postUrl,
+                name: 'Hello',
+                isPartOf: { '@id': ids.website },
+                '@id': 'custom-page-id',
+            },
+            ids,
+        );
+        expect(page['@id']).toBe('custom-page-id');
+    });
+
+    it('allows overriding the computed @id on buildBreadcrumbList', () => {
+        const bc = buildBreadcrumbList(
+            {
+                url: postUrl,
+                items: [{ name: 'Home', url: 'https://example.com/' }],
+                '@id': 'custom-breadcrumb-id',
+            },
+            ids,
+        );
+        expect(bc['@id']).toBe('custom-breadcrumb-id');
+    });
+
+    it('allows overriding the computed @id on buildArticle', () => {
+        const article = buildArticle(
+            {
+                url: postUrl,
+                isPartOf: { '@id': ids.webPage(postUrl) },
+                author: { '@id': ids.person },
+                publisher: { '@id': ids.person },
+                headline: 'Hello',
+                description: 'World',
+                datePublished: new Date('2026-04-07'),
+                '@id': 'custom-article-id',
+            },
+            ids,
+        );
+        expect(article['@id']).toBe('custom-article-id');
+    });
+});
