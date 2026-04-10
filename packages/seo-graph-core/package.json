@@ -23,6 +23,7 @@
     "files": [
         "dist",
         "README.md",
+        "AGENTS.md",
         "LICENSE"
     ],
     "repository": {
@@ -36,7 +37,7 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.build.json",
+        "build": "tsc -p tsconfig.build.json && cp ../../AGENTS.md .",
         "typecheck": "tsc -p tsconfig.json",
         "test": "vitest run"
     },

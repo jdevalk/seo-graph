@@ -7,3 +7,6 @@ coverage
 .turbo
 .vitest-cache
 .pnpm-store
+
+# AGENTS.md copies created by build scripts (the source of truth is the root copy)
+packages/*/AGENTS.md

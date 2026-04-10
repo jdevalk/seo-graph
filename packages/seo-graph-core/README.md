@@ -14,8 +14,7 @@ for the Astro integration, or consume this directly from your own CMS or
 framework.
 
 For detailed usage — including all builder signatures, site-type recipes, and
-schema.org best practices — see [AGENTS.md](../../AGENTS.md) in the repository
-root.
+schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-graph/blob/main/AGENTS.md).
 
 ## Install
 

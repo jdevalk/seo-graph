@@ -27,6 +27,7 @@
     "files": [
         "dist",
         "README.md",
+        "AGENTS.md",
         "LICENSE"
     ],
     "repository": {
@@ -40,7 +41,7 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.build.json && mkdir -p dist/components && cp src/components/*.astro dist/components/",
+        "build": "tsc -p tsconfig.build.json && mkdir -p dist/components && cp src/components/*.astro dist/components/ && cp ../../AGENTS.md .",
         "typecheck": "tsc -p tsconfig.json",
         "test": "vitest run"
     },

@@ -6,8 +6,7 @@ content-collection aggregator, breadcrumb helpers, and Zod helpers for content
 schemas.
 
 For detailed usage — including all builder signatures, site-type recipes, and
-schema.org best practices — see [AGENTS.md](../../AGENTS.md) in the repository
-root.
+schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-graph/blob/main/AGENTS.md).
 
 ## What you get
 
