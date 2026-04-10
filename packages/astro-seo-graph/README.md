@@ -11,16 +11,16 @@ root.
 
 ## What you get
 
-| API | Purpose |
-|---|---|
-| **`<Seo>`** (`./Seo.astro`) | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, hreflang alternates, and optional JSON-LD `@graph`. Wraps [`astro-seo`](https://github.com/jonasmerlin/astro-seo) for the meta tags. |
-| **`createSchemaEndpoint`** | Factory returning an Astro `APIRoute` handler that serves a corpus-wide JSON-LD `@graph` for a content collection. |
-| **`createSchemaMap`** | Factory returning an `APIRoute` handler that emits a sitemap-style XML listing of your site's schema endpoints — the discovery point for agent crawlers. |
-| **`aggregate`** | Shared engine behind the endpoint factories. Walks a list of entries, runs a caller-supplied mapper, deduplicates by `@id`. |
-| **`seoSchema`, `imageSchema`** | Zod schemas for the `seo` and `image` fields on content collections. Import them into `src/content.config.ts`. |
-| **`buildAstroSeoProps`** | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component. |
-| **`buildAlternateLinks`** | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
-| **`breadcrumbsFromUrl`** | Derives a breadcrumb trail from an Astro URL. Splits path segments, supports custom display names and segment skipping. Returns `BreadcrumbItem[]` ready to pass to `buildBreadcrumbList`. |
+| API                            | Purpose                                                                                                                                                                                                                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`<Seo>`** (`./Seo.astro`)    | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, hreflang alternates, and optional JSON-LD `@graph`. Wraps [`astro-seo`](https://github.com/jonasmerlin/astro-seo) for the meta tags.                                   |
+| **`createSchemaEndpoint`**     | Factory returning an Astro `APIRoute` handler that serves a corpus-wide JSON-LD `@graph` for a content collection.                                                                                                                                                      |
+| **`createSchemaMap`**          | Factory returning an `APIRoute` handler that emits a sitemap-style XML listing of your site's schema endpoints — the discovery point for agent crawlers.                                                                                                                |
+| **`aggregate`**                | Shared engine behind the endpoint factories. Walks a list of entries, runs a caller-supplied mapper, deduplicates by `@id`.                                                                                                                                             |
+| **`seoSchema`, `imageSchema`** | Zod schemas for the `seo` and `image` fields on content collections. Import them into `src/content.config.ts`.                                                                                                                                                          |
+| **`buildAstroSeoProps`**       | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component.                                                                                                                                                                     |
+| **`buildAlternateLinks`**      | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
+| **`breadcrumbsFromUrl`**       | Derives a breadcrumb trail from an Astro URL. Splits path segments, supports custom display names and segment skipping. Returns `BreadcrumbItem[]` ready to pass to `buildBreadcrumbList`.                                                                              |
 
 ## Installation
 
@@ -86,9 +86,9 @@ const ids = makeIds({ siteUrl: 'https://example.com' });
 const url = 'https://example.com/blog/open-source/my-post/';
 
 const items = breadcrumbsFromUrl({
-    url: Astro.url,                          // or any URL / string
+    url: Astro.url, // or any URL / string
     siteUrl: 'https://example.com',
-    pageName: 'My Post',                     // display name for the current page
+    pageName: 'My Post', // display name for the current page
     // homeName: 'Home',                     // optional, defaults to 'Home'
     // names: { blog: 'Articles' },          // optional, custom segment names
     // skip: ['category'],                   // optional, segments to omit

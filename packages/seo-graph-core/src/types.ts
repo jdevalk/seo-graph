@@ -76,5 +76,6 @@ export function applyCreativeWorkFields(
     if (input.copyrightYear !== undefined) piece.copyrightYear = input.copyrightYear;
     if (input.copyrightNotice !== undefined) piece.copyrightNotice = input.copyrightNotice;
     if (input.license !== undefined) piece.license = input.license;
-    if (input.isAccessibleForFree !== undefined) piece.isAccessibleForFree = input.isAccessibleForFree;
+    if (input.isAccessibleForFree !== undefined)
+        piece.isAccessibleForFree = input.isAccessibleForFree;
 }

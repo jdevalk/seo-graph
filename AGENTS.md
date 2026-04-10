@@ -60,7 +60,7 @@ Two packages:
 ```
 
 **Key principle:** Core has no opinions about your content model, routing, or
-page types. It gives you piece builders. *You* decide which pieces to assemble
+page types. It gives you piece builders. _You_ decide which pieces to assemble
 for each page. This file tells you which pieces to pick.
 
 ---
@@ -80,7 +80,7 @@ npm install @jdevalk/seo-graph-core
 ## The @id system
 
 Every entity in a JSON-LD `@graph` can have an `@id`. Other entities reference
-it by `{ "@id": "..." }`. This is how the graph becomes *linked* rather than
+it by `{ "@id": "..." }`. This is how the graph becomes _linked_ rather than
 flat.
 
 `makeIds()` creates an `IdFactory` that generates stable, deterministic `@id`
@@ -97,19 +97,19 @@ const ids = makeIds({
 
 ### Available IDs
 
-| Property/Method | Returns | Use for |
-|---|---|---|
-| `ids.person` | `https://example.com/about/#/schema.org/Person` | Site-wide Person entity |
-| `ids.personImage` | `https://example.com/about/#/schema.org/Person/image` | Person's profile image |
-| `ids.website` | `https://example.com/#/schema.org/WebSite` | Site-wide WebSite entity |
-| `ids.navigation` | `https://example.com/#/schema.org/SiteNavigationElement` | Main navigation |
-| `ids.organization(slug)` | `https://example.com/#/schema.org/Organization/{slug}` | Named organization |
-| `ids.country(code)` | `https://example.com/#/schema.org/Country/{code}` | Country entity (ISO 3166) |
-| `ids.webPage(url)` | The URL itself | WebPage entity (canonical URL = @id) |
-| `ids.breadcrumb(url)` | `{url}#breadcrumb` | BreadcrumbList for a page |
-| `ids.article(url)` | `{url}#article` | Article entity for a page |
-| `ids.videoObject(url)` | `{url}#video` | VideoObject for a page |
-| `ids.primaryImage(url)` | `{url}#primaryimage` | Primary image for a page |
+| Property/Method          | Returns                                                  | Use for                              |
+| ------------------------ | -------------------------------------------------------- | ------------------------------------ |
+| `ids.person`             | `https://example.com/about/#/schema.org/Person`          | Site-wide Person entity              |
+| `ids.personImage`        | `https://example.com/about/#/schema.org/Person/image`    | Person's profile image               |
+| `ids.website`            | `https://example.com/#/schema.org/WebSite`               | Site-wide WebSite entity             |
+| `ids.navigation`         | `https://example.com/#/schema.org/SiteNavigationElement` | Main navigation                      |
+| `ids.organization(slug)` | `https://example.com/#/schema.org/Organization/{slug}`   | Named organization                   |
+| `ids.country(code)`      | `https://example.com/#/schema.org/Country/{code}`        | Country entity (ISO 3166)            |
+| `ids.webPage(url)`       | The URL itself                                           | WebPage entity (canonical URL = @id) |
+| `ids.breadcrumb(url)`    | `{url}#breadcrumb`                                       | BreadcrumbList for a page            |
+| `ids.article(url)`       | `{url}#article`                                          | Article entity for a page            |
+| `ids.videoObject(url)`   | `{url}#video`                                            | VideoObject for a page               |
+| `ids.primaryImage(url)`  | `{url}#primaryimage`                                     | Primary image for a page             |
 
 ### How entities reference each other
 
@@ -143,7 +143,7 @@ blog as a publication. `BlogPosting` is a subtype of `Article`. A `BlogPosting`
 can be `isPartOf` both its `WebPage` and the `Blog`. This lets agents understand
 that a post belongs to a specific blog, not just a website. Use `Blog` when the
 site has a distinct blog section; skip it for single-purpose blogs where the
-blog *is* the site.
+blog _is_ the site.
 
 **Rule:** Always use `{ '@id': ids.xxx }` to reference another entity. Never
 inline the full entity inside another entity. The graph structure handles
@@ -161,16 +161,19 @@ Every builder takes an input object and the `IdFactory`, and returns a
 Creates the site-wide `WebSite` entity. Include exactly once per graph.
 
 ```ts
-buildWebSite({
-    url: 'https://example.com/',           // required — site root URL
-    name: 'My Site',                        // required — site name
-    description: 'A site about...',         // optional
-    publisher: { '@id': ids.person },       // required — Person or Organization ref
-    about: { '@id': ids.person },           // optional — what this site is about
-    inLanguage: 'en-US',                    // optional — default content language
-    hasPart: { '@id': ids.navigation },     // optional — navigation ref
-    extra: {},                              // optional — escape hatch for any schema.org property
-}, ids);
+buildWebSite(
+    {
+        url: 'https://example.com/', // required — site root URL
+        name: 'My Site', // required — site name
+        description: 'A site about...', // optional
+        publisher: { '@id': ids.person }, // required — Person or Organization ref
+        about: { '@id': ids.person }, // optional — what this site is about
+        inLanguage: 'en-US', // optional — default content language
+        hasPart: { '@id': ids.navigation }, // optional — navigation ref
+        extra: {}, // optional — escape hatch for any schema.org property
+    },
+    ids,
+);
 ```
 
 **Adding a SearchAction** (recommended for sites with search):
@@ -179,25 +182,28 @@ Use the `extra` field to add a `potentialAction` with a `SearchAction`. This
 tells search engines and agents how to search your site:
 
 ```ts
-buildWebSite({
-    url: 'https://example.com/',
-    name: 'My Site',
-    publisher: { '@id': ids.person },
-    extra: {
-        potentialAction: {
-            '@type': 'SearchAction',
-            target: {
-                '@type': 'EntryPoint',
-                urlTemplate: 'https://example.com/?s={search_term_string}',
-            },
-            'query-input': {
-                '@type': 'PropertyValueSpecification',
-                valueRequired: true,
-                valueName: 'search_term_string',
+buildWebSite(
+    {
+        url: 'https://example.com/',
+        name: 'My Site',
+        publisher: { '@id': ids.person },
+        extra: {
+            potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                    '@type': 'EntryPoint',
+                    urlTemplate: 'https://example.com/?s={search_term_string}',
+                },
+                'query-input': {
+                    '@type': 'PropertyValueSpecification',
+                    valueRequired: true,
+                    valueName: 'search_term_string',
+                },
             },
         },
     },
-}, ids);
+    ids,
+);
 ```
 
 This is the pattern used by most WordPress sites and many other CMSes.
@@ -207,32 +213,37 @@ This is the pattern used by most WordPress sites and many other CMSes.
 Creates a `Person` entity. Typically the site owner or author.
 
 ```ts
-buildPerson({
-    name: 'Jane Doe',                       // required
-    familyName: 'Doe',                      // optional
-    birthDate: '1990-01-15',                // optional
-    gender: 'female',                       // optional
-    nationality: { '@id': ids.country('US') }, // optional
-    description: 'Software engineer...',    // optional
-    jobTitle: 'Lead Engineer',              // optional
-    knowsLanguage: ['en', 'es'],            // optional
-    url: 'https://example.com/about/',      // optional
-    image: { '@id': ids.personImage },      // optional — ref to ImageObject
-    sameAs: [                               // optional — social/professional profiles
-        'https://twitter.com/janedoe',
-        'https://github.com/janedoe',
-        'https://linkedin.com/in/janedoe',
-    ],
-    worksFor: [                             // optional — EmployeeRole objects
-        {
-            '@type': 'EmployeeRole',
-            roleName: 'Lead Engineer',
-            startDate: '2022-01-01',
-            worksFor: { '@id': ids.organization('acme') },
-        },
-    ],
-    extra: {},                              // optional — escape hatch
-}, ids);
+buildPerson(
+    {
+        name: 'Jane Doe', // required
+        familyName: 'Doe', // optional
+        birthDate: '1990-01-15', // optional
+        gender: 'female', // optional
+        nationality: { '@id': ids.country('US') }, // optional
+        description: 'Software engineer...', // optional
+        jobTitle: 'Lead Engineer', // optional
+        knowsLanguage: ['en', 'es'], // optional
+        url: 'https://example.com/about/', // optional
+        image: { '@id': ids.personImage }, // optional — ref to ImageObject
+        sameAs: [
+            // optional — social/professional profiles
+            'https://twitter.com/janedoe',
+            'https://github.com/janedoe',
+            'https://linkedin.com/in/janedoe',
+        ],
+        worksFor: [
+            // optional — EmployeeRole objects
+            {
+                '@type': 'EmployeeRole',
+                roleName: 'Lead Engineer',
+                startDate: '2022-01-01',
+                worksFor: { '@id': ids.organization('acme') },
+            },
+        ],
+        extra: {}, // optional — escape hatch
+    },
+    ids,
+);
 ```
 
 ### buildOrganization
@@ -243,43 +254,50 @@ Creates an `Organization` or any subtype (`LocalBusiness`, `Restaurant`, etc.).
 import type { LocalBusiness } from 'schema-dts';
 
 // Basic organization
-buildOrganization({
-    slug: 'acme',                           // required — stable slug for @id
-    name: 'Acme Corp',                      // required
-    url: 'https://acme.com/',               // optional
-    description: 'We make things.',         // optional
-    logo: 'https://acme.com/logo.png',      // optional — URL string or ImageObject ref
-    sameAs: ['https://twitter.com/acme'],   // optional
-    extra: {},                              // optional — escape hatch
-}, ids);
+buildOrganization(
+    {
+        slug: 'acme', // required — stable slug for @id
+        name: 'Acme Corp', // required
+        url: 'https://acme.com/', // optional
+        description: 'We make things.', // optional
+        logo: 'https://acme.com/logo.png', // optional — URL string or ImageObject ref
+        sameAs: ['https://twitter.com/acme'], // optional
+        extra: {}, // optional — escape hatch
+    },
+    ids,
+);
 
 // Subtype (e.g. LocalBusiness, Restaurant, etc.)
-buildOrganization<LocalBusiness>({
-    slug: 'my-restaurant',
-    name: 'Chez Example',
-    url: 'https://example.com/',
-    extra: {
-        address: {
-            '@type': 'PostalAddress',
-            streetAddress: '123 Main St',
-            addressLocality: 'Springfield',
-            addressRegion: 'IL',
-            postalCode: '62701',
-            addressCountry: 'US',
-        },
-        telephone: '+1-555-123-4567',
-        priceRange: '$$',
-        servesCuisine: 'French',
-        openingHoursSpecification: [
-            {
-                '@type': 'OpeningHoursSpecification',
-                dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                opens: '11:00',
-                closes: '22:00',
+buildOrganization<LocalBusiness>(
+    {
+        slug: 'my-restaurant',
+        name: 'Chez Example',
+        url: 'https://example.com/',
+        extra: {
+            address: {
+                '@type': 'PostalAddress',
+                streetAddress: '123 Main St',
+                addressLocality: 'Springfield',
+                addressRegion: 'IL',
+                postalCode: '62701',
+                addressCountry: 'US',
             },
-        ],
+            telephone: '+1-555-123-4567',
+            priceRange: '$$',
+            servesCuisine: 'French',
+            openingHoursSpecification: [
+                {
+                    '@type': 'OpeningHoursSpecification',
+                    dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+                    opens: '11:00',
+                    closes: '22:00',
+                },
+            ],
+        },
     },
-}, ids, 'Restaurant');
+    ids,
+    'Restaurant',
+);
 ```
 
 **The `subtype` parameter:** Pass the schema.org type name as the third argument
@@ -291,27 +309,32 @@ buildOrganization<LocalBusiness>({
 Creates a `WebPage`, `ProfilePage`, or `CollectionPage` entity.
 
 ```ts
-buildWebPage({
-    url: 'https://example.com/my-page/',    // required — canonical URL (becomes @id)
-    name: 'My Page',                         // required — page title
-    isPartOf: { '@id': ids.website },        // required — WebSite ref
-    breadcrumb: { '@id': ids.breadcrumb(url) }, // optional — BreadcrumbList ref
-    inLanguage: 'en-US',                     // optional
-    datePublished: new Date('2026-01-15'),   // optional — emitted as ISO string
-    dateModified: new Date('2026-03-01'),    // optional
-    primaryImage: { '@id': ids.primaryImage(url) }, // optional — ImageObject ref
-    about: { '@id': ids.person },            // optional — for ProfilePage/homepage
-    copyrightHolder: { '@id': ids.person },  // optional — who holds the copyright
-    copyrightYear: 2026,                     // optional
-    copyrightNotice: '© 2026 Jane Doe.',     // optional — human-readable copyright text
-    license: 'https://creativecommons.org/licenses/by/4.0/', // optional — license URL
-    isAccessibleForFree: true,               // optional
-    potentialAction: [],                     // optional — defaults to ReadAction
-    extra: {},                               // optional — escape hatch
-}, ids, 'WebPage');  // third param: 'WebPage' | 'ProfilePage' | 'CollectionPage'
+buildWebPage(
+    {
+        url: 'https://example.com/my-page/', // required — canonical URL (becomes @id)
+        name: 'My Page', // required — page title
+        isPartOf: { '@id': ids.website }, // required — WebSite ref
+        breadcrumb: { '@id': ids.breadcrumb(url) }, // optional — BreadcrumbList ref
+        inLanguage: 'en-US', // optional
+        datePublished: new Date('2026-01-15'), // optional — emitted as ISO string
+        dateModified: new Date('2026-03-01'), // optional
+        primaryImage: { '@id': ids.primaryImage(url) }, // optional — ImageObject ref
+        about: { '@id': ids.person }, // optional — for ProfilePage/homepage
+        copyrightHolder: { '@id': ids.person }, // optional — who holds the copyright
+        copyrightYear: 2026, // optional
+        copyrightNotice: '© 2026 Jane Doe.', // optional — human-readable copyright text
+        license: 'https://creativecommons.org/licenses/by/4.0/', // optional — license URL
+        isAccessibleForFree: true, // optional
+        potentialAction: [], // optional — defaults to ReadAction
+        extra: {}, // optional — escape hatch
+    },
+    ids,
+    'WebPage',
+); // third param: 'WebPage' | 'ProfilePage' | 'CollectionPage'
 ```
 
 **When to use which type:**
+
 - `WebPage` — Default. Blog posts, regular pages, product pages.
 - `ProfilePage` — About pages, author profiles.
 - `CollectionPage` — Blog listing, category archives, tag pages, portfolios.
@@ -322,30 +345,35 @@ Creates an `Article` or any Article subtype (`BlogPosting`, `NewsArticle`,
 etc.). Use for blog posts, news articles, tutorials.
 
 ```ts
-buildArticle({
-    url: 'https://example.com/my-post/',     // required — canonical URL
-    isPartOf: { '@id': ids.webPage(url) },   // required — enclosing WebPage ref
-    author: { '@id': ids.person },            // required — Person ref
-    publisher: { '@id': ids.person },         // required — Person or Organization ref
-    headline: 'My Post Title',                // required
-    description: 'A brief summary...',        // required
-    inLanguage: 'en-US',                      // optional
-    datePublished: new Date('2026-01-15'),    // required
-    dateModified: new Date('2026-03-01'),     // optional
-    image: { '@id': ids.primaryImage(url) },  // optional — ImageObject ref
-    about: { '@id': ids.person },             // optional — what this article is about
-    articleSection: 'Technology',              // optional — top-level category
-    wordCount: 1500,                          // optional
-    articleBody: 'The full text...',           // optional — plain text, max ~10K chars
-    extra: {},                                // optional — escape hatch
-}, ids, 'Article');  // third param: 'Article' | 'BlogPosting' | 'NewsArticle' | 'TechArticle' | 'ScholarlyArticle' | 'Report'
+buildArticle(
+    {
+        url: 'https://example.com/my-post/', // required — canonical URL
+        isPartOf: { '@id': ids.webPage(url) }, // required — enclosing WebPage ref
+        author: { '@id': ids.person }, // required — Person ref
+        publisher: { '@id': ids.person }, // required — Person or Organization ref
+        headline: 'My Post Title', // required
+        description: 'A brief summary...', // required
+        inLanguage: 'en-US', // optional
+        datePublished: new Date('2026-01-15'), // required
+        dateModified: new Date('2026-03-01'), // optional
+        image: { '@id': ids.primaryImage(url) }, // optional — ImageObject ref
+        about: { '@id': ids.person }, // optional — what this article is about
+        articleSection: 'Technology', // optional — top-level category
+        wordCount: 1500, // optional
+        articleBody: 'The full text...', // optional — plain text, max ~10K chars
+        extra: {}, // optional — escape hatch
+    },
+    ids,
+    'Article',
+); // third param: 'Article' | 'BlogPosting' | 'NewsArticle' | 'TechArticle' | 'ScholarlyArticle' | 'Report'
 ```
 
 **The `type` parameter:** Pass the schema.org type name as the third argument.
 Defaults to `'Article'`. Use `'BlogPosting'` for blog posts, `'NewsArticle'`
 for journalism, `'TechArticle'` for technical docs, `'ScholarlyArticle'` for
 academic papers, or `'Report'` for data/research reports.
-```
+
+````
 
 ### buildBreadcrumbList
 
@@ -361,9 +389,10 @@ buildBreadcrumbList({
     ],
     extra: {},                                 // optional
 }, ids);
-```
+````
 
 **Rules:**
+
 - First item should be the homepage.
 - Last item should be the current page.
 - Order is root → leaf.
@@ -374,23 +403,29 @@ Creates an `ImageObject` entity.
 
 ```ts
 // Page-specific image (e.g. blog post feature image)
-buildImageObject({
-    pageUrl: 'https://example.com/my-post/', // one of pageUrl or id required
-    url: 'https://example.com/images/post.jpg', // required — image file URL
-    width: 1200,                              // required
-    height: 630,                              // required
-    inLanguage: 'en-US',                      // optional
-    caption: 'A photo of...',                 // optional
-    extra: {},                                // optional
-}, ids);
+buildImageObject(
+    {
+        pageUrl: 'https://example.com/my-post/', // one of pageUrl or id required
+        url: 'https://example.com/images/post.jpg', // required — image file URL
+        width: 1200, // required
+        height: 630, // required
+        inLanguage: 'en-US', // optional
+        caption: 'A photo of...', // optional
+        extra: {}, // optional
+    },
+    ids,
+);
 
 // Site-wide image (e.g. person photo, logo)
-buildImageObject({
-    id: ids.personImage,                      // explicit @id override
-    url: 'https://example.com/joost.jpg',
-    width: 400,
-    height: 400,
-}, ids);
+buildImageObject(
+    {
+        id: ids.personImage, // explicit @id override
+        url: 'https://example.com/joost.jpg',
+        width: 400,
+        height: 400,
+    },
+    ids,
+);
 ```
 
 ### buildVideoObject
@@ -398,22 +433,26 @@ buildImageObject({
 Creates a `VideoObject` entity. Has built-in YouTube support.
 
 ```ts
-buildVideoObject({
-    url: 'https://example.com/videos/my-talk/', // required — page URL
-    name: 'My Conference Talk',                  // required
-    description: 'A talk about...',              // required
-    isPartOf: { '@id': ids.webPage(url) },       // required — enclosing WebPage ref
-    youtubeId: 'dQw4w9WgXcQ',                   // optional — auto-derives thumbnail + embed URLs
-    thumbnailUrl: '...',                         // optional — explicit override
-    embedUrl: '...',                             // optional — explicit override
-    uploadDate: new Date('2026-01-15'),          // optional
-    duration: 'PT30M',                           // optional — ISO 8601
-    transcript: 'Full transcript text...',       // optional
-    extra: {},                                   // optional
-}, ids);
+buildVideoObject(
+    {
+        url: 'https://example.com/videos/my-talk/', // required — page URL
+        name: 'My Conference Talk', // required
+        description: 'A talk about...', // required
+        isPartOf: { '@id': ids.webPage(url) }, // required — enclosing WebPage ref
+        youtubeId: 'dQw4w9WgXcQ', // optional — auto-derives thumbnail + embed URLs
+        thumbnailUrl: '...', // optional — explicit override
+        embedUrl: '...', // optional — explicit override
+        uploadDate: new Date('2026-01-15'), // optional
+        duration: 'PT30M', // optional — ISO 8601
+        transcript: 'Full transcript text...', // optional
+        extra: {}, // optional
+    },
+    ids,
+);
 ```
 
 **YouTube convenience:** When `youtubeId` is provided:
+
 - `thumbnailUrl` defaults to `https://img.youtube.com/vi/{id}/maxresdefault.jpg`
 - `embedUrl` defaults to `https://www.youtube-nocookie.com/embed/{id}`
 
@@ -422,16 +461,20 @@ buildVideoObject({
 Creates a `SiteNavigationElement` with nested items.
 
 ```ts
-buildSiteNavigationElement({
-    name: 'Main navigation',                   // required
-    isPartOf: { '@id': ids.website },           // required — WebSite ref
-    items: [                                    // required — navigation links
-        { name: 'Home', url: 'https://example.com/' },
-        { name: 'Blog', url: 'https://example.com/blog/' },
-        { name: 'About', url: 'https://example.com/about/' },
-    ],
-    extra: {},                                  // optional
-}, ids);
+buildSiteNavigationElement(
+    {
+        name: 'Main navigation', // required
+        isPartOf: { '@id': ids.website }, // required — WebSite ref
+        items: [
+            // required — navigation links
+            { name: 'Home', url: 'https://example.com/' },
+            { name: 'Blog', url: 'https://example.com/blog/' },
+            { name: 'About', url: 'https://example.com/about/' },
+        ],
+        extra: {}, // optional
+    },
+    ids,
+);
 ```
 
 ### buildCustomPiece
@@ -504,6 +547,7 @@ The most common case. A single-author blog with posts, categories, and an
 about page.
 
 **For every page** (site-wide entities):
+
 - `buildWebSite` — publisher points to Person
 - `buildPerson` — the blog author
 - `buildImageObject` — person's profile photo (use `id: ids.personImage`)
@@ -572,36 +616,91 @@ the posting to both the `WebPage` and the `Blog`. If you don't need the `Blog`
 link, just use `isPartOf: { '@id': ids.webPage(url) }` directly.
 
 **Blog listing** (`/blog/`):
+
 ```ts
 const pieces = [
     // ...site-wide entities (including Blog)...
-    buildWebPage({ url, name: 'Blog', isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) }, about: { '@id': blogId } }, ids, 'CollectionPage'),
-    buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Blog', url }] }, ids),
+    buildWebPage(
+        {
+            url,
+            name: 'Blog',
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+            about: { '@id': blogId },
+        },
+        ids,
+        'CollectionPage',
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: siteUrl },
+                { name: 'Blog', url },
+            ],
+        },
+        ids,
+    ),
 ];
 ```
 
 **Category archive** (`/blog/category/tech/`):
+
 ```ts
 const pieces = [
     // ...site-wide entities...
-    buildWebPage({ url, name: 'Technology', isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) } }, ids, 'CollectionPage'),
-    buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Blog', url: blogUrl }, { name: 'Technology', url }] }, ids),
+    buildWebPage(
+        {
+            url,
+            name: 'Technology',
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+        },
+        ids,
+        'CollectionPage',
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: siteUrl },
+                { name: 'Blog', url: blogUrl },
+                { name: 'Technology', url },
+            ],
+        },
+        ids,
+    ),
 ];
 ```
 
 **About page** (`/about/`):
+
 ```ts
 const pieces = [
     // ...site-wide entities...
-    buildWebPage({ url, name: 'About Jane', isPartOf: { '@id': ids.website }, about: { '@id': ids.person } }, ids, 'ProfilePage'),
+    buildWebPage(
+        { url, name: 'About Jane', isPartOf: { '@id': ids.website }, about: { '@id': ids.person } },
+        ids,
+        'ProfilePage',
+    ),
 ];
 ```
 
 **Homepage** (`/`):
+
 ```ts
 const pieces = [
     // ...site-wide entities...
-    buildWebPage({ url: siteUrl, name: 'Jane Doe — My Blog', isPartOf: { '@id': ids.website }, about: { '@id': ids.person } }, ids, 'CollectionPage'),
+    buildWebPage(
+        {
+            url: siteUrl,
+            name: 'Jane Doe — My Blog',
+            isPartOf: { '@id': ids.website },
+            about: { '@id': ids.person },
+        },
+        ids,
+        'CollectionPage',
+    ),
 ];
 ```
 
@@ -666,9 +765,30 @@ const ids = makeIds({ siteUrl: 'https://shop.example.com' });
 
 const pieces = [
     buildOrganization({ slug: 'shop', name: 'Example Shop', url: siteUrl, logo: logoUrl }, ids),
-    buildWebSite({ url: siteUrl, name: 'Example Shop', publisher: { '@id': ids.organization('shop') } }, ids),
-    buildWebPage({ url, name: productName, isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) } }, ids),
-    buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Shoes', url: categoryUrl }, { name: productName, url }] }, ids),
+    buildWebSite(
+        { url: siteUrl, name: 'Example Shop', publisher: { '@id': ids.organization('shop') } },
+        ids,
+    ),
+    buildWebPage(
+        {
+            url,
+            name: productName,
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+        },
+        ids,
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: siteUrl },
+                { name: 'Shoes', url: categoryUrl },
+                { name: productName, url },
+            ],
+        },
+        ids,
+    ),
     buildCustomPiece({
         '@type': 'Product',
         '@id': `${url}#product`,
@@ -709,9 +829,30 @@ as the parent and individual `Product` entities for each variant:
 
 ```ts
 const variants = [
-    { sku: 'SHOE-BLK-10', name: 'Running Shoe — Black, Size 10', color: 'Black', size: '10', price: 99.99, inStock: true },
-    { sku: 'SHOE-WHT-10', name: 'Running Shoe — White, Size 10', color: 'White', size: '10', price: 99.99, inStock: true },
-    { sku: 'SHOE-BLK-11', name: 'Running Shoe — Black, Size 11', color: 'Black', size: '11', price: 99.99, inStock: false },
+    {
+        sku: 'SHOE-BLK-10',
+        name: 'Running Shoe — Black, Size 10',
+        color: 'Black',
+        size: '10',
+        price: 99.99,
+        inStock: true,
+    },
+    {
+        sku: 'SHOE-WHT-10',
+        name: 'Running Shoe — White, Size 10',
+        color: 'White',
+        size: '10',
+        price: 99.99,
+        inStock: true,
+    },
+    {
+        sku: 'SHOE-BLK-11',
+        name: 'Running Shoe — Black, Size 11',
+        color: 'Black',
+        size: '11',
+        price: 99.99,
+        inStock: false,
+    },
 ];
 
 const pieces = [
@@ -724,35 +865,39 @@ const pieces = [
         brand: { '@type': 'Brand', name: 'Nike' },
         productGroupID: 'running-shoe',
         variesBy: ['https://schema.org/color', 'https://schema.org/size'],
-        hasVariant: variants.map(v => ({ '@id': `${url}#variant-${v.sku}` })),
+        hasVariant: variants.map((v) => ({ '@id': `${url}#variant-${v.sku}` })),
     }),
-    ...variants.map(v => buildCustomPiece({
-        '@type': 'Product',
-        '@id': `${url}#variant-${v.sku}`,
-        name: v.name,
-        sku: v.sku,
-        color: v.color,
-        size: v.size,
-        image: [productImageUrl],
-        offers: {
-            '@type': 'Offer',
-            price: v.price,
-            priceCurrency: 'USD',
-            availability: v.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-            url,
-            hasMerchantReturnPolicy: {
-                '@type': 'MerchantReturnPolicy',
-                merchantReturnDays: 30,
-                returnMethod: 'https://schema.org/ReturnByMail',
-                returnFees: 'https://schema.org/FreeReturn',
+    ...variants.map((v) =>
+        buildCustomPiece({
+            '@type': 'Product',
+            '@id': `${url}#variant-${v.sku}`,
+            name: v.name,
+            sku: v.sku,
+            color: v.color,
+            size: v.size,
+            image: [productImageUrl],
+            offers: {
+                '@type': 'Offer',
+                price: v.price,
+                priceCurrency: 'USD',
+                availability: v.inStock
+                    ? 'https://schema.org/InStock'
+                    : 'https://schema.org/OutOfStock',
+                url,
+                hasMerchantReturnPolicy: {
+                    '@type': 'MerchantReturnPolicy',
+                    merchantReturnDays: 30,
+                    returnMethod: 'https://schema.org/ReturnByMail',
+                    returnFees: 'https://schema.org/FreeReturn',
+                },
+                shippingDetails: {
+                    '@type': 'OfferShippingDetails',
+                    shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'USD' },
+                    shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'US' },
+                },
             },
-            shippingDetails: {
-                '@type': 'OfferShippingDetails',
-                shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'USD' },
-                shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'US' },
-            },
-        },
-    })),
+        }),
+    ),
 ];
 ```
 
@@ -768,46 +913,64 @@ import type { Restaurant } from 'schema-dts';
 const ids = makeIds({ siteUrl: 'https://chezexample.com' });
 
 const pieces = [
-    buildOrganization<Restaurant>({
-        slug: 'chez-example',
-        name: 'Chez Example',
-        url: 'https://chezexample.com/',
-        logo: logoUrl,
-        sameAs: ['https://instagram.com/chezexample'],
-        extra: {
-            address: {
-                '@type': 'PostalAddress',
-                streetAddress: '123 Rue de la Paix',
-                addressLocality: 'Paris',
-                postalCode: '75002',
-                addressCountry: 'FR',
-            },
-            telephone: '+33-1-23-45-67-89',
-            priceRange: '$$$',
-            servesCuisine: 'French',
-            geo: {
-                '@type': 'GeoCoordinates',
-                latitude: 48.8698,
-                longitude: 2.3311,
-            },
-            openingHoursSpecification: [
-                {
-                    '@type': 'OpeningHoursSpecification',
-                    dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-                    opens: '12:00',
-                    closes: '14:30',
+    buildOrganization<Restaurant>(
+        {
+            slug: 'chez-example',
+            name: 'Chez Example',
+            url: 'https://chezexample.com/',
+            logo: logoUrl,
+            sameAs: ['https://instagram.com/chezexample'],
+            extra: {
+                address: {
+                    '@type': 'PostalAddress',
+                    streetAddress: '123 Rue de la Paix',
+                    addressLocality: 'Paris',
+                    postalCode: '75002',
+                    addressCountry: 'FR',
                 },
-                {
-                    '@type': 'OpeningHoursSpecification',
-                    dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-                    opens: '19:00',
-                    closes: '22:30',
+                telephone: '+33-1-23-45-67-89',
+                priceRange: '$$$',
+                servesCuisine: 'French',
+                geo: {
+                    '@type': 'GeoCoordinates',
+                    latitude: 48.8698,
+                    longitude: 2.3311,
                 },
-            ],
+                openingHoursSpecification: [
+                    {
+                        '@type': 'OpeningHoursSpecification',
+                        dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                        opens: '12:00',
+                        closes: '14:30',
+                    },
+                    {
+                        '@type': 'OpeningHoursSpecification',
+                        dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                        opens: '19:00',
+                        closes: '22:30',
+                    },
+                ],
+            },
         },
-    }, ids, 'Restaurant'),
-    buildWebSite({ url: siteUrl, name: 'Chez Example', publisher: { '@id': ids.organization('chez-example') } }, ids),
-    buildWebPage({ url: siteUrl, name: 'Chez Example — French Restaurant in Paris', isPartOf: { '@id': ids.website } }, ids),
+        ids,
+        'Restaurant',
+    ),
+    buildWebSite(
+        {
+            url: siteUrl,
+            name: 'Chez Example',
+            publisher: { '@id': ids.organization('chez-example') },
+        },
+        ids,
+    ),
+    buildWebPage(
+        {
+            url: siteUrl,
+            name: 'Chez Example — French Restaurant in Paris',
+            isPartOf: { '@id': ids.website },
+        },
+        ids,
+    ),
 ];
 ```
 
@@ -822,18 +985,66 @@ const ids = makeIds({ siteUrl: 'https://janedoe.design' });
 
 // Homepage — CollectionPage showcasing work
 const pieces = [
-    buildPerson({ name: 'Jane Doe', jobTitle: 'Product Designer', url: siteUrl, image: { '@id': ids.personImage }, sameAs: [dribbble, linkedin] }, ids),
+    buildPerson(
+        {
+            name: 'Jane Doe',
+            jobTitle: 'Product Designer',
+            url: siteUrl,
+            image: { '@id': ids.personImage },
+            sameAs: [dribbble, linkedin],
+        },
+        ids,
+    ),
     buildImageObject({ id: ids.personImage, url: headshot, width: 400, height: 400 }, ids),
     buildWebSite({ url: siteUrl, name: 'Jane Doe Design', publisher: { '@id': ids.person } }, ids),
-    buildWebPage({ url: siteUrl, name: 'Jane Doe — Product Designer', isPartOf: { '@id': ids.website }, about: { '@id': ids.person } }, ids, 'CollectionPage'),
+    buildWebPage(
+        {
+            url: siteUrl,
+            name: 'Jane Doe — Product Designer',
+            isPartOf: { '@id': ids.website },
+            about: { '@id': ids.person },
+        },
+        ids,
+        'CollectionPage',
+    ),
 ];
 
 // Individual project page
 const projectPieces = [
     // ...site-wide entities...
-    buildWebPage({ url, name: projectTitle, isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) }, datePublished }, ids),
-    buildArticle({ url, isPartOf: { '@id': ids.webPage(url) }, author: { '@id': ids.person }, publisher: { '@id': ids.person }, headline: projectTitle, description, datePublished }, ids),
-    buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Work', url: workUrl }, { name: projectTitle, url }] }, ids),
+    buildWebPage(
+        {
+            url,
+            name: projectTitle,
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+            datePublished,
+        },
+        ids,
+    ),
+    buildArticle(
+        {
+            url,
+            isPartOf: { '@id': ids.webPage(url) },
+            author: { '@id': ids.person },
+            publisher: { '@id': ids.person },
+            headline: projectTitle,
+            description,
+            datePublished,
+        },
+        ids,
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: siteUrl },
+                { name: 'Work', url: workUrl },
+                { name: projectTitle, url },
+            ],
+        },
+        ids,
+    ),
 ];
 ```
 
@@ -847,10 +1058,40 @@ A docs site for a software project or API.
 const ids = makeIds({ siteUrl: 'https://docs.example.com' });
 
 const pieces = [
-    buildOrganization({ slug: 'example', name: 'Example Inc', url: 'https://example.com/', logo: logoUrl }, ids),
-    buildWebSite({ url: siteUrl, name: 'Example Docs', publisher: { '@id': ids.organization('example') }, description: 'Documentation for Example SDK' }, ids),
-    buildWebPage({ url, name: pageTitle, isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) }, dateModified }, ids),
-    buildBreadcrumbList({ url, items: [{ name: 'Docs', url: siteUrl }, { name: 'Guides', url: guidesUrl }, { name: pageTitle, url }] }, ids),
+    buildOrganization(
+        { slug: 'example', name: 'Example Inc', url: 'https://example.com/', logo: logoUrl },
+        ids,
+    ),
+    buildWebSite(
+        {
+            url: siteUrl,
+            name: 'Example Docs',
+            publisher: { '@id': ids.organization('example') },
+            description: 'Documentation for Example SDK',
+        },
+        ids,
+    ),
+    buildWebPage(
+        {
+            url,
+            name: pageTitle,
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+            dateModified,
+        },
+        ids,
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Docs', url: siteUrl },
+                { name: 'Guides', url: guidesUrl },
+                { name: pageTitle, url },
+            ],
+        },
+        ids,
+    ),
 ];
 ```
 
@@ -887,9 +1128,40 @@ const pieces = [
         inLanguage: 'en-US',
         webFeed: `${siteUrl}feed.xml`,
     }),
-    buildWebPage({ url, name: episodeTitle, isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) }, datePublished }, ids),
-    buildVideoObject({ url, name: episodeTitle, description: episodeDescription, isPartOf: { '@id': ids.webPage(url) }, youtubeId, uploadDate: publishDate, duration: 'PT45M', transcript }, ids),
-    buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Episodes', url: episodesUrl }, { name: episodeTitle, url }] }, ids),
+    buildWebPage(
+        {
+            url,
+            name: episodeTitle,
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+            datePublished,
+        },
+        ids,
+    ),
+    buildVideoObject(
+        {
+            url,
+            name: episodeTitle,
+            description: episodeDescription,
+            isPartOf: { '@id': ids.webPage(url) },
+            youtubeId,
+            uploadDate: publishDate,
+            duration: 'PT45M',
+            transcript,
+        },
+        ids,
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: siteUrl },
+                { name: 'Episodes', url: episodesUrl },
+                { name: episodeTitle, url },
+            ],
+        },
+        ids,
+    ),
 ];
 ```
 
@@ -921,7 +1193,17 @@ const pieces = [
         },
         author: { '@id': ids.person },
     }),
-    buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Episodes', url: episodesUrl }, { name: episodeTitle, url }] }, ids),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: siteUrl },
+                { name: 'Episodes', url: episodesUrl },
+                { name: episodeTitle, url },
+            ],
+        },
+        ids,
+    ),
 ];
 ```
 
@@ -930,7 +1212,11 @@ const pieces = [
 ```ts
 const pieces = [
     // ...site-wide entities...
-    buildWebPage({ url, name: 'Episodes', isPartOf: { '@id': ids.website }, about: { '@id': seriesId } }, ids, 'CollectionPage'),
+    buildWebPage(
+        { url, name: 'Episodes', isPartOf: { '@id': ids.website }, about: { '@id': seriesId } },
+        ids,
+        'CollectionPage',
+    ),
 ];
 ```
 
@@ -944,7 +1230,14 @@ const ids = makeIds({ siteUrl: 'https://myhouse.example.com' });
 const pieces = [
     buildPerson({ name: 'Owner Name', url: siteUrl }, ids),
     buildWebSite({ url: siteUrl, name: 'Villa Example', publisher: { '@id': ids.person } }, ids),
-    buildWebPage({ url: siteUrl, name: 'Villa Example — Holiday Home in Tuscany', isPartOf: { '@id': ids.website } }, ids),
+    buildWebPage(
+        {
+            url: siteUrl,
+            name: 'Villa Example — Holiday Home in Tuscany',
+            isPartOf: { '@id': ids.website },
+        },
+        ids,
+    ),
     buildCustomPiece({
         '@type': 'VacationRental',
         '@id': `${siteUrl}#rental`,
@@ -961,7 +1254,7 @@ const pieces = [
         geo: {
             '@type': 'GeoCoordinates',
             latitude: 43.84,
-            longitude: 10.50,
+            longitude: 10.5,
         },
         numberOfRooms: 4,
         occupancy: {
@@ -976,7 +1269,8 @@ const pieces = [
             '@type': 'RentAction',
             target: {
                 '@type': 'EntryPoint',
-                urlTemplate: 'https://myhouse.example.com/book?checkin={checkin}&checkout={checkout}&guests={guests}',
+                urlTemplate:
+                    'https://myhouse.example.com/book?checkin={checkin}&checkout={checkout}&guests={guests}',
             },
             landlord: { '@id': ids.person },
             priceSpecification: {
@@ -999,8 +1293,27 @@ const ids = makeIds({ siteUrl: 'https://recipes.example.com' });
 
 const pieces = [
     // ...site-wide entities...
-    buildWebPage({ url, name: recipeName, isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) }, datePublished }, ids),
-    buildBreadcrumbList({ url, items: [{ name: 'Home', url: siteUrl }, { name: 'Italian', url: categoryUrl }, { name: recipeName, url }] }, ids),
+    buildWebPage(
+        {
+            url,
+            name: recipeName,
+            isPartOf: { '@id': ids.website },
+            breadcrumb: { '@id': ids.breadcrumb(url) },
+            datePublished,
+        },
+        ids,
+    ),
+    buildBreadcrumbList(
+        {
+            url,
+            items: [
+                { name: 'Home', url: siteUrl },
+                { name: 'Italian', url: categoryUrl },
+                { name: recipeName, url },
+            ],
+        },
+        ids,
+    ),
     buildCustomPiece({
         '@type': 'Recipe',
         '@id': `${url}#recipe`,
@@ -1078,8 +1391,18 @@ buildCustomPiece({
 ```ts
 const pieces = [
     buildOrganization({ slug: 'myapp', name: 'MyApp Inc', url: siteUrl, logo: logoUrl }, ids),
-    buildWebSite({ url: siteUrl, name: 'MyApp', publisher: { '@id': ids.organization('myapp') } }, ids),
-    buildWebPage({ url: siteUrl, name: 'MyApp — Project Management for Teams', isPartOf: { '@id': ids.website } }, ids),
+    buildWebSite(
+        { url: siteUrl, name: 'MyApp', publisher: { '@id': ids.organization('myapp') } },
+        ids,
+    ),
+    buildWebPage(
+        {
+            url: siteUrl,
+            name: 'MyApp — Project Management for Teams',
+            isPartOf: { '@id': ids.website },
+        },
+        ids,
+    ),
     buildCustomPiece({
         '@type': 'SoftwareApplication',
         '@id': `${siteUrl}#app`,
@@ -1122,7 +1445,10 @@ Combine `WebPage` with a `FAQPage` custom piece:
 ```ts
 const pieces = [
     // ...site-wide entities...
-    buildWebPage({ url, name: 'Frequently Asked Questions', isPartOf: { '@id': ids.website } }, ids),
+    buildWebPage(
+        { url, name: 'Frequently Asked Questions', isPartOf: { '@id': ids.website } },
+        ids,
+    ),
     buildCustomPiece({
         '@type': 'FAQPage',
         '@id': `${url}#faq`,
@@ -1262,13 +1588,13 @@ buildOrganization({
 
 ### When to use which
 
-| Site type | Recommended properties |
-|---|---|
-| Personal blog | `publishingPrinciples` on Person or Blog |
-| Company blog | `publishingPrinciples` on Organization |
-| News / magazine | All sub-properties (corrections, fact-checking, sources, ownership, masthead) |
-| Documentation site | `publishingPrinciples` on Organization (link to contribution guidelines) |
-| Any site with AI-generated content | `publishingPrinciples` (link to AI usage disclosure) |
+| Site type                          | Recommended properties                                                        |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| Personal blog                      | `publishingPrinciples` on Person or Blog                                      |
+| Company blog                       | `publishingPrinciples` on Organization                                        |
+| News / magazine                    | All sub-properties (corrections, fact-checking, sources, ownership, masthead) |
+| Documentation site                 | `publishingPrinciples` on Organization (link to contribution guidelines)      |
+| Any site with AI-generated content | `publishingPrinciples` (link to AI usage disclosure)                          |
 
 **Practical advice:** You don't need all of these. Start with
 `publishingPrinciples` on your primary entity (Person or Organization). Add
@@ -1330,28 +1656,28 @@ buildWebSite({
 
 ### Copyright and licensing properties reference
 
-| Property | Type | Use for |
-|---|---|---|
-| `copyrightHolder` | Person or Organization | Who holds the copyright |
-| `copyrightYear` | Number | Year copyright was first asserted |
-| `copyrightNotice` | Text | Human-readable copyright text |
-| `license` | URL or CreativeWork | License that applies (CC, MIT, custom) |
-| `acquireLicensePage` | URL | Where to buy/request a license for reuse |
-| `creditText` | Text | How to credit when reusing (e.g. "Photo: Jane Doe") |
-| `isAccessibleForFree` | Boolean | Whether the content is free to access |
-| `conditionsOfAccess` | Text | Access conditions in natural language |
+| Property              | Type                   | Use for                                             |
+| --------------------- | ---------------------- | --------------------------------------------------- |
+| `copyrightHolder`     | Person or Organization | Who holds the copyright                             |
+| `copyrightYear`       | Number                 | Year copyright was first asserted                   |
+| `copyrightNotice`     | Text                   | Human-readable copyright text                       |
+| `license`             | URL or CreativeWork    | License that applies (CC, MIT, custom)              |
+| `acquireLicensePage`  | URL                    | Where to buy/request a license for reuse            |
+| `creditText`          | Text                   | How to credit when reusing (e.g. "Photo: Jane Doe") |
+| `isAccessibleForFree` | Boolean                | Whether the content is free to access               |
+| `conditionsOfAccess`  | Text                   | Access conditions in natural language               |
 
 ### When to use what
 
-| Scenario | Properties to include |
-|---|---|
-| Personal blog (all rights reserved) | `copyrightHolder`, `copyrightYear` |
-| Blog with Creative Commons license | `copyrightHolder`, `copyrightYear`, `license` |
-| Paywalled content | `isAccessibleForFree: false`, `conditionsOfAccess: 'Requires paid subscription'` |
-| Stock photography site | `copyrightHolder`, `license`, `acquireLicensePage`, `creditText` |
-| Open source docs (MIT/Apache) | `license` pointing to the license URL |
-| News with free + premium tiers | `isAccessibleForFree` per-article (true for free, false for premium) |
-| AI training opt-out signal | `copyrightNotice` + `license` with restrictive terms |
+| Scenario                            | Properties to include                                                            |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| Personal blog (all rights reserved) | `copyrightHolder`, `copyrightYear`                                               |
+| Blog with Creative Commons license  | `copyrightHolder`, `copyrightYear`, `license`                                    |
+| Paywalled content                   | `isAccessibleForFree: false`, `conditionsOfAccess: 'Requires paid subscription'` |
+| Stock photography site              | `copyrightHolder`, `license`, `acquireLicensePage`, `creditText`                 |
+| Open source docs (MIT/Apache)       | `license` pointing to the license URL                                            |
+| News with free + premium tiers      | `isAccessibleForFree` per-article (true for free, false for premium)             |
+| AI training opt-out signal          | `copyrightNotice` + `license` with restrictive terms                             |
 
 **Note on AI and licensing:** While `license` and `copyrightNotice` don't
 legally prevent AI training (that's what robots.txt, TDM headers, and
@@ -1366,30 +1692,34 @@ deciding how to use your content.
 `buildArticle` defaults to `@type: Article`, which is correct for most content.
 Pass a subtype as the third argument for more precise semantics:
 
-| Type | When to use | Example |
-|---|---|---|
-| `Article` | Default. General articles, tutorials, guides. | "How to set up ESLint" |
-| `BlogPosting` | Personal blog posts, opinion pieces, diary-style entries. | "Why I switched to Astro" |
-| `NewsArticle` | News reporting, journalism, press releases. | "Google announces new protocol" |
-| `TechArticle` | Technical documentation, API guides, spec write-ups. | "WebSocket protocol deep dive" |
-| `ScholarlyArticle` | Academic papers, research publications. | "Effects of caching on TTFB" |
-| `Report` | Data reports, annual reviews, research findings. | "State of CSS 2026" |
+| Type               | When to use                                               | Example                         |
+| ------------------ | --------------------------------------------------------- | ------------------------------- |
+| `Article`          | Default. General articles, tutorials, guides.             | "How to set up ESLint"          |
+| `BlogPosting`      | Personal blog posts, opinion pieces, diary-style entries. | "Why I switched to Astro"       |
+| `NewsArticle`      | News reporting, journalism, press releases.               | "Google announces new protocol" |
+| `TechArticle`      | Technical documentation, API guides, spec write-ups.      | "WebSocket protocol deep dive"  |
+| `ScholarlyArticle` | Academic papers, research publications.                   | "Effects of caching on TTFB"    |
+| `Report`           | Data reports, annual reviews, research findings.          | "State of CSS 2026"             |
 
 ```ts
-buildArticle({
-    url,
-    headline: title,
-    description: excerpt,
-    datePublished: publishDate,
-    dateModified: modifiedDate,
-    author: { '@id': ids.person },
-    publisher: { '@id': ids.person },
-    isPartOf: { '@id': ids.webPage(url) },
-    image: { '@id': ids.primaryImage(url) },
-    articleSection: category,
-    wordCount,
-    articleBody: plainTextBody,
-}, ids, 'BlogPosting');
+buildArticle(
+    {
+        url,
+        headline: title,
+        description: excerpt,
+        datePublished: publishDate,
+        dateModified: modifiedDate,
+        author: { '@id': ids.person },
+        publisher: { '@id': ids.person },
+        isPartOf: { '@id': ids.webPage(url) },
+        image: { '@id': ids.primaryImage(url) },
+        articleSection: category,
+        wordCount,
+        articleBody: plainTextBody,
+    },
+    ids,
+    'BlogPosting',
+);
 ```
 
 jonoalderson.com uses `BlogPosting` for all blog content. Most SEO plugins
@@ -1401,7 +1731,7 @@ precise for personal blogs.
 ## Actions: telling agents what they can do
 
 The `potentialAction` property on any entity tells search engines and AI agents
-*what actions can be performed* and *where to go to perform them*. This is the
+_what actions can be performed_ and _where to go to perform them_. This is the
 mechanism that makes your schema truly agent-ready: an agent can read your
 graph, find a `BuyAction` on a Product, and navigate to the checkout URL.
 
@@ -1409,16 +1739,16 @@ graph, find a `BuyAction` on a Product, and navigate to the checkout URL.
 
 All commerce-related actions inherit from `TradeAction`:
 
-| Action | Use for | Key extra property |
-|---|---|---|
-| `BuyAction` | Direct purchase (add to cart, buy now) | `seller` |
-| `OrderAction` | Order for delivery | `deliveryMethod` |
-| `PreOrderAction` | Not yet available, reserve now | — |
-| `RentAction` | Vacation rentals, equipment, cars | `landlord`, `realEstateAgent` |
-| `QuoteAction` | Custom pricing, request a quote | — |
-| `SellAction` | Marketplace listings (seller-side) | `buyer` |
-| `PayAction` | Payment processing | — |
-| `TipAction` | Donations, tips, support | — |
+| Action           | Use for                                | Key extra property            |
+| ---------------- | -------------------------------------- | ----------------------------- |
+| `BuyAction`      | Direct purchase (add to cart, buy now) | `seller`                      |
+| `OrderAction`    | Order for delivery                     | `deliveryMethod`              |
+| `PreOrderAction` | Not yet available, reserve now         | —                             |
+| `RentAction`     | Vacation rentals, equipment, cars      | `landlord`, `realEstateAgent` |
+| `QuoteAction`    | Custom pricing, request a quote        | —                             |
+| `SellAction`     | Marketplace listings (seller-side)     | `buyer`                       |
+| `PayAction`      | Payment processing                     | —                             |
+| `TipAction`      | Donations, tips, support               | —                             |
 
 ### The pattern
 
@@ -1639,22 +1969,22 @@ buildCustomPiece({
 
 ### When to use which action
 
-| Scenario | Action | Why |
-|---|---|---|
-| E-commerce product, buy now | `BuyAction` | Direct purchase, immediate |
-| E-commerce product, add to cart | `BuyAction` | Still a buy intent |
-| Product not yet released | `PreOrderAction` | Signals future availability |
-| Physical goods with shipping | `OrderAction` + `deliveryMethod` | Delivery is part of the action |
-| Vacation rental booking | `RentAction` + `landlord` | Temporal use, not ownership |
-| Car rental | `RentAction` | Temporal use |
-| Equipment rental | `RentAction` | Temporal use |
-| Custom/B2B pricing | `QuoteAction` | Price not fixed |
-| Consulting services | `QuoteAction` | Scope-dependent pricing |
-| Marketplace: fixed price | `BuyAction` + `seller` | Direct from seller |
-| Marketplace: negotiable | `BuyAction` + `QuoteAction` | Both options available |
-| SaaS free trial | `BuyAction` with `price: 0` | Free is still a transaction |
-| Donations / support | `TipAction` + `recipient` | Voluntary, no product exchanged |
-| Subscription | `BuyAction` + `priceSpecification` with `billingPeriod` | Recurring purchase |
+| Scenario                        | Action                                                  | Why                             |
+| ------------------------------- | ------------------------------------------------------- | ------------------------------- |
+| E-commerce product, buy now     | `BuyAction`                                             | Direct purchase, immediate      |
+| E-commerce product, add to cart | `BuyAction`                                             | Still a buy intent              |
+| Product not yet released        | `PreOrderAction`                                        | Signals future availability     |
+| Physical goods with shipping    | `OrderAction` + `deliveryMethod`                        | Delivery is part of the action  |
+| Vacation rental booking         | `RentAction` + `landlord`                               | Temporal use, not ownership     |
+| Car rental                      | `RentAction`                                            | Temporal use                    |
+| Equipment rental                | `RentAction`                                            | Temporal use                    |
+| Custom/B2B pricing              | `QuoteAction`                                           | Price not fixed                 |
+| Consulting services             | `QuoteAction`                                           | Scope-dependent pricing         |
+| Marketplace: fixed price        | `BuyAction` + `seller`                                  | Direct from seller              |
+| Marketplace: negotiable         | `BuyAction` + `QuoteAction`                             | Both options available          |
+| SaaS free trial                 | `BuyAction` with `price: 0`                             | Free is still a transaction     |
+| Donations / support             | `TipAction` + `recipient`                               | Voluntary, no product exchanged |
+| Subscription                    | `BuyAction` + `priceSpecification` with `billingPeriod` | Recurring purchase              |
 
 ---
 
@@ -1669,13 +1999,16 @@ buildCustomPiece({
     '@id': ids.organization('acme'),
     name: 'Acme',
     url: 'https://acme.com/',
-    logo: { /* ... */ },
+    logo: {
+        /* ... */
+    },
 });
 ```
 
 This is appropriate for companies that are also consumer-facing brands.
 
 Common multi-type combinations:
+
 - `['Organization', 'Brand']` — Company with brand identity
 - `['LocalBusiness', 'Restaurant']` — Specific local business type
 - `['Person', 'Patient']` — Context-specific
@@ -1686,11 +2019,14 @@ Common multi-type combinations:
 subtype as the third argument and add additional types via `extra`:
 
 ```ts
-buildOrganization({
-    slug: 'acme',
-    name: 'Acme',
-    extra: { '@type': ['Organization', 'Brand'] },
-}, ids);
+buildOrganization(
+    {
+        slug: 'acme',
+        name: 'Acme',
+        extra: { '@type': ['Organization', 'Brand'] },
+    },
+    ids,
+);
 ```
 
 ---
@@ -1701,46 +2037,49 @@ For established businesses, a richer Organization entity improves knowledge
 graph representation. Here's the full pattern:
 
 ```ts
-buildOrganization({
-    slug: 'acme',
-    name: 'Acme Corp',
-    url: 'https://acme.com/',
-    logo: 'https://acme.com/logo.png',
-    description: 'We build developer tools.',
-    sameAs: [
-        'https://twitter.com/acme',
-        'https://linkedin.com/company/acme',
-        'https://github.com/acme',
-        'https://en.wikipedia.org/wiki/Acme_Corp',
-    ],
-    extra: {
-        legalName: 'Acme Corp B.V.',
-        foundingDate: '2015-03-01',
-        founder: {
-            '@type': 'Person',
-            name: 'Jane Doe',
-            sameAs: 'https://en.wikipedia.org/wiki/Jane_Doe',
-        },
-        numberOfEmployees: 45,
-        slogan: 'Tools for the modern web',
-        parentOrganization: {
-            '@type': 'Organization',
-            name: 'Parent Holdings Inc',
-            url: 'https://parent.com/',
-        },
-        memberOf: {
-            '@type': 'Organization',
-            name: 'World Wide Web Consortium (W3C)',
-            url: 'https://w3.org/',
-        },
-        address: {
-            '@type': 'PostalAddress',
-            streetAddress: '123 Tech Lane',
-            addressLocality: 'Amsterdam',
-            addressCountry: 'NL',
+buildOrganization(
+    {
+        slug: 'acme',
+        name: 'Acme Corp',
+        url: 'https://acme.com/',
+        logo: 'https://acme.com/logo.png',
+        description: 'We build developer tools.',
+        sameAs: [
+            'https://twitter.com/acme',
+            'https://linkedin.com/company/acme',
+            'https://github.com/acme',
+            'https://en.wikipedia.org/wiki/Acme_Corp',
+        ],
+        extra: {
+            legalName: 'Acme Corp B.V.',
+            foundingDate: '2015-03-01',
+            founder: {
+                '@type': 'Person',
+                name: 'Jane Doe',
+                sameAs: 'https://en.wikipedia.org/wiki/Jane_Doe',
+            },
+            numberOfEmployees: 45,
+            slogan: 'Tools for the modern web',
+            parentOrganization: {
+                '@type': 'Organization',
+                name: 'Parent Holdings Inc',
+                url: 'https://parent.com/',
+            },
+            memberOf: {
+                '@type': 'Organization',
+                name: 'World Wide Web Consortium (W3C)',
+                url: 'https://w3.org/',
+            },
+            address: {
+                '@type': 'PostalAddress',
+                streetAddress: '123 Tech Lane',
+                addressLocality: 'Amsterdam',
+                addressCountry: 'NL',
+            },
         },
     },
-}, ids);
+    ids,
+);
 ```
 
 Include as much as is factually accurate. Don't fabricate data. Properties like
@@ -1755,66 +2094,67 @@ For personal sites, a detailed Person entity establishes identity and
 credibility. jonoalderson.com uses 80+ entities. Here's the extended pattern:
 
 ```ts
-buildPerson({
-    name: 'Jane Doe',
-    familyName: 'Doe',
-    birthDate: '1990-01-15',
-    gender: 'female',
-    nationality: { '@id': ids.country('US') },
-    description: 'Software engineer and technical writer.',
-    jobTitle: 'Lead Engineer',
-    knowsLanguage: ['en', 'es', 'pt'],
-    url: 'https://janedoe.com/about/',
-    image: { '@id': ids.personImage },
-    sameAs: [
-        'https://twitter.com/janedoe',
-        'https://github.com/janedoe',
-        'https://linkedin.com/in/janedoe',
-        'https://bsky.app/profile/janedoe.com',
-        'https://mastodon.social/@janedoe',
-        'https://en.wikipedia.org/wiki/Jane_Doe',
-    ],
-    worksFor: [
-        {
-            '@type': 'EmployeeRole',
-            roleName: 'Lead Engineer',
-            startDate: '2022-01',
-            worksFor: { '@id': ids.organization('acme') },
-        },
-        {
-            '@type': 'EmployeeRole',
-            roleName: 'Advisor',
-            startDate: '2024-06',
-            worksFor: { '@id': ids.organization('startup') },
-        },
-    ],
-    spouse: {
-        '@type': 'Person',
-        '@id': `${siteUrl}/#/schema.org/Person/john`,
-        name: 'John Doe',
-    },
-    extra: {
-        knowsAbout: [
-            'TypeScript',
-            'Schema.org',
-            'Search Engine Optimization',
-            'Web Performance',
+buildPerson(
+    {
+        name: 'Jane Doe',
+        familyName: 'Doe',
+        birthDate: '1990-01-15',
+        gender: 'female',
+        nationality: { '@id': ids.country('US') },
+        description: 'Software engineer and technical writer.',
+        jobTitle: 'Lead Engineer',
+        knowsLanguage: ['en', 'es', 'pt'],
+        url: 'https://janedoe.com/about/',
+        image: { '@id': ids.personImage },
+        sameAs: [
+            'https://twitter.com/janedoe',
+            'https://github.com/janedoe',
+            'https://linkedin.com/in/janedoe',
+            'https://bsky.app/profile/janedoe.com',
+            'https://mastodon.social/@janedoe',
+            'https://en.wikipedia.org/wiki/Jane_Doe',
         ],
-        honorificPrefix: 'Dr.',
-        alumniOf: {
-            '@type': 'EducationalOrganization',
-            name: 'MIT',
-            url: 'https://mit.edu/',
-        },
-        award: [
-            'Best Developer Blog 2025',
-            'Open Source Contributor of the Year 2024',
+        worksFor: [
+            {
+                '@type': 'EmployeeRole',
+                roleName: 'Lead Engineer',
+                startDate: '2022-01',
+                worksFor: { '@id': ids.organization('acme') },
+            },
+            {
+                '@type': 'EmployeeRole',
+                roleName: 'Advisor',
+                startDate: '2024-06',
+                worksFor: { '@id': ids.organization('startup') },
+            },
         ],
+        spouse: {
+            '@type': 'Person',
+            '@id': `${siteUrl}/#/schema.org/Person/john`,
+            name: 'John Doe',
+        },
+        extra: {
+            knowsAbout: [
+                'TypeScript',
+                'Schema.org',
+                'Search Engine Optimization',
+                'Web Performance',
+            ],
+            honorificPrefix: 'Dr.',
+            alumniOf: {
+                '@type': 'EducationalOrganization',
+                name: 'MIT',
+                url: 'https://mit.edu/',
+            },
+            award: ['Best Developer Blog 2025', 'Open Source Contributor of the Year 2024'],
+        },
     },
-}, ids);
+    ids,
+);
 ```
 
 **Practical advice:**
+
 - `sameAs` is the most impactful property after name and url. It helps search
   engines connect your entity to external profiles and knowledge bases.
 - `worksFor` with `EmployeeRole` is better than plain Organization references
@@ -1837,6 +2177,7 @@ at Yoast, one of the foremost schema.org experts). Uses `BlogPosting` for
 articles and has one of the richest Person schemas on the web:
 
 **Notable patterns:**
+
 - 80+ entities on the homepage, 12+ on article pages
 - `BlogPosting` instead of `Article` for blog content
 - Person entity with `birthDate`, `birthPlace`, `nationality`, `award`,
@@ -1851,6 +2192,7 @@ Meta's product pages (e.g. `/ai-glasses/ray-ban-meta-wayfarer-gen-2/`) are
 an excellent reference for e-commerce schema:
 
 **Notable patterns:**
+
 - `ProductGroup` with `hasVariant` array pointing to individual `Product` entities
 - 14 product variants, each with their own `sku`, `color`, `size`, and `Offer`
 - `MerchantReturnPolicy` with return window, method, and shipping cost
@@ -1871,6 +2213,7 @@ This library's own reference consumer. Astro site using `<Seo>` from
 [github.com/jdevalk/joost.blog](https://github.com/jdevalk/joost.blog).
 
 **Notable patterns:**
+
 - Schema endpoints at `/schema/post.json`, `/schema/video.json`,
   `/schema/page.json` with full article bodies (markdown-stripped, max 10K chars)
 - Schema map at `/schemamap.xml` for agent discovery
@@ -1941,26 +2284,26 @@ import Seo from '@jdevalk/astro-seo-graph/Seo.astro';
 
 ### `<Seo>` props reference
 
-| Prop | Type | Required | Default | Purpose |
-|---|---|---|---|---|
-| `title` | `string` | Yes | — | Full page title |
-| `titleTemplate` | `string` | No | — | Template with `%s` placeholder |
-| `description` | `string` | No | — | Meta description |
-| `canonical` | `string \| URL` | No | Current page URL | Canonical URL |
-| `ogType` | `'website' \| 'article' \| 'profile' \| 'book'` | No | `'website'` | Open Graph type |
-| `ogImage` | `string` | No | — | OG image (absolute URL) |
-| `ogImageAlt` | `string` | No | — | OG image alt text |
-| `ogImageWidth` | `number` | No | — | OG image width (px) |
-| `ogImageHeight` | `number` | No | — | OG image height (px) |
-| `siteName` | `string` | No | — | Site name for OG |
-| `locale` | `string` | No | `'en_US'` | OG locale |
-| `twitter` | `{ card?, site?, creator? }` | No | — | Twitter card settings |
-| `article` | `{ publishedTime?, modifiedTime?, expirationTime?, authors?, tags?, section? }` | No | — | Article OG metadata |
-| `noindex` | `boolean` | No | `false` | Emit `robots: noindex` |
-| `graph` | `object \| null` | No | — | JSON-LD graph from `assembleGraph()` |
-| `alternates` | `{ defaultLocale?, entries[] }` | No | — | hreflang alternate links |
-| `extraLinks` | `Array<Record<string, string>>` | No | — | Additional `<link>` elements |
-| `extraMeta` | `Array<Record<string, string>>` | No | — | Additional `<meta>` elements |
+| Prop            | Type                                                                            | Required | Default          | Purpose                              |
+| --------------- | ------------------------------------------------------------------------------- | -------- | ---------------- | ------------------------------------ |
+| `title`         | `string`                                                                        | Yes      | —                | Full page title                      |
+| `titleTemplate` | `string`                                                                        | No       | —                | Template with `%s` placeholder       |
+| `description`   | `string`                                                                        | No       | —                | Meta description                     |
+| `canonical`     | `string \| URL`                                                                 | No       | Current page URL | Canonical URL                        |
+| `ogType`        | `'website' \| 'article' \| 'profile' \| 'book'`                                 | No       | `'website'`      | Open Graph type                      |
+| `ogImage`       | `string`                                                                        | No       | —                | OG image (absolute URL)              |
+| `ogImageAlt`    | `string`                                                                        | No       | —                | OG image alt text                    |
+| `ogImageWidth`  | `number`                                                                        | No       | —                | OG image width (px)                  |
+| `ogImageHeight` | `number`                                                                        | No       | —                | OG image height (px)                 |
+| `siteName`      | `string`                                                                        | No       | —                | Site name for OG                     |
+| `locale`        | `string`                                                                        | No       | `'en_US'`        | OG locale                            |
+| `twitter`       | `{ card?, site?, creator? }`                                                    | No       | —                | Twitter card settings                |
+| `article`       | `{ publishedTime?, modifiedTime?, expirationTime?, authors?, tags?, section? }` | No       | —                | Article OG metadata                  |
+| `noindex`       | `boolean`                                                                       | No       | `false`          | Emit `robots: noindex`               |
+| `graph`         | `object \| null`                                                                | No       | —                | JSON-LD graph from `assembleGraph()` |
+| `alternates`    | `{ defaultLocale?, entries[] }`                                                 | No       | —                | hreflang alternate links             |
+| `extraLinks`    | `Array<Record<string, string>>`                                                 | No       | —                | Additional `<link>` elements         |
+| `extraMeta`     | `Array<Record<string, string>>`                                                 | No       | —                | Additional `<meta>` elements         |
 
 ### hreflang alternates
 
@@ -1981,6 +2324,7 @@ For multilingual sites:
 ```
 
 **Rules:**
+
 - Absolute URLs only. Relative, protocol-relative, and non-http schemes are dropped.
 - Include the current page (self-referential hreflang is required by Google).
 - BCP 47 tags are auto-normalized (fr-ca becomes fr-CA).
@@ -2004,26 +2348,32 @@ export const GET = createSchemaEndpoint({
     mapper: (post) => {
         const url = `https://example.com/${post.id}/`;
         return [
-            buildWebPage({
-                url,
-                name: post.data.title,
-                isPartOf: { '@id': ids.website },
-                breadcrumb: { '@id': ids.breadcrumb(url) },
-                datePublished: post.data.publishDate,
-            }, ids),
-            buildArticle({
-                url,
-                isPartOf: { '@id': ids.webPage(url) },
-                author: { '@id': ids.person },
-                publisher: { '@id': ids.person },
-                headline: post.data.title,
-                description: post.data.excerpt ?? '',
-                datePublished: post.data.publishDate,
-            }, ids),
+            buildWebPage(
+                {
+                    url,
+                    name: post.data.title,
+                    isPartOf: { '@id': ids.website },
+                    breadcrumb: { '@id': ids.breadcrumb(url) },
+                    datePublished: post.data.publishDate,
+                },
+                ids,
+            ),
+            buildArticle(
+                {
+                    url,
+                    isPartOf: { '@id': ids.webPage(url) },
+                    author: { '@id': ids.person },
+                    publisher: { '@id': ids.person },
+                    headline: post.data.title,
+                    description: post.data.excerpt ?? '',
+                    datePublished: post.data.publishDate,
+                },
+                ids,
+            ),
         ];
     },
-    cacheControl: 'max-age=300',   // optional, defaults to 5 minutes
-    indent: 2,                      // optional, defaults to 2
+    cacheControl: 'max-age=300', // optional, defaults to 5 minutes
+    indent: 2, // optional, defaults to 2
 });
 ```
 
@@ -2098,6 +2448,7 @@ const blog = defineCollection({
 ```
 
 **`seoSchema(image)` shape:**
+
 ```ts
 {
     title: z.string().min(5).max(120).optional(),
@@ -2108,6 +2459,7 @@ const blog = defineCollection({
 ```
 
 **`imageSchema(image)` shape:**
+
 ```ts
 {
     src: image(),
@@ -2178,9 +2530,15 @@ const blog = defineCollection({
 
 ```ts
 import {
-    makeIds, assembleGraph,
-    buildWebSite, buildPerson, buildWebPage, buildArticle,
-    buildBreadcrumbList, buildImageObject, buildSiteNavigationElement,
+    makeIds,
+    assembleGraph,
+    buildWebSite,
+    buildPerson,
+    buildWebPage,
+    buildArticle,
+    buildBreadcrumbList,
+    buildImageObject,
+    buildSiteNavigationElement,
 } from '@jdevalk/seo-graph-core';
 
 const SITE_URL = 'https://example.com';
@@ -2189,47 +2547,130 @@ export const ids = makeIds({ siteUrl: SITE_URL, personUrl: `${SITE_URL}/about/` 
 // Site-wide entities — included on every page
 function siteWideEntities() {
     return [
-        buildWebSite({ url: `${SITE_URL}/`, name: 'My Blog', publisher: { '@id': ids.person } }, ids),
-        buildPerson({ name: 'Jane Doe', url: `${SITE_URL}/about/`, image: { '@id': ids.personImage }, sameAs: ['...'] }, ids),
-        buildImageObject({ id: ids.personImage, url: `${SITE_URL}/jane.jpg`, width: 400, height: 400 }, ids),
-        buildSiteNavigationElement({ name: 'Main navigation', isPartOf: { '@id': ids.website }, items: [
-            { name: 'Home', url: `${SITE_URL}/` },
-            { name: 'Blog', url: `${SITE_URL}/blog/` },
-            { name: 'About', url: `${SITE_URL}/about/` },
-        ]}, ids),
+        buildWebSite(
+            { url: `${SITE_URL}/`, name: 'My Blog', publisher: { '@id': ids.person } },
+            ids,
+        ),
+        buildPerson(
+            {
+                name: 'Jane Doe',
+                url: `${SITE_URL}/about/`,
+                image: { '@id': ids.personImage },
+                sameAs: ['...'],
+            },
+            ids,
+        ),
+        buildImageObject(
+            { id: ids.personImage, url: `${SITE_URL}/jane.jpg`, width: 400, height: 400 },
+            ids,
+        ),
+        buildSiteNavigationElement(
+            {
+                name: 'Main navigation',
+                isPartOf: { '@id': ids.website },
+                items: [
+                    { name: 'Home', url: `${SITE_URL}/` },
+                    { name: 'Blog', url: `${SITE_URL}/blog/` },
+                    { name: 'About', url: `${SITE_URL}/about/` },
+                ],
+            },
+            ids,
+        ),
     ];
 }
 
 // Page-specific graph builder
-export function buildSchemaGraph(opts: { pageType: string; url: string; title: string; description: string; publishDate?: Date; updatedDate?: Date; featureImageUrl?: string; category?: string }) {
+export function buildSchemaGraph(opts: {
+    pageType: string;
+    url: string;
+    title: string;
+    description: string;
+    publishDate?: Date;
+    updatedDate?: Date;
+    featureImageUrl?: string;
+    category?: string;
+}) {
     const pieces = [...siteWideEntities()];
     const { url, title, description, publishDate, updatedDate, featureImageUrl, category } = opts;
 
     switch (opts.pageType) {
         case 'blogPost':
             pieces.push(
-                buildWebPage({ url, name: title, isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) }, datePublished: publishDate, dateModified: updatedDate, primaryImage: featureImageUrl ? { '@id': ids.primaryImage(url) } : undefined }, ids),
-                buildArticle({ url, isPartOf: { '@id': ids.webPage(url) }, author: { '@id': ids.person }, publisher: { '@id': ids.person }, headline: title, description, datePublished: publishDate!, dateModified: updatedDate, image: featureImageUrl ? { '@id': ids.primaryImage(url) } : undefined, articleSection: category }, ids),
-                buildBreadcrumbList({ url, items: [{ name: 'Home', url: `${SITE_URL}/` }, { name: 'Blog', url: `${SITE_URL}/blog/` }, { name: title, url }] }, ids),
+                buildWebPage(
+                    {
+                        url,
+                        name: title,
+                        isPartOf: { '@id': ids.website },
+                        breadcrumb: { '@id': ids.breadcrumb(url) },
+                        datePublished: publishDate,
+                        dateModified: updatedDate,
+                        primaryImage: featureImageUrl
+                            ? { '@id': ids.primaryImage(url) }
+                            : undefined,
+                    },
+                    ids,
+                ),
+                buildArticle(
+                    {
+                        url,
+                        isPartOf: { '@id': ids.webPage(url) },
+                        author: { '@id': ids.person },
+                        publisher: { '@id': ids.person },
+                        headline: title,
+                        description,
+                        datePublished: publishDate!,
+                        dateModified: updatedDate,
+                        image: featureImageUrl ? { '@id': ids.primaryImage(url) } : undefined,
+                        articleSection: category,
+                    },
+                    ids,
+                ),
+                buildBreadcrumbList(
+                    {
+                        url,
+                        items: [
+                            { name: 'Home', url: `${SITE_URL}/` },
+                            { name: 'Blog', url: `${SITE_URL}/blog/` },
+                            { name: title, url },
+                        ],
+                    },
+                    ids,
+                ),
             );
             if (featureImageUrl) {
-                pieces.push(buildImageObject({ pageUrl: url, url: featureImageUrl, width: 1200, height: 630 }, ids));
+                pieces.push(
+                    buildImageObject(
+                        { pageUrl: url, url: featureImageUrl, width: 1200, height: 630 },
+                        ids,
+                    ),
+                );
             }
             break;
         case 'blogListing':
             pieces.push(
-                buildWebPage({ url, name: title, isPartOf: { '@id': ids.website } }, ids, 'CollectionPage'),
+                buildWebPage(
+                    { url, name: title, isPartOf: { '@id': ids.website } },
+                    ids,
+                    'CollectionPage',
+                ),
             );
             break;
         case 'about':
             pieces.push(
-                buildWebPage({ url, name: title, isPartOf: { '@id': ids.website }, about: { '@id': ids.person } }, ids, 'ProfilePage'),
+                buildWebPage(
+                    {
+                        url,
+                        name: title,
+                        isPartOf: { '@id': ids.website },
+                        about: { '@id': ids.person },
+                    },
+                    ids,
+                    'ProfilePage',
+                ),
             );
             break;
         default:
-            pieces.push(
-                buildWebPage({ url, name: title, isPartOf: { '@id': ids.website } }, ids),
-            );
+            pieces.push(buildWebPage({ url, name: title, isPartOf: { '@id': ids.website } }, ids));
     }
 
     return assembleGraph(pieces);
@@ -2290,14 +2731,45 @@ const SITE_URL = 'https://example.com';
 export const GET = createSchemaEndpoint({
     entries: async () => {
         const posts = await getCollection('blog');
-        return posts.filter(p => !p.data.draft);
+        return posts.filter((p) => !p.data.draft);
     },
     mapper: (post) => {
         const url = `${SITE_URL}/${post.id}/`;
         return [
-            buildWebPage({ url, name: post.data.title, isPartOf: { '@id': ids.website }, breadcrumb: { '@id': ids.breadcrumb(url) }, datePublished: post.data.publishDate }, ids),
-            buildArticle({ url, isPartOf: { '@id': ids.webPage(url) }, author: { '@id': ids.person }, publisher: { '@id': ids.person }, headline: post.data.title, description: post.data.excerpt ?? '', datePublished: post.data.publishDate, dateModified: post.data.updatedDate }, ids),
-            buildBreadcrumbList({ url, items: [{ name: 'Home', url: `${SITE_URL}/` }, { name: 'Blog', url: `${SITE_URL}/blog/` }, { name: post.data.title, url }] }, ids),
+            buildWebPage(
+                {
+                    url,
+                    name: post.data.title,
+                    isPartOf: { '@id': ids.website },
+                    breadcrumb: { '@id': ids.breadcrumb(url) },
+                    datePublished: post.data.publishDate,
+                },
+                ids,
+            ),
+            buildArticle(
+                {
+                    url,
+                    isPartOf: { '@id': ids.webPage(url) },
+                    author: { '@id': ids.person },
+                    publisher: { '@id': ids.person },
+                    headline: post.data.title,
+                    description: post.data.excerpt ?? '',
+                    datePublished: post.data.publishDate,
+                    dateModified: post.data.updatedDate,
+                },
+                ids,
+            ),
+            buildBreadcrumbList(
+                {
+                    url,
+                    items: [
+                        { name: 'Home', url: `${SITE_URL}/` },
+                        { name: 'Blog', url: `${SITE_URL}/blog/` },
+                        { name: post.data.title, url },
+                    ],
+                },
+                ids,
+            ),
         ];
     },
 });
@@ -2310,9 +2782,7 @@ import { createSchemaMap } from '@jdevalk/astro-seo-graph';
 
 export const GET = createSchemaMap({
     siteUrl: 'https://example.com',
-    entries: [
-        { path: '/schema/post.json', lastModified: new Date() },
-    ],
+    entries: [{ path: '/schema/post.json', lastModified: new Date() }],
 });
 ```
 
@@ -2330,15 +2800,28 @@ const orgs = [
     { slug: 'side-project', name: 'Side Project Inc', url: 'https://sideproject.com/' },
 ];
 
-const orgPieces = orgs.map(org => buildOrganization(org, ids));
+const orgPieces = orgs.map((org) => buildOrganization(org, ids));
 
-const personPiece = buildPerson({
-    name: 'Jane Doe',
-    worksFor: [
-        { '@type': 'EmployeeRole', roleName: 'CEO', startDate: '2020', worksFor: { '@id': ids.organization('acme') } },
-        { '@type': 'EmployeeRole', roleName: 'Advisor', startDate: '2023', worksFor: { '@id': ids.organization('side-project') } },
-    ],
-}, ids);
+const personPiece = buildPerson(
+    {
+        name: 'Jane Doe',
+        worksFor: [
+            {
+                '@type': 'EmployeeRole',
+                roleName: 'CEO',
+                startDate: '2020',
+                worksFor: { '@id': ids.organization('acme') },
+            },
+            {
+                '@type': 'EmployeeRole',
+                roleName: 'Advisor',
+                startDate: '2023',
+                worksFor: { '@id': ids.organization('side-project') },
+            },
+        ],
+    },
+    ids,
+);
 ```
 
 ### Organization subtypes
@@ -2348,8 +2831,24 @@ Use `schema-dts` generics for full type safety on subtypes:
 ```ts
 import type { Dentist, Hotel, EducationalOrganization } from 'schema-dts';
 
-buildOrganization<Dentist>({ slug: 'clinic', name: 'Smile Dental', extra: { medicalSpecialty: 'Dentistry' } }, ids, 'Dentist');
-buildOrganization<Hotel>({ slug: 'hotel', name: 'Grand Hotel', extra: { starRating: { '@type': 'Rating', ratingValue: 4 }, checkinTime: '15:00', checkoutTime: '11:00' } }, ids, 'Hotel');
+buildOrganization<Dentist>(
+    { slug: 'clinic', name: 'Smile Dental', extra: { medicalSpecialty: 'Dentistry' } },
+    ids,
+    'Dentist',
+);
+buildOrganization<Hotel>(
+    {
+        slug: 'hotel',
+        name: 'Grand Hotel',
+        extra: {
+            starRating: { '@type': 'Rating', ratingValue: 4 },
+            checkinTime: '15:00',
+            checkoutTime: '11:00',
+        },
+    },
+    ids,
+    'Hotel',
+);
 ```
 
 ### Multi-author blogs
@@ -2366,15 +2865,18 @@ const authorPiece = buildCustomPiece({
     url: `${siteUrl}/authors/${authorSlug}/`,
     image: authorAvatarUrl,
 });
-const articlePiece = buildArticle({
-    url,
-    isPartOf: { '@id': ids.webPage(url) },
-    author: { '@id': authorId },
-    publisher: { '@id': ids.organization('company') },
-    headline: title,
-    description,
-    datePublished,
-}, ids);
+const articlePiece = buildArticle(
+    {
+        url,
+        isPartOf: { '@id': ids.webPage(url) },
+        author: { '@id': authorId },
+        publisher: { '@id': ids.organization('company') },
+        headline: title,
+        description,
+        datePublished,
+    },
+    ids,
+);
 ```
 
 ### Non-Astro usage (Next.js, SvelteKit, etc.)
@@ -2384,23 +2886,54 @@ Use `@jdevalk/seo-graph-core` directly. Build your graph, then inject it as a
 
 ```tsx
 // Next.js example
-import { makeIds, assembleGraph, buildWebSite, buildWebPage, buildArticle } from '@jdevalk/seo-graph-core';
+import {
+    makeIds,
+    assembleGraph,
+    buildWebSite,
+    buildWebPage,
+    buildArticle,
+} from '@jdevalk/seo-graph-core';
 
 const ids = makeIds({ siteUrl: 'https://example.com' });
 
 export default function BlogPost({ post }) {
     const url = `https://example.com/blog/${post.slug}`;
     const graph = assembleGraph([
-        buildWebSite({ url: 'https://example.com/', name: 'My Site', publisher: { '@id': ids.person } }, ids),
-        buildWebPage({ url, name: post.title, isPartOf: { '@id': ids.website }, datePublished: new Date(post.date) }, ids),
-        buildArticle({ url, isPartOf: { '@id': ids.webPage(url) }, author: { '@id': ids.person }, publisher: { '@id': ids.person }, headline: post.title, description: post.excerpt, datePublished: new Date(post.date) }, ids),
+        buildWebSite(
+            { url: 'https://example.com/', name: 'My Site', publisher: { '@id': ids.person } },
+            ids,
+        ),
+        buildWebPage(
+            {
+                url,
+                name: post.title,
+                isPartOf: { '@id': ids.website },
+                datePublished: new Date(post.date),
+            },
+            ids,
+        ),
+        buildArticle(
+            {
+                url,
+                isPartOf: { '@id': ids.webPage(url) },
+                author: { '@id': ids.person },
+                publisher: { '@id': ids.person },
+                headline: post.title,
+                description: post.excerpt,
+                datePublished: new Date(post.date),
+            },
+            ids,
+        ),
     ]);
 
     return (
         <>
             <Head>
                 <title>{post.title} | My Site</title>
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }} />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
+                />
             </Head>
             <article>{post.content}</article>
         </>

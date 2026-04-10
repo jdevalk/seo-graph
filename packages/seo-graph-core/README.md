@@ -27,11 +27,11 @@ npm install @jdevalk/seo-graph-core
 
 ### Graph assembly
 
-| API | Purpose |
-|---|---|
-| `makeIds({ siteUrl, personUrl? })` | `IdFactory` for stable `@id` references across site-wide and per-page entities. |
-| `assembleGraph(pieces)` | Wraps pieces in a `{ @context, @graph }` envelope with first-wins deduplication by `@id`. |
-| `deduplicateByGraphId(entities)` | The dedup engine on its own, in case you need custom assembly. |
+| API                                | Purpose                                                                                   |
+| ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| `makeIds({ siteUrl, personUrl? })` | `IdFactory` for stable `@id` references across site-wide and per-page entities.           |
+| `assembleGraph(pieces)`            | Wraps pieces in a `{ @context, @graph }` envelope with first-wins deduplication by `@id`. |
+| `deduplicateByGraphId(entities)`   | The dedup engine on its own, in case you need custom assembly.                            |
 
 ### Piece builders
 
@@ -42,18 +42,18 @@ object with `@type` and `@id`. Builders for CreativeWork subtypes (`WebSite`,
 `dateModified`, `about`, `copyrightHolder`, `copyrightYear`,
 `copyrightNotice`, `license`, and `isAccessibleForFree`.
 
-| Builder | Schema.org type | Subtype parameter |
-|---|---|---|
-| `buildWebSite` | `WebSite` | — |
-| `buildWebPage` | `WebPage` | `'WebPage'` \| `'ProfilePage'` \| `'CollectionPage'` |
-| `buildArticle` | `Article` | `'Article'` \| `'BlogPosting'` \| `'NewsArticle'` \| `'TechArticle'` \| `'ScholarlyArticle'` \| `'Report'` |
-| `buildPerson` | `Person` | — |
-| `buildOrganization` | `Organization` | Any subtype string (e.g. `'Restaurant'`, `'LocalBusiness'`) |
-| `buildBreadcrumbList` | `BreadcrumbList` | — |
-| `buildImageObject` | `ImageObject` | — |
-| `buildVideoObject` | `VideoObject` | — |
-| `buildSiteNavigationElement` | `SiteNavigationElement` | — |
-| `buildCustomPiece` | Any | Pass `@type` directly in the input object |
+| Builder                      | Schema.org type         | Subtype parameter                                                                                          |
+| ---------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `buildWebSite`               | `WebSite`               | —                                                                                                          |
+| `buildWebPage`               | `WebPage`               | `'WebPage'` \| `'ProfilePage'` \| `'CollectionPage'`                                                       |
+| `buildArticle`               | `Article`               | `'Article'` \| `'BlogPosting'` \| `'NewsArticle'` \| `'TechArticle'` \| `'ScholarlyArticle'` \| `'Report'` |
+| `buildPerson`                | `Person`                | —                                                                                                          |
+| `buildOrganization`          | `Organization`          | Any subtype string (e.g. `'Restaurant'`, `'LocalBusiness'`)                                                |
+| `buildBreadcrumbList`        | `BreadcrumbList`        | —                                                                                                          |
+| `buildImageObject`           | `ImageObject`           | —                                                                                                          |
+| `buildVideoObject`           | `VideoObject`           | —                                                                                                          |
+| `buildSiteNavigationElement` | `SiteNavigationElement` | —                                                                                                          |
+| `buildCustomPiece`           | Any                     | Pass `@type` directly in the input object                                                                  |
 
 Every builder accepts an `extra` escape hatch for schema.org properties not
 covered by the typed interface.

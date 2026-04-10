@@ -5,11 +5,11 @@
 
 This monorepo ships two packages (plus a third consumer living elsewhere):
 
-| Package | Purpose |
-|---|---|
-| [`@jdevalk/seo-graph-core`](./packages/seo-graph-core) | Pure, runtime-agnostic schema.org piece builders and graph assembler. Depends only on [`schema-dts`](https://github.com/google/schema-dts). |
-| [`@jdevalk/astro-seo-graph`](./packages/astro-seo-graph) | Astro integration: `<Seo>` component, route factories for agent-ready endpoints, breadcrumb helper, Zod content helpers. |
-| [`@jdevalk/emdash-plugin-seo`](https://github.com/jdevalk/emdash-plugin-seo) | EmDash CMS plugin. Lives in its own repo, depends on `seo-graph-core`. |
+| Package                                                                      | Purpose                                                                                                                                     |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@jdevalk/seo-graph-core`](./packages/seo-graph-core)                       | Pure, runtime-agnostic schema.org piece builders and graph assembler. Depends only on [`schema-dts`](https://github.com/google/schema-dts). |
+| [`@jdevalk/astro-seo-graph`](./packages/astro-seo-graph)                     | Astro integration: `<Seo>` component, route factories for agent-ready endpoints, breadcrumb helper, Zod content helpers.                    |
+| [`@jdevalk/emdash-plugin-seo`](https://github.com/jdevalk/emdash-plugin-seo) | EmDash CMS plugin. Lives in its own repo, depends on `seo-graph-core`.                                                                      |
 
 ## Documentation
 
