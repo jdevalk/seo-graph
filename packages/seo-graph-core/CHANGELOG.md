@@ -1,5 +1,11 @@
 # @jdevalk/seo-graph-core
 
+## 0.5.2
+
+### Patch Changes
+
+- 2a076cb: `BreadcrumbItem` now accepts an optional `id` field. When set, the ListItem's `item` value uses `{ "@id": id }` instead of the plain URL, allowing breadcrumb items to reference entities in the graph (e.g. linking a "Blog" crumb to a Blog entity).
+
 ## 0.5.1
 
 ### Patch Changes
