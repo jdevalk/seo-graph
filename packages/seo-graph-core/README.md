@@ -1,5 +1,8 @@
 # @jdevalk/seo-graph-core
 
+[![npm version](https://img.shields.io/npm/v/@jdevalk/seo-graph-core)](https://www.npmjs.com/package/@jdevalk/seo-graph-core)
+[![license](https://img.shields.io/npm/l/@jdevalk/seo-graph-core)](https://github.com/jdevalk/seo-graph/blob/main/LICENSE)
+
 Pure schema.org JSON-LD graph builders. Runtime-agnostic core for agent-ready SEO.
 
 ## What this is

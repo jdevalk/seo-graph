@@ -1,5 +1,8 @@
 # @jdevalk/astro-seo-graph
 
+[![npm version](https://img.shields.io/npm/v/@jdevalk/astro-seo-graph)](https://www.npmjs.com/package/@jdevalk/astro-seo-graph)
+[![license](https://img.shields.io/npm/l/@jdevalk/astro-seo-graph)](https://github.com/jdevalk/seo-graph/blob/main/LICENSE)
+
 Astro integration for [`@jdevalk/seo-graph-core`](../seo-graph-core). Ships a
 `<Seo>` component, route factories for agent-ready schema endpoints, a
 content-collection aggregator, breadcrumb helpers, and Zod helpers for content
