@@ -102,6 +102,18 @@ const {
         const suggestionText = container.dataset.suggestionText ?? 'Did you mean';
 
         const currentPath = window.location.pathname;
+
+        // Out-of-bounds pagination: /something/page/N/ → /something/
+        const paginationMatch = currentPath.match(/^(.+?)\/page\/\d+\/?$/);
+        if (paginationMatch) {
+            const basePath = paginationMatch[1]!.replace(/\/$/, '') + '/';
+            console.log(
+                `[FuzzyRedirect] Pagination redirect: "${currentPath}" → "${basePath}"`,
+            );
+            window.location.replace(basePath);
+            return;
+        }
+
         const urls = await fetchSitemapUrls(sitemapUrl);
 
         // Extract paths from full URLs.
