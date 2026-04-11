@@ -2,13 +2,13 @@
 interface Props {
     /**
      * Minimum similarity score (0–1) for a suggestion to appear.
-     * Defaults to 0.7.
+     * Defaults to 0.6.
      */
     threshold?: number;
     /**
      * Similarity score (0–1) above which the user is automatically
      * redirected instead of shown a suggestion. Set to 1 to disable
-     * auto-redirect. Defaults to 0.95.
+     * auto-redirect. Defaults to 0.85.
      */
     autoRedirectThreshold?: number;
     /**
@@ -23,8 +23,8 @@ interface Props {
 }
 
 const {
-    threshold = 0.7,
-    autoRedirectThreshold = 0.95,
+    threshold = 0.6,
+    autoRedirectThreshold = 0.85,
     sitemapUrl = '/sitemap-index.xml',
     suggestionText = 'Did you mean',
 } = Astro.props;
@@ -96,8 +96,8 @@ const {
         const container = document.getElementById('fuzzy-redirect');
         if (!container) return;
 
-        const threshold = parseFloat(container.dataset.threshold ?? '0.7');
-        const autoRedirectThreshold = parseFloat(container.dataset.autoRedirectThreshold ?? '0.95');
+        const threshold = parseFloat(container.dataset.threshold ?? '0.6');
+        const autoRedirectThreshold = parseFloat(container.dataset.autoRedirectThreshold ?? '0.85');
         const sitemapUrl = container.dataset.sitemapUrl ?? '/sitemap-index.xml';
         const suggestionText = container.dataset.suggestionText ?? 'Did you mean';
 
