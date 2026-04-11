@@ -1,5 +1,11 @@
 # @jdevalk/astro-seo-graph
 
+## 0.5.2
+
+### Patch Changes
+
+- e5792ad: FuzzyRedirect now detects out-of-bounds pagination URLs (e.g. `/blog/page/99/`) and redirects to the base path (`/blog/`) before attempting fuzzy matching.
+
 ## 0.5.1
 
 ### Patch Changes
