@@ -1,5 +1,11 @@
 # @jdevalk/astro-seo-graph
 
+## 0.5.1
+
+### Patch Changes
+
+- b7e22f3: FuzzyRedirect: log best match and similarity to console, adjust default thresholds (suggest at 0.6+, auto-redirect at 0.85+).
+
 ## 0.5.0
 
 ### Minor Changes
