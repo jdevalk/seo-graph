@@ -1,0 +1,147 @@
+---
+interface Props {
+    /**
+     * Minimum similarity score (0–1) for a suggestion to appear.
+     * Defaults to 0.7.
+     */
+    threshold?: number;
+    /**
+     * Similarity score (0–1) above which the user is automatically
+     * redirected instead of shown a suggestion. Set to 1 to disable
+     * auto-redirect. Defaults to 0.95.
+     */
+    autoRedirectThreshold?: number;
+    /**
+     * URL of the sitemap index or sitemap file to fetch.
+     * Defaults to '/sitemap-index.xml'.
+     */
+    sitemapUrl?: string;
+    /**
+     * Text shown before the suggestion link. Defaults to 'Did you mean'.
+     */
+    suggestionText?: string;
+}
+
+const {
+    threshold = 0.7,
+    autoRedirectThreshold = 0.95,
+    sitemapUrl = '/sitemap-index.xml',
+    suggestionText = 'Did you mean',
+} = Astro.props;
+---
+
+<div
+    id="fuzzy-redirect"
+    data-threshold={threshold}
+    data-auto-redirect-threshold={autoRedirectThreshold}
+    data-sitemap-url={sitemapUrl}
+    data-suggestion-text={suggestionText}
+></div>
+
+<script>
+    function levenshtein(a: string, b: string): number {
+        const m = a.length;
+        const n = b.length;
+        if (m === 0) return n;
+        if (n === 0) return m;
+
+        // Single-row DP: prev[j] holds the cost for (i-1, j).
+        let prev = Array.from({ length: n + 1 }, (_, j) => j);
+        for (let i = 1; i <= m; i++) {
+            let prevDiag = prev[0]!;
+            prev[0] = i;
+            for (let j = 1; j <= n; j++) {
+                const temp = prev[j]!;
+                prev[j] =
+                    a[i - 1] === b[j - 1]
+                        ? prevDiag
+                        : 1 + Math.min(prevDiag, prev[j - 1]!, prev[j]!);
+                prevDiag = temp;
+            }
+        }
+        return prev[n]!;
+    }
+
+    function similarity(a: string, b: string): number {
+        const maxLen = Math.max(a.length, b.length);
+        if (maxLen === 0) return 1;
+        return 1 - levenshtein(a, b) / maxLen;
+    }
+
+    async function fetchSitemapUrls(sitemapUrl: string): Promise<string[]> {
+        const response = await fetch(sitemapUrl);
+        if (!response.ok) return [];
+
+        const text = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/xml');
+
+        // Check if this is a sitemap index.
+        const sitemapLocs = doc.querySelectorAll('sitemap > loc');
+        if (sitemapLocs.length > 0) {
+            // Fetch each child sitemap in parallel.
+            const childUrls = await Promise.all(
+                Array.from(sitemapLocs).map((loc) => fetchSitemapUrls(loc.textContent?.trim() ?? '')),
+            );
+            return childUrls.flat();
+        }
+
+        // Regular sitemap — extract <url><loc> entries.
+        return Array.from(doc.querySelectorAll('url > loc'))
+            .map((loc) => loc.textContent?.trim() ?? '')
+            .filter(Boolean);
+    }
+
+    async function run() {
+        const container = document.getElementById('fuzzy-redirect');
+        if (!container) return;
+
+        const threshold = parseFloat(container.dataset.threshold ?? '0.7');
+        const autoRedirectThreshold = parseFloat(container.dataset.autoRedirectThreshold ?? '0.95');
+        const sitemapUrl = container.dataset.sitemapUrl ?? '/sitemap-index.xml';
+        const suggestionText = container.dataset.suggestionText ?? 'Did you mean';
+
+        const currentPath = window.location.pathname;
+        const urls = await fetchSitemapUrls(sitemapUrl);
+
+        // Extract paths from full URLs.
+        const paths = urls.map((url) => {
+            try {
+                return new URL(url).pathname;
+            } catch {
+                return url;
+            }
+        });
+
+        // Find the closest match.
+        let bestPath = '';
+        let bestScore = 0;
+        for (const path of paths) {
+            const score = similarity(currentPath, path);
+            if (score > bestScore) {
+                bestScore = score;
+                bestPath = path;
+            }
+        }
+
+        // Exact match means the 404 is correct — the path exists in the
+        // sitemap but returned a 404 (possibly a stale sitemap entry).
+        if (bestScore >= 1 || bestScore < threshold) return;
+
+        if (bestScore >= autoRedirectThreshold) {
+            window.location.replace(bestPath);
+            return;
+        }
+
+        // Show suggestion.
+        const link = document.createElement('a');
+        link.href = bestPath;
+        link.textContent = bestPath;
+
+        container.textContent = `${suggestionText} `;
+        container.appendChild(link);
+        container.append('?');
+    }
+
+    run();
+</script>

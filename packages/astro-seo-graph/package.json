@@ -22,7 +22,8 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
         },
-        "./Seo.astro": "./dist/components/Seo.astro"
+        "./Seo.astro": "./dist/components/Seo.astro",
+        "./FuzzyRedirect.astro": "./dist/components/FuzzyRedirect.astro"
     },
     "files": [
         "dist",
