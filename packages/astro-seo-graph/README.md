@@ -5,8 +5,8 @@
 
 Astro integration for [`@jdevalk/seo-graph-core`](../seo-graph-core). Ships a
 `<Seo>` component, route factories for agent-ready schema endpoints, a
-content-collection aggregator, breadcrumb helpers, and Zod helpers for content
-schemas.
+content-collection aggregator, breadcrumb helpers, a fuzzy 404 redirect
+component, and Zod helpers for content schemas.
 
 For detailed usage — including all builder signatures, site-type recipes, and
 schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-graph/blob/main/AGENTS.md).
@@ -23,6 +23,7 @@ schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-gra
 | **`buildAstroSeoProps`**       | Pure-TS logic that powers `<Seo>` — exported for users who want to feed a different head component.                                                                                                                                                                     |
 | **`buildAlternateLinks`**      | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
 | **`breadcrumbsFromUrl`**       | Derives a breadcrumb trail from an Astro URL. Splits path segments, supports custom display names and segment skipping. Returns `BreadcrumbItem[]` ready to pass to `buildBreadcrumbList`.                                                                              |
+| **`<FuzzyRedirect>`**          | Drop-in 404 component. Fetches your sitemap, fuzzy-matches the current URL against known paths, and suggests or auto-redirects to the closest match.                                                                                                                    |
 
 ## Installation
 
@@ -109,6 +110,57 @@ Segments without a `names` entry are title-cased from their slug
 (`open-source` → `Open Source`). Sites with a base path
 (e.g. `https://example.com/docs`) are supported — pass the base path as part
 of `siteUrl`.
+
+## Fuzzy 404 redirect
+
+When a visitor hits a 404, `<FuzzyRedirect>` fetches your sitemap, compares
+the mistyped URL against all known paths, and either suggests the closest
+match or auto-redirects. Drop it into your `404.astro` page:
+
+```astro
+---
+// src/pages/404.astro
+import FuzzyRedirect from '@jdevalk/astro-seo-graph/FuzzyRedirect.astro';
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Page not found</title>
+    </head>
+    <body>
+        <h1>Page not found</h1>
+        <p>Sorry, the page you're looking for doesn't exist.</p>
+        <p style="font-size: 1.25em; font-weight: bold;">
+            <FuzzyRedirect />
+        </p>
+        <p><a href="/">Go to the homepage</a></p>
+    </body>
+</html>
+```
+
+When a close match is found, the component renders a message like
+**Did you mean [/seo-graph/](/seo-graph/)?** inside the element where
+you place it. Style the surrounding element to make it prominent.
+
+### How it works
+
+1. Fetches `/sitemap-index.xml` (follows sitemap index → child sitemaps)
+2. Extracts all paths and computes
+   [Levenshtein similarity](https://en.wikipedia.org/wiki/Levenshtein_distance)
+   against the current URL
+3. **0.6–0.85 similarity**: shows "Did you mean /correct-path/?"
+4. **Above 0.85**: auto-redirects with `window.location.replace`
+5. **Below 0.6 or exact match**: does nothing
+
+### Props
+
+| Prop                    | Default                | Description                                        |
+| ----------------------- | ---------------------- | -------------------------------------------------- |
+| `threshold`             | `0.6`                  | Minimum similarity for a suggestion to appear      |
+| `autoRedirectThreshold` | `0.85`                 | Similarity above which the user is auto-redirected |
+| `sitemapUrl`            | `'/sitemap-index.xml'` | URL of the sitemap index or sitemap file           |
+| `suggestionText`        | `'Did you mean'`       | Text shown before the suggested link               |
 
 ## hreflang alternates
 
