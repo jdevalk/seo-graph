@@ -124,6 +124,10 @@ const {
             }
         }
 
+        console.log(
+            `[FuzzyRedirect] Best match for "${currentPath}": "${bestPath}" (similarity: ${bestScore.toFixed(3)})`,
+        );
+
         // Exact match means the 404 is correct — the path exists in the
         // sitemap but returned a 404 (possibly a stale sitemap entry).
         if (bestScore >= 1 || bestScore < threshold) return;
