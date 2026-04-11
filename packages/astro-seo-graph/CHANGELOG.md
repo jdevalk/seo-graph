@@ -1,5 +1,11 @@
 # @jdevalk/astro-seo-graph
 
+## 0.5.0
+
+### Minor Changes
+
+- 330b7fe: Add `<FuzzyRedirect>` component for 404 pages. Fetches the sitemap, fuzzy-matches the current URL against known paths, and suggests or auto-redirects to close matches. Configurable thresholds, sitemap URL, and suggestion text.
+
 ## 0.4.2
 
 ### Patch Changes
