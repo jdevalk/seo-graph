@@ -1,10 +1,5 @@
 import type { APIRoute } from 'astro';
-import {
-    getIndexNowKeyFileContent,
-    submitToIndexNow,
-    validateIndexNowKey,
-    type IndexNowSubmitResult,
-} from '@jdevalk/seo-graph-core';
+import { getIndexNowKeyFileContent } from '@jdevalk/seo-graph-core';
 
 export interface IndexNowKeyRouteOptions {
     /** IndexNow key (8–128 hex characters). */
@@ -40,5 +35,5 @@ export function createIndexNowKeyRoute(options: IndexNowKeyRouteOptions): APIRou
     };
 }
 
-export { submitToIndexNow, validateIndexNowKey };
-export type { IndexNowSubmitResult };
+export { submitToIndexNow, validateIndexNowKey } from '@jdevalk/seo-graph-core';
+export type { IndexNowSubmitResult } from '@jdevalk/seo-graph-core';
