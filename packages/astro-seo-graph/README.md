@@ -394,6 +394,13 @@ The filename (minus `.txt.ts`) must equal the key. Pair this with the
 `indexNow` integration option above, or call `submitToIndexNow` from your
 own deploy hook.
 
+> **Deploy the key file first.** IndexNow verifies host ownership by
+> fetching `https://<host>/<key>.txt` on every submission. Submissions
+> sent before the key file is reachable in production get rejected
+> (HTTP 403) and the key is treated as invalid going forward — you'll
+> have to rotate it. Ship the route, deploy, confirm the `.txt` loads
+> over HTTPS, *then* enable `indexNow` in the integration.
+
 ## Validating your output
 
 The build-time integration checks only catch a narrow set of issues.

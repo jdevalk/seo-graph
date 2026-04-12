@@ -164,6 +164,12 @@ network errors — it returns one result per chunk with `ok`, `status`, and
 `message`. Pass `endpoint` to override the default aggregator, `keyLocation`
 to point at a non-default key-file path, or `fetch` for testing.
 
+> **Deploy the key file before submitting.** IndexNow verifies host
+> ownership by fetching `https://<host>/<key>.txt` (or `keyLocation`)
+> on every call. Submissions sent before the file is publicly reachable
+> are rejected with HTTP 403 and the key is marked invalid — rotate
+> with `generateIndexNowKey()` if that happens.
+
 ## Why
 
 Read more about [why this project exists](https://joost.blog/seo-graph/).
