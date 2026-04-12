@@ -73,10 +73,12 @@ describe('submitToIndexNow', () => {
         });
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
-        const [url, init] = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+        const call = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+        const url = call[0];
+        const init = call[1] as RequestInit;
         expect(url).toBe(DEFAULT_INDEXNOW_ENDPOINT);
-        expect((init as RequestInit).method).toBe('POST');
-        const parsed = JSON.parse((init as RequestInit).body as string);
+        expect(init.method).toBe('POST');
+        const parsed = JSON.parse(init.body as string);
         expect(parsed).toEqual({
             host: 'example.com',
             key,
@@ -102,14 +104,12 @@ describe('submitToIndexNow', () => {
             ],
             fetch: fetchMock,
         });
-        const parsed = JSON.parse(
-            ((fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit)
-                .body as string,
-        );
+        const call = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+        const parsed = JSON.parse((call[1] as RequestInit).body as string);
         expect(parsed.urlList).toHaveLength(2);
         expect(parsed.urlList[0]).toBe('https://example.com/a');
-        expect(results[0].ok).toBe(true);
-        expect(results[0].status).toBe(202);
+        expect(results[0]!.ok).toBe(true);
+        expect(results[0]!.status).toBe(202);
     });
 
     it('returns empty array and does not fetch when no URLs match host', async () => {
@@ -137,8 +137,8 @@ describe('submitToIndexNow', () => {
             fetch: fetchMock,
         });
         expect(fetchMock).toHaveBeenCalledTimes(2);
-        expect(results[0].submitted).toBe(INDEXNOW_MAX_URLS_PER_REQUEST);
-        expect(results[1].submitted).toBe(5);
+        expect(results[0]!.submitted).toBe(INDEXNOW_MAX_URLS_PER_REQUEST);
+        expect(results[1]!.submitted).toBe(5);
     });
 
     it('supports a custom endpoint and keyLocation', async () => {
@@ -151,9 +151,9 @@ describe('submitToIndexNow', () => {
             keyLocation: 'https://example.com/.well-known/indexnow.txt',
             fetch: fetchMock,
         });
-        const [url, init] = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-        expect(url).toBe('https://www.bing.com/indexnow');
-        const body = JSON.parse((init as RequestInit).body as string);
+        const call = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+        expect(call[0]).toBe('https://www.bing.com/indexnow');
+        const body = JSON.parse((call[1] as RequestInit).body as string);
         expect(body.keyLocation).toBe('https://example.com/.well-known/indexnow.txt');
     });
 
