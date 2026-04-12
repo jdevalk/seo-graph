@@ -1,5 +1,28 @@
 # @jdevalk/astro-seo-graph
 
+## 0.8.0
+
+### Minor Changes
+
+- fbaf594: Add `validateUniqueMetadata` option to the Astro integration. Warns when
+  two or more built pages share the same `<title>` or meta description —
+  an SEO smell that can only be detected across the whole corpus. Enabled
+  by default.
+
+    Exports `extractTitle` and `extractMetaDescription` helpers for callers
+    that want to reuse the extraction logic outside the integration hook.
+
+### Patch Changes
+
+- 946ceaf: Docs: warn that the IndexNow key file must be deployed and reachable
+  over HTTPS _before_ any submissions are sent. Early submissions get
+  rejected (HTTP 403) and the key is marked invalid, forcing rotation.
+- ee68bfc: Use direct re-export syntax for `submitToIndexNow`, `validateIndexNowKey`,
+  and `IndexNowSubmitResult` from `@jdevalk/seo-graph-core`. Fixes a Vite
+  warning about imported-but-unused symbols in the built module.
+- Updated dependencies [946ceaf]
+    - @jdevalk/seo-graph-core@0.6.1
+
 ## 0.7.0
 
 ### Minor Changes

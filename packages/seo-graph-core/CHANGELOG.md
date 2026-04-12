@@ -1,5 +1,13 @@
 # @jdevalk/seo-graph-core
 
+## 0.6.1
+
+### Patch Changes
+
+- 946ceaf: Docs: warn that the IndexNow key file must be deployed and reachable
+  over HTTPS _before_ any submissions are sent. Early submissions get
+  rejected (HTTP 403) and the key is marked invalid, forcing rotation.
+
 ## 0.6.0
 
 ### Minor Changes
