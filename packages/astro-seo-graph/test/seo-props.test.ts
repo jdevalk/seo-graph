@@ -124,7 +124,7 @@ describe('buildAstroSeoProps', () => {
         expect(out.openGraph.article?.publishedTime).toBe('2026-04-01');
     });
 
-    it('emits twitter block with defaults when `twitter` is provided', () => {
+    it('emits only Twitter-specific tags; title/description/image/imageAlt fall back to OG', () => {
         const out = buildAstroSeoProps(
             {
                 title: 'Hello',
@@ -139,10 +139,54 @@ describe('buildAstroSeoProps', () => {
             card: 'summary_large_image',
             site: '@example',
             creator: '@author',
-            title: 'Hello',
-            description: 'A post',
-            image: 'https://example.com/og.png',
-            imageAlt: 'Alt text',
+        });
+    });
+
+    it('emits twitter:title/description/image/imageAlt when explicitly overridden', () => {
+        const out = buildAstroSeoProps(
+            {
+                title: 'Hello',
+                description: 'A post',
+                ogImage: 'https://example.com/og.png',
+                ogImageAlt: 'Alt text',
+                twitter: {
+                    site: '@example',
+                    title: 'Twitter-only title',
+                    description: 'Twitter-only description',
+                    image: 'https://example.com/twitter.png',
+                    imageAlt: 'Twitter-only alt',
+                },
+            },
+            pageUrl,
+        );
+        expect(out.twitter).toEqual({
+            card: 'summary_large_image',
+            site: '@example',
+            title: 'Twitter-only title',
+            description: 'Twitter-only description',
+            image: 'https://example.com/twitter.png',
+            imageAlt: 'Twitter-only alt',
+        });
+    });
+
+    it('omits twitter override when it equals the OG counterpart', () => {
+        const out = buildAstroSeoProps(
+            {
+                title: 'Hello',
+                description: 'A post',
+                ogImage: 'https://example.com/og.png',
+                twitter: {
+                    site: '@example',
+                    title: 'Hello', // same as og:title
+                    description: 'A post', // same as og:description
+                    image: 'https://example.com/og.png', // same as og:image
+                },
+            },
+            pageUrl,
+        );
+        expect(out.twitter).toEqual({
+            card: 'summary_large_image',
+            site: '@example',
         });
     });
 

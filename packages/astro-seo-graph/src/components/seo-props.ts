@@ -49,7 +49,14 @@ export interface SeoProps {
     siteName?: string;
     /** OG locale. Defaults to `'en_US'`. */
     locale?: string;
-    /** Twitter card metadata. */
+    /**
+     * Twitter card metadata. Only Twitter-specific tags (card, site,
+     * creator) are emitted by default — twitter:title, :description,
+     * :image, and :image:alt fall back to their `og:` counterparts
+     * automatically. Set `title`, `description`, `image`, or `imageAlt`
+     * here only when you want Twitter-specific content that differs
+     * from the OG values.
+     */
     twitter?: {
         /** Twitter handle of the site owner, e.g. `'@jdevalk'`. */
         site?: string;
@@ -57,6 +64,14 @@ export interface SeoProps {
         creator?: string;
         /** Card type. Defaults to `'summary_large_image'`. */
         card?: 'summary' | 'summary_large_image' | 'app' | 'player';
+        /** Override twitter:title. Omit to fall back to og:title. */
+        title?: string;
+        /** Override twitter:description. Omit to fall back to og:description. */
+        description?: string;
+        /** Override twitter:image. Omit to fall back to og:image. */
+        image?: string;
+        /** Override twitter:image:alt. Omit to fall back to og:image:alt. */
+        imageAlt?: string;
     };
     /**
      * Article-specific OG metadata. Only emitted when `ogType` is
@@ -147,7 +162,7 @@ export interface AstroSeoProps {
         card: 'summary' | 'summary_large_image' | 'app' | 'player';
         site?: string;
         creator?: string;
-        title: string;
+        title?: string;
         description?: string;
         image?: string;
         imageAlt?: string;
@@ -311,13 +326,28 @@ export function buildAstroSeoProps(props: SeoProps, pageUrl: string): AstroSeoPr
     if (props.twitter !== undefined) {
         const twitter: NonNullable<AstroSeoProps['twitter']> = {
             card: props.twitter.card ?? 'summary_large_image',
-            title: fullTitle,
         };
         if (props.twitter.site !== undefined) twitter.site = props.twitter.site;
         if (props.twitter.creator !== undefined) twitter.creator = props.twitter.creator;
-        if (props.description !== undefined) twitter.description = props.description;
-        if (ogImage) twitter.image = ogImage;
-        if (props.ogImageAlt !== undefined) twitter.imageAlt = props.ogImageAlt;
+        // Only emit twitter:title/description/image/imageAlt when the
+        // caller explicitly provided Twitter-specific overrides.
+        // Otherwise Twitter falls back to the og: counterparts
+        // automatically — emitting duplicates is noisy.
+        if (props.twitter.title !== undefined && props.twitter.title !== fullTitle) {
+            twitter.title = props.twitter.title;
+        }
+        if (
+            props.twitter.description !== undefined &&
+            props.twitter.description !== props.description
+        ) {
+            twitter.description = props.twitter.description;
+        }
+        if (props.twitter.image !== undefined && props.twitter.image !== ogImage) {
+            twitter.image = props.twitter.image;
+        }
+        if (props.twitter.imageAlt !== undefined && props.twitter.imageAlt !== props.ogImageAlt) {
+            twitter.imageAlt = props.twitter.imageAlt;
+        }
         astroSeo.twitter = twitter;
     }
 

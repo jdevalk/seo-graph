@@ -13,6 +13,7 @@
 - **`og:locale:alternate`** derived from `alternates` prop for multilingual pages.
 - **`<meta name="author">`** from new `author` prop, with fallback to `article.authors[0]`.
 - **`article:publisher`** via new `articlePublisher` prop (Facebook page URL of the publisher).
+- **Twitter tags deduplicated against OG.** `twitter:title`, `:description`, `:image`, and `:image:alt` are only emitted when explicitly overridden via the `twitter.title/description/image/imageAlt` props — otherwise Twitter falls back to the `og:` counterparts automatically (reduces meta tag noise).
 
 **Breaking:**
 
