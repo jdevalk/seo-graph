@@ -124,8 +124,11 @@ describe('createSchemaMap', () => {
         expect(xml).toContain('<loc>https://example.com/schema/video.json</loc>');
         expect(xml).toContain('<lastmod>2026-04-07</lastmod>');
         expect(xml).toContain('<lastmod>2026-03-13</lastmod>');
-        expect(xml).toContain('<changefreq>daily</changefreq>');
-        expect(xml).toContain('<priority>0.8</priority>');
+        // priority and changefreq are deliberately NOT emitted — Google
+        // and other crawlers ignore them, and fabricating defaults is
+        // worse than omitting.
+        expect(xml).not.toContain('<changefreq>');
+        expect(xml).not.toContain('<priority>');
     });
 
     it('strips a trailing slash from siteUrl', async () => {
@@ -144,23 +147,6 @@ describe('createSchemaMap', () => {
         });
         const xml = await (await invoke(route)).text();
         expect(xml).toContain('<loc>https://example.com/schema/a.json</loc>');
-    });
-
-    it('respects custom changefreq and priority', async () => {
-        const route = createSchemaMap({
-            siteUrl: 'https://example.com',
-            entries: [
-                {
-                    path: '/schema/a.json',
-                    lastModified: new Date('2026-01-01'),
-                    changeFreq: 'weekly',
-                    priority: 0.5,
-                },
-            ],
-        });
-        const xml = await (await invoke(route)).text();
-        expect(xml).toContain('<changefreq>weekly</changefreq>');
-        expect(xml).toContain('<priority>0.5</priority>');
     });
 
     it('XML-escapes special characters in the path', async () => {

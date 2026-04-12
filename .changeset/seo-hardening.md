@@ -19,3 +19,4 @@
 
 - `imageSchema` now **requires** `alt` (previously optional). Missing alt text is an accessibility and SEO failure. Decorative images should use `alt: ''` explicitly. Wrap with `.optional()` if you want the whole image field to be optional.
 - `AstroSeoProps.canonical` is now optional (previously required). `AstroSeoProps.noindex` has been removed — robots directives go through `extend.meta` instead. Internal shape change; only affects consumers calling `buildAstroSeoProps` directly.
+- `createSchemaMap` no longer emits `<changefreq>` or `<priority>` — these have been deprecated by Google and other major crawlers. `SchemaMapEntry.changeFreq` and `SchemaMapEntry.priority` have been removed from the interface.

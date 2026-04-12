@@ -77,10 +77,6 @@ export interface SchemaMapEntry {
     path: string;
     /** When the resource at this path was last modified. */
     lastModified: Date;
-    /** Defaults to `'daily'`. */
-    changeFreq?: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
-    /** 0.0–1.0. Defaults to `0.8`. */
-    priority?: number;
 }
 
 export interface SchemaMapOptions {
@@ -130,13 +126,9 @@ export function createSchemaMap(options: SchemaMapOptions): APIRoute {
                 const pathPart = entry.path.startsWith('/') ? entry.path : `/${entry.path}`;
                 const loc = escapeXml(`${site}${pathPart}`);
                 const lastmod = entry.lastModified.toISOString().split('T')[0];
-                const changefreq = entry.changeFreq ?? 'daily';
-                const priority = entry.priority ?? 0.8;
                 return `  <url contentType="structuredData/schema.org">
     <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
-    <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
   </url>`;
             })
             .join('\n');
