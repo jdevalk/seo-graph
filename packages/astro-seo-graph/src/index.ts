@@ -20,3 +20,6 @@ export type { AlternateLink, BuildAlternateLinksInput } from './alternates.js';
 
 export { breadcrumbsFromUrl } from './breadcrumbs.js';
 export type { BreadcrumbsFromUrlInput } from './breadcrumbs.js';
+
+export { createIndexNowKeyRoute, submitToIndexNow, validateIndexNowKey } from './indexnow.js';
+export type { IndexNowKeyRouteOptions, IndexNowSubmitResult } from './indexnow.js';

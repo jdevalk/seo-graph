@@ -35,6 +35,15 @@ npm install @jdevalk/seo-graph-core
 | `assembleGraph(pieces)`            | Wraps pieces in a `{ @context, @graph }` envelope with first-wins deduplication by `@id`. |
 | `deduplicateByGraphId(entities)`   | The dedup engine on its own, in case you need custom assembly.                            |
 
+### IndexNow
+
+| API                          | Purpose                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `submitToIndexNow`           | POST URLs to the IndexNow aggregator. Filters by host, dedupes, chunks at 10k. |
+| `generateIndexNowKey`        | Generate a random hex key (Web Crypto).                                       |
+| `validateIndexNowKey`        | Verify a key is 8–128 hex chars.                                              |
+| `getIndexNowKeyFileContent`  | Body to serve at `/<key>.txt` for host verification.                          |
+
 ### Piece builders
 
 All builders take an input object and the `IdFactory`, and return a plain
@@ -122,6 +131,38 @@ const graph = assembleGraph([
 
 // graph === { '@context': 'https://schema.org', '@graph': [...] }
 ```
+
+## IndexNow
+
+Runtime-agnostic helpers for the [IndexNow](https://www.indexnow.org) protocol.
+Submit URLs to participating search engines (Bing, Yandex, Seznam, Naver, Yep)
+through the neutral aggregator at `api.indexnow.org`.
+
+```ts
+import {
+    generateIndexNowKey,
+    getIndexNowKeyFileContent,
+    submitToIndexNow,
+    validateIndexNowKey,
+} from '@jdevalk/seo-graph-core';
+
+const key = generateIndexNowKey(); // 32-char hex, persist this
+
+// Serve this body at https://example.com/<key>.txt
+const keyFileBody = getIndexNowKeyFileContent(key);
+
+const results = await submitToIndexNow({
+    host: 'example.com',
+    key,
+    urls: ['https://example.com/blog/new-post/'],
+});
+```
+
+URLs not on `host` and duplicates are filtered automatically. Bulk submissions
+are chunked at 10,000 URLs per request. `submitToIndexNow` never throws on
+network errors — it returns one result per chunk with `ok`, `status`, and
+`message`. Pass `endpoint` to override the default aggregator, `keyLocation`
+to point at a non-default key-file path, or `fetch` for testing.
 
 ## Why
 

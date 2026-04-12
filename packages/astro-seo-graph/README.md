@@ -24,6 +24,7 @@ schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-gra
 | **`buildAlternateLinks`**      | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
 | **`breadcrumbsFromUrl`**       | Derives a breadcrumb trail from an Astro URL. Splits path segments, supports custom display names and segment skipping. Returns `BreadcrumbItem[]` ready to pass to `buildBreadcrumbList`.                                                                              |
 | **`<FuzzyRedirect>`**          | Drop-in 404 component. Fetches your sitemap, fuzzy-matches the current URL against known paths, and suggests or auto-redirects to the closest match.                                                                                                                    |
+| **`createIndexNowKeyRoute`**   | Factory returning an `APIRoute` that serves the IndexNow key-verification file at `/<key>.txt`. Pair with the `indexNow` option on the integration to auto-submit built URLs on `astro:build:done`.                                                                      |
 
 ## Installation
 
@@ -75,6 +76,27 @@ const graph = buildSchemaGraph({
     <body>...</body>
 </html>
 ```
+
+### `<Seo>` behavior notes
+
+- **Robots defaults.** `max-snippet:-1`, `max-image-preview:large`, and
+  `max-video-preview:-1` are always emitted alongside any `noindex` /
+  `nofollow` directives, matching the Yoast-style defaults for maximum
+  snippet sizes.
+- **Canonical + noindex.** When `noindex` is true the canonical link is
+  omitted per Google's recommendation.
+- **Query params.** Canonical URLs strip query parameters by default. Pass
+  `preserveQueryParams` to keep them.
+- **Twitter tag dedup.** `twitter:title`, `twitter:description`,
+  `twitter:image`, and `twitter:image:alt` are only emitted when the
+  caller explicitly overrides them via `twitter.title` / `description` /
+  `image` / `imageAlt`. Otherwise Twitter falls back to the `og:`
+  counterparts automatically.
+- **`og:locale:alternate`.** Emitted automatically from the `alternates`
+  prop on multilingual pages.
+- **Author / publisher.** Pass `author` for `<meta name="author">` (falls
+  back to `article.authors[0]`); pass `articlePublisher` for the
+  `article:publisher` Facebook URL.
 
 ## Breadcrumbs from URL
 
@@ -312,10 +334,13 @@ explicitly. If you want the whole image to be optional, wrap the schema:
 
 ## Astro integration
 
-An Astro integration that runs build-time SEO checks. Currently:
+An Astro integration that runs build-time SEO checks and optional post-build
+actions. Currently:
 
 - Warns about built pages with zero or more than one `<h1>` element (a
   common SEO and accessibility issue).
+- Optionally submits built URLs to [IndexNow](https://www.indexnow.org)
+  after the build completes.
 
 ```js
 // astro.config.mjs
@@ -323,17 +348,48 @@ import { defineConfig } from 'astro/config';
 import seoGraph from '@jdevalk/astro-seo-graph/integration';
 
 export default defineConfig({
-    integrations: [seoGraph()],
+    integrations: [
+        seoGraph({
+            indexNow: {
+                key: process.env.INDEXNOW_KEY!,
+                host: 'example.com',
+                siteUrl: 'https://example.com',
+            },
+        }),
+    ],
 });
 ```
 
 Options:
 
-| Prop         | Default | Description                                 |
-| ------------ | ------- | ------------------------------------------- |
-| `validateH1` | `true`  | Warn about pages without exactly one `<h1>` |
+| Prop         | Default | Description                                               |
+| ------------ | ------- | --------------------------------------------------------- |
+| `validateH1` | `true`  | Warn about pages without exactly one `<h1>`               |
+| `indexNow`   | —       | Submit built URLs to IndexNow. See below for sub-options. |
 
-Only static pages are checked (SSR pages aren't on disk at build time).
+`indexNow` sub-options: `key` (8–128 hex chars), `host` (bare host, e.g.
+`example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
+`https://<host>/<key>.txt`), `endpoint?` (defaults to `api.indexnow.org`),
+`filter?` (drop URLs for which the callback returns `false`).
+
+`index.html` paths are rewritten to their trailing-slash form. Only static
+pages are checked/submitted (SSR pages aren't on disk at build time).
+
+## IndexNow key route
+
+Serve the IndexNow key-verification file at `/<key>.txt` so participating
+engines can confirm host ownership:
+
+```ts
+// src/pages/[your-key-here].txt.ts
+import { createIndexNowKeyRoute } from '@jdevalk/astro-seo-graph';
+
+export const GET = createIndexNowKeyRoute({ key: 'your-key-here' });
+```
+
+The filename (minus `.txt.ts`) must equal the key. Pair this with the
+`indexNow` integration option above, or call `submitToIndexNow` from your
+own deploy hook.
 
 ## License
 

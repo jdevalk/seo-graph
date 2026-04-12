@@ -31,3 +31,14 @@ export { buildVideoObject } from './pieces/video.js';
 export type { VideoObjectInput } from './pieces/video.js';
 
 export { buildPiece } from './pieces/custom.js';
+
+// IndexNow protocol
+export {
+    submitToIndexNow,
+    validateIndexNowKey,
+    generateIndexNowKey,
+    getIndexNowKeyFileContent,
+    DEFAULT_INDEXNOW_ENDPOINT,
+    INDEXNOW_MAX_URLS_PER_REQUEST,
+} from './indexnow.js';
+export type { SubmitToIndexNowOptions, IndexNowSubmitResult } from './indexnow.js';
