@@ -21,8 +21,20 @@ export interface SeoProps {
     titleTemplate?: string;
     /** Meta description. */
     description?: string;
-    /** Canonical URL. Defaults to the current page URL (`Astro.url.href`). */
+    /**
+     * Canonical URL. Defaults to the current page URL with the query
+     * string stripped. Set `preserveQueryParams` to keep the query
+     * string, or pass an explicit `canonical` to override entirely.
+     *
+     * Omitted from the output when `noindex` is true.
+     */
     canonical?: string | URL;
+    /**
+     * Keep the query string in the default canonical URL. Defaults to
+     * `false` (query params are stripped — the SEO-correct behavior for
+     * most cases). Has no effect when `canonical` is explicitly set.
+     */
+    preserveQueryParams?: boolean;
     /** Open Graph type. Defaults to `'website'`. */
     ogType?: 'website' | 'article' | 'profile' | 'book';
     /** Absolute URL of the share image. */
@@ -58,8 +70,20 @@ export interface SeoProps {
         tags?: readonly string[];
         section?: string;
     };
-    /** Emit `<meta name="robots" content="noindex, follow">` when `true`. */
+    /** Emit `<meta name="robots" content="noindex, follow, max-*">`. */
     noindex?: boolean;
+    /** Emit `nofollow` in the robots meta. */
+    nofollow?: boolean;
+    /**
+     * Facebook page URL of the publisher. Emitted as `article:publisher`
+     * when `ogType` is `'article'`.
+     */
+    articlePublisher?: string;
+    /**
+     * Author name for the `<meta name="author">` tag. If omitted but
+     * `article.authors` is set, the first author is used.
+     */
+    author?: string;
     /**
      * JSON-LD `@graph` envelope to inject as
      * `<script type="application/ld+json">`. Typically the output of
@@ -76,21 +100,8 @@ export interface SeoProps {
      *
      * Emits one `<link rel="alternate" hreflang="…" href="…">` per
      * entry, plus an `x-default` entry pointing at the default-locale
-     * sibling (or the first entry, if no default match is found).
-     *
-     * All `href` values MUST be absolute `http(s)://` URLs — relative
-     * or other-scheme values are dropped silently. BCP 47 tags are
-     * normalized on output (`fr-ca` → `fr-CA`, `zh-hant-hk` →
-     * `zh-Hant-HK`). On duplicate normalized tags, the first entry
-     * wins.
-     *
-     * **The caller must include the current page itself** in the
-     * entries list — Google treats self-referential hreflang as
-     * required, not optional.
-     *
-     * When fewer than 2 entries survive validation, nothing is emitted
-     * (a single-locale page has no meaningful alternates). If you
-     * prefer strict input checking, validate before passing in.
+     * sibling (or the first entry, if no default match is found). Also
+     * emits matching `og:locale:alternate` tags.
      */
     alternates?: BuildAlternateLinksInput;
 }
@@ -103,8 +114,7 @@ export interface SeoProps {
 export interface AstroSeoProps {
     title: string;
     description?: string;
-    canonical: string;
-    noindex?: boolean;
+    canonical?: string;
     openGraph: {
         basic: {
             title: string;
@@ -116,6 +126,7 @@ export interface AstroSeoProps {
             description?: string;
             siteName?: string;
             locale?: string;
+            localeAlternate?: string[];
         };
         image?: {
             alt?: string;
@@ -129,6 +140,7 @@ export interface AstroSeoProps {
             authors?: string[];
             tags?: string[];
             section?: string;
+            publisher?: string;
         };
     };
     twitter?: {
@@ -152,6 +164,39 @@ function toIsoString(value: Date | string | undefined): string | undefined {
 }
 
 /**
+ * Build the `content` value of the `<meta name="robots">` tag. Always
+ * includes `max-snippet:-1, max-image-preview:large, max-video-preview:-1`
+ * (opt into maximum snippet/preview sizes in search results). Prepends
+ * `noindex`, `nofollow`, or `noindex, follow` as applicable.
+ */
+function buildRobotsContent(noindex?: boolean, nofollow?: boolean): string {
+    const directives: string[] = [];
+    if (noindex && nofollow) {
+        directives.push('noindex', 'nofollow');
+    } else if (noindex) {
+        directives.push('noindex', 'follow');
+    } else if (nofollow) {
+        directives.push('nofollow');
+    }
+    directives.push('max-snippet:-1', 'max-image-preview:large', 'max-video-preview:-1');
+    return directives.join(', ');
+}
+
+/**
+ * Strip the query string from a URL. Fragments are preserved. Falls
+ * back to returning the input unchanged if URL parsing fails.
+ */
+function stripQueryParams(url: string): string {
+    try {
+        const parsed = new URL(url);
+        parsed.search = '';
+        return parsed.toString();
+    } catch {
+        return url;
+    }
+}
+
+/**
  * Project the public `SeoProps` onto the shape `astro-seo`'s `<SEO>`
  * component expects. Pure function; no Astro runtime access.
  *
@@ -165,7 +210,26 @@ export function buildAstroSeoProps(props: SeoProps, pageUrl: string): AstroSeoPr
         ? props.titleTemplate.replace('%s', props.title)
         : props.title;
 
-    const canonical = props.canonical !== undefined ? props.canonical.toString() : pageUrl;
+    // Default canonical strips query params (SEO-correct for most
+    // cases). `preserveQueryParams` opts out. Explicit `canonical`
+    // overrides entirely.
+    let canonical: string | undefined;
+    if (props.canonical !== undefined) {
+        canonical = props.canonical.toString();
+    } else if (props.preserveQueryParams) {
+        canonical = pageUrl;
+    } else {
+        canonical = stripQueryParams(pageUrl);
+    }
+
+    // Omit canonical when the page is noindex (Google recommendation).
+    if (props.noindex) {
+        canonical = undefined;
+    }
+
+    // og:url uses the canonical when available, otherwise the (possibly
+    // query-stripped) page URL.
+    const ogUrl = canonical ?? stripQueryParams(pageUrl);
 
     const ogType = props.ogType ?? 'website';
     const ogImage = props.ogImage ?? '';
@@ -175,7 +239,7 @@ export function buildAstroSeoProps(props: SeoProps, pageUrl: string): AstroSeoPr
             title: fullTitle,
             type: ogType,
             image: ogImage,
-            url: canonical,
+            url: ogUrl,
         },
     };
 
@@ -183,6 +247,28 @@ export function buildAstroSeoProps(props: SeoProps, pageUrl: string): AstroSeoPr
     if (props.description !== undefined) optional.description = props.description;
     if (props.siteName !== undefined) optional.siteName = props.siteName;
     optional.locale = props.locale ?? 'en_US';
+
+    // og:locale:alternate from hreflang entries. Convert hyphenated
+    // BCP 47 (fr-CA) to OG-style underscores (fr_CA), and skip any
+    // entry that matches the primary og:locale (including language-only
+    // matches like hreflang='en' when og:locale='en_US').
+    if (props.alternates?.entries && props.alternates.entries.length > 1) {
+        const primaryLang = optional.locale?.split('_')[0]?.toLowerCase();
+        const localeAlternate: string[] = [];
+        const seen = new Set<string>();
+        for (const entry of props.alternates.entries) {
+            const ogLocale = entry.hreflang.replace('-', '_');
+            const entryLang = entry.hreflang.split('-')[0]?.toLowerCase();
+            if (seen.has(ogLocale)) continue;
+            if (ogLocale === optional.locale) continue;
+            // Skip language-only hreflang when it matches the primary locale's language.
+            if (!entry.hreflang.includes('-') && entryLang === primaryLang) continue;
+            seen.add(ogLocale);
+            localeAlternate.push(ogLocale);
+        }
+        if (localeAlternate.length > 0) optional.localeAlternate = localeAlternate;
+    }
+
     openGraph.optional = optional;
 
     const hasImageMeta =
@@ -197,28 +283,30 @@ export function buildAstroSeoProps(props: SeoProps, pageUrl: string): AstroSeoPr
         openGraph.image = image;
     }
 
-    if (ogType === 'article' && props.article) {
+    if (ogType === 'article' && (props.article || props.articlePublisher)) {
         const article: NonNullable<AstroSeoProps['openGraph']['article']> = {};
-        const published = toIsoString(props.article.publishedTime);
-        if (published !== undefined) article.publishedTime = published;
-        const modified = toIsoString(props.article.modifiedTime);
-        if (modified !== undefined) article.modifiedTime = modified;
-        const expiration = toIsoString(props.article.expirationTime);
-        if (expiration !== undefined) article.expirationTime = expiration;
-        if (props.article.authors !== undefined) article.authors = [...props.article.authors];
-        if (props.article.tags !== undefined) article.tags = [...props.article.tags];
-        if (props.article.section !== undefined) article.section = props.article.section;
+        if (props.article) {
+            const published = toIsoString(props.article.publishedTime);
+            if (published !== undefined) article.publishedTime = published;
+            const modified = toIsoString(props.article.modifiedTime);
+            if (modified !== undefined) article.modifiedTime = modified;
+            const expiration = toIsoString(props.article.expirationTime);
+            if (expiration !== undefined) article.expirationTime = expiration;
+            if (props.article.authors !== undefined) article.authors = [...props.article.authors];
+            if (props.article.tags !== undefined) article.tags = [...props.article.tags];
+            if (props.article.section !== undefined) article.section = props.article.section;
+        }
+        if (props.articlePublisher !== undefined) article.publisher = props.articlePublisher;
         openGraph.article = article;
     }
 
     const astroSeo: AstroSeoProps = {
         title: fullTitle,
-        canonical,
         openGraph,
     };
 
+    if (canonical !== undefined) astroSeo.canonical = canonical;
     if (props.description !== undefined) astroSeo.description = props.description;
-    if (props.noindex) astroSeo.noindex = true;
 
     if (props.twitter !== undefined) {
         const twitter: NonNullable<AstroSeoProps['twitter']> = {
@@ -238,29 +326,42 @@ export function buildAstroSeoProps(props: SeoProps, pageUrl: string): AstroSeoPr
     const alternateLinks =
         props.alternates !== undefined ? buildAlternateLinks(props.alternates) : [];
 
-    const hasExtraLinks = props.extraLinks !== undefined && props.extraLinks.length > 0;
-    const hasExtraMeta = props.extraMeta !== undefined && props.extraMeta.length > 0;
-    const hasAlternates = alternateLinks.length > 0;
+    // Build our own robots meta (astro-seo's doesn't support max-*).
+    const robotsContent = buildRobotsContent(props.noindex, props.nofollow);
 
-    if (hasExtraLinks || hasExtraMeta || hasAlternates) {
-        const extend: NonNullable<AstroSeoProps['extend']> = {};
-        const link: Array<Record<string, string>> = [];
-        if (hasExtraLinks) {
-            for (const entry of props.extraLinks!) link.push({ ...entry });
+    // Resolve author name: explicit prop takes precedence, falls back
+    // to first entry in article.authors.
+    const authorName = props.author ?? props.article?.authors?.[0];
+
+    const meta: Array<Record<string, string>> = [];
+    meta.push({ name: 'robots', content: robotsContent });
+    if (authorName !== undefined) {
+        meta.push({ name: 'author', content: authorName });
+    }
+    if (props.extraMeta !== undefined) {
+        for (const entry of props.extraMeta) meta.push({ ...entry });
+    }
+
+    const hasExtraLinks = props.extraLinks !== undefined && props.extraLinks.length > 0;
+    const hasAlternates = alternateLinks.length > 0;
+    const link: Array<Record<string, string>> = [];
+    if (hasExtraLinks) {
+        for (const entry of props.extraLinks!) link.push({ ...entry });
+    }
+    if (hasAlternates) {
+        for (const entry of alternateLinks) {
+            link.push({
+                rel: entry.rel,
+                href: entry.href,
+                hreflang: entry.hreflang,
+            });
         }
-        if (hasAlternates) {
-            for (const entry of alternateLinks) {
-                link.push({
-                    rel: entry.rel,
-                    href: entry.href,
-                    hreflang: entry.hreflang,
-                });
-            }
-        }
-        if (link.length > 0) extend.link = link;
-        if (hasExtraMeta) {
-            extend.meta = props.extraMeta!.map((meta) => ({ ...meta }));
-        }
+    }
+
+    const extend: NonNullable<AstroSeoProps['extend']> = {};
+    if (link.length > 0) extend.link = link;
+    if (meta.length > 0) extend.meta = meta;
+    if (extend.link !== undefined || extend.meta !== undefined) {
         astroSeo.extend = extend;
     }
 

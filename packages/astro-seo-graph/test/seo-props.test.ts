@@ -17,7 +17,14 @@ describe('buildAstroSeoProps', () => {
         expect(out.openGraph.optional?.locale).toBe('en_US');
         expect(out.description).toBeUndefined();
         expect(out.twitter).toBeUndefined();
-        expect(out.extend).toBeUndefined();
+        // Robots meta is always emitted with max-* defaults.
+        expect(out.extend?.meta).toEqual([
+            {
+                name: 'robots',
+                content: 'max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+            },
+        ]);
+        expect(out.extend?.link).toBeUndefined();
     });
 
     it('applies titleTemplate with %s substitution', () => {
@@ -152,7 +159,7 @@ describe('buildAstroSeoProps', () => {
                     { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
                     { rel: 'sitemap', href: '/sitemap-index.xml' },
                 ],
-                extraMeta: [{ name: 'author', content: 'Jane Doe' }],
+                extraMeta: [{ name: 'custom', content: 'value' }],
             },
             pageUrl,
         );
@@ -162,19 +169,139 @@ describe('buildAstroSeoProps', () => {
             type: 'image/svg+xml',
             href: '/favicon.svg',
         });
-        expect(out.extend?.meta).toEqual([{ name: 'author', content: 'Jane Doe' }]);
+        // Meta now always starts with robots; extraMeta follows.
+        expect(out.extend?.meta).toContainEqual({ name: 'custom', content: 'value' });
+        expect(out.extend?.meta?.[0]?.name).toBe('robots');
     });
 
-    it('emits noindex when requested', () => {
-        const out = buildAstroSeoProps({ title: 'Hello', noindex: true }, pageUrl);
-        expect(out.noindex).toBe(true);
+    describe('robots meta', () => {
+        it('always emits max-* defaults even without noindex', () => {
+            const out = buildAstroSeoProps({ title: 'Hello' }, pageUrl);
+            const robots = out.extend?.meta?.find((m) => m.name === 'robots');
+            expect(robots?.content).toBe(
+                'max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+            );
+        });
+
+        it('emits noindex, follow when noindex is true', () => {
+            const out = buildAstroSeoProps({ title: 'Hello', noindex: true }, pageUrl);
+            const robots = out.extend?.meta?.find((m) => m.name === 'robots');
+            expect(robots?.content).toBe(
+                'noindex, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+            );
+        });
+
+        it('emits nofollow when nofollow is true', () => {
+            const out = buildAstroSeoProps({ title: 'Hello', nofollow: true }, pageUrl);
+            const robots = out.extend?.meta?.find((m) => m.name === 'robots');
+            expect(robots?.content).toBe(
+                'nofollow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+            );
+        });
+
+        it('emits noindex, nofollow when both are true', () => {
+            const out = buildAstroSeoProps(
+                { title: 'Hello', noindex: true, nofollow: true },
+                pageUrl,
+            );
+            const robots = out.extend?.meta?.find((m) => m.name === 'robots');
+            expect(robots?.content).toBe(
+                'noindex, nofollow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+            );
+        });
     });
 
-    it('omits noindex when false or absent', () => {
-        expect(buildAstroSeoProps({ title: 'Hello' }, pageUrl).noindex).toBeUndefined();
-        expect(
-            buildAstroSeoProps({ title: 'Hello', noindex: false }, pageUrl).noindex,
-        ).toBeUndefined();
+    describe('canonical', () => {
+        it('strips query params from the default canonical', () => {
+            const out = buildAstroSeoProps({ title: 'Hello' }, `${pageUrl}?ref=twitter`);
+            expect(out.canonical).toBe(pageUrl);
+        });
+
+        it('preserves query params when preserveQueryParams is true', () => {
+            const urlWithQuery = `${pageUrl}?ref=twitter`;
+            const out = buildAstroSeoProps(
+                { title: 'Hello', preserveQueryParams: true },
+                urlWithQuery,
+            );
+            expect(out.canonical).toBe(urlWithQuery);
+        });
+
+        it('omits canonical when noindex is true', () => {
+            const out = buildAstroSeoProps({ title: 'Hello', noindex: true }, pageUrl);
+            expect(out.canonical).toBeUndefined();
+        });
+
+        it('og:url still falls back to page URL when canonical is omitted', () => {
+            const out = buildAstroSeoProps({ title: 'Hello', noindex: true }, pageUrl);
+            expect(out.openGraph.basic.url).toBe(pageUrl);
+        });
+    });
+
+    describe('og:locale:alternate', () => {
+        it('derives from alternates, excluding the default locale', () => {
+            const out = buildAstroSeoProps(
+                {
+                    title: 'Hello',
+                    locale: 'en_US',
+                    alternates: {
+                        entries: [
+                            { hreflang: 'en', href: 'https://example.com/' },
+                            { hreflang: 'fr-CA', href: 'https://example.com/fr-ca/' },
+                            { hreflang: 'nl', href: 'https://example.com/nl/' },
+                        ],
+                    },
+                },
+                pageUrl,
+            );
+            // fr-CA → fr_CA (underscore), en excluded since it matches locale.
+            expect(out.openGraph.optional?.localeAlternate).toEqual(['fr_CA', 'nl']);
+        });
+
+        it('emits nothing when alternates has fewer than 2 entries', () => {
+            const out = buildAstroSeoProps(
+                {
+                    title: 'Hello',
+                    alternates: {
+                        entries: [{ hreflang: 'en', href: 'https://example.com/' }],
+                    },
+                },
+                pageUrl,
+            );
+            expect(out.openGraph.optional?.localeAlternate).toBeUndefined();
+        });
+    });
+
+    describe('author and publisher', () => {
+        it('emits meta name=author from explicit prop', () => {
+            const out = buildAstroSeoProps({ title: 'Hello', author: 'Jane Doe' }, pageUrl);
+            const author = out.extend?.meta?.find((m) => m.name === 'author');
+            expect(author?.content).toBe('Jane Doe');
+        });
+
+        it('falls back to article.authors[0] for meta name=author', () => {
+            const out = buildAstroSeoProps(
+                {
+                    title: 'Hello',
+                    ogType: 'article',
+                    article: { authors: ['Jane Doe', 'John Smith'] },
+                },
+                pageUrl,
+            );
+            const author = out.extend?.meta?.find((m) => m.name === 'author');
+            expect(author?.content).toBe('Jane Doe');
+        });
+
+        it('emits article:publisher when articlePublisher is set', () => {
+            const out = buildAstroSeoProps(
+                {
+                    title: 'Hello',
+                    ogType: 'article',
+                    articlePublisher: 'https://facebook.com/example',
+                },
+                pageUrl,
+            );
+            expect(out.openGraph.article?.publisher).toBe('https://facebook.com/example');
+        });
     });
 
     it('respects a custom locale', () => {
@@ -250,7 +377,7 @@ describe('buildAstroSeoProps', () => {
                 },
                 pageUrl,
             );
-            expect(out.extend).toBeUndefined();
+            expect(out.extend?.link).toBeUndefined();
         });
     });
 });

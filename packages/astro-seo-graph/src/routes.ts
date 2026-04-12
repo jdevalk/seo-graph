@@ -62,7 +62,7 @@ export function createSchemaEndpoint<Entry>(options: SchemaEndpointOptions<Entry
         const graph = aggregate({ entries, mapper: options.mapper });
         const headers: Record<string, string> = {
             'Content-Type': contentType,
-            'X-Robots-Tag': 'noindex',
+            'X-Robots-Tag': 'noindex, follow',
         };
         if (cacheControl !== null) headers['Cache-Control'] = cacheControl;
         return new Response(JSON.stringify(graph, null, indent), { headers });
@@ -148,7 +148,7 @@ ${urls}
 
         const headers: Record<string, string> = {
             'Content-Type': 'application/xml',
-            'X-Robots-Tag': 'noindex',
+            'X-Robots-Tag': 'noindex, follow',
         };
         if (cacheControl !== null) headers['Cache-Control'] = cacheControl;
         return new Response(xml, { headers });
