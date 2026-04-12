@@ -55,6 +55,16 @@ export interface SeoGraphIntegrationOptions {
      */
     validateH1?: boolean;
     /**
+     * Warn when two or more built pages share the same `<title>` or
+     * meta description. Duplicate metadata is an SEO smell that can only
+     * be detected across the whole corpus. Defaults to `true`.
+     *
+     * Pages without a title or description are reported separately by
+     * the H1 validator's siblings — this check only compares values that
+     * are present on multiple pages.
+     */
+    validateUniqueMetadata?: boolean;
+    /**
      * Submit built URLs to IndexNow after the build completes. Omit to
      * disable. Only URLs on `host` are submitted; URLs with trailing
      * `index.html` are rewritten to their directory form.
@@ -94,6 +104,46 @@ export function countH1s(html: string): number {
     return matches ? matches.length : 0;
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&apos;': "'",
+    '&#39;': "'",
+    '&nbsp;': ' ',
+};
+
+function decodeHtmlEntities(value: string): string {
+    return value.replace(/&(?:amp|lt|gt|quot|apos|#39|nbsp);/g, (m) => HTML_ENTITIES[m] ?? m);
+}
+
+/**
+ * Extract the first `<title>` element's text content. Returns `null` when
+ * no title tag is found. Whitespace-collapsed and entity-decoded so
+ * duplicate-detection compares rendered text, not raw HTML.
+ */
+export function extractTitle(html: string): string | null {
+    const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (!match) return null;
+    const text = decodeHtmlEntities(match[1]!).replace(/\s+/g, ' ').trim();
+    return text.length > 0 ? text : null;
+}
+
+/**
+ * Extract the `content` attribute of the first `<meta name="description">`
+ * tag. Returns `null` when absent. Entity-decoded for duplicate detection.
+ */
+export function extractMetaDescription(html: string): string | null {
+    const re =
+        /<meta\s+[^>]*name\s*=\s*["']description["'][^>]*content\s*=\s*["']([^"']*)["'][^>]*>|<meta\s+[^>]*content\s*=\s*["']([^"']*)["'][^>]*name\s*=\s*["']description["'][^>]*>/i;
+    const match = html.match(re);
+    if (!match) return null;
+    const raw = (match[1] ?? match[2] ?? '').trim();
+    if (!raw) return null;
+    return decodeHtmlEntities(raw);
+}
+
 async function collectHtmlFiles(dir: string, base: string = dir): Promise<string[]> {
     const entries = await readdir(dir, { withFileTypes: true });
     const files: string[] = [];
@@ -126,38 +176,91 @@ async function collectHtmlFiles(dir: string, base: string = dir): Promise<string
  * ```
  */
 export default function seoGraph(options: SeoGraphIntegrationOptions = {}): AstroIntegrationLike {
-    const { validateH1 = true, indexNow } = options;
+    const { validateH1 = true, validateUniqueMetadata = true, indexNow } = options;
 
     return {
         name: '@jdevalk/astro-seo-graph',
         hooks: {
             'astro:build:done': async ({ dir, logger }) => {
                 const buildDir = fileURLToPath(dir);
+                const needsContentScan = validateH1 || validateUniqueMetadata;
                 const htmlFiles =
-                    validateH1 || indexNow ? await collectHtmlFiles(buildDir) : [];
+                    needsContentScan || indexNow ? await collectHtmlFiles(buildDir) : [];
 
-                if (validateH1) {
-                    const missing: string[] = [];
-                    const multiple: Array<{ file: string; count: number }> = [];
+                const h1Missing: string[] = [];
+                const h1Multiple: Array<{ file: string; count: number }> = [];
+                const titlesByValue = new Map<string, string[]>();
+                const descriptionsByValue = new Map<string, string[]>();
 
+                if (needsContentScan) {
                     for (const file of htmlFiles) {
                         const content = await readFile(join(buildDir, file), 'utf8');
-                        const count = countH1s(content);
-                        if (count === 0) missing.push(file);
-                        else if (count > 1) multiple.push({ file, count });
-                    }
 
-                    if (missing.length === 0 && multiple.length === 0) {
+                        if (validateH1) {
+                            const count = countH1s(content);
+                            if (count === 0) h1Missing.push(file);
+                            else if (count > 1) h1Multiple.push({ file, count });
+                        }
+
+                        if (validateUniqueMetadata) {
+                            const title = extractTitle(content);
+                            if (title) {
+                                const list = titlesByValue.get(title) ?? [];
+                                list.push(file);
+                                titlesByValue.set(title, list);
+                            }
+                            const description = extractMetaDescription(content);
+                            if (description) {
+                                const list = descriptionsByValue.get(description) ?? [];
+                                list.push(file);
+                                descriptionsByValue.set(description, list);
+                            }
+                        }
+                    }
+                }
+
+                if (validateH1) {
+                    if (h1Missing.length === 0 && h1Multiple.length === 0) {
                         logger.info(
                             `H1 validation: ${htmlFiles.length} pages checked, all good.`,
                         );
                     } else {
-                        for (const file of missing) {
+                        for (const file of h1Missing) {
                             logger.warn(`H1 validation: ${file} has no <h1>.`);
                         }
-                        for (const { file, count } of multiple) {
+                        for (const { file, count } of h1Multiple) {
                             logger.warn(
                                 `H1 validation: ${file} has ${count} <h1> elements (expected 1).`,
+                            );
+                        }
+                    }
+                }
+
+                if (validateUniqueMetadata) {
+                    const dupTitles = [...titlesByValue.entries()].filter(
+                        ([, files]) => files.length > 1,
+                    );
+                    const dupDescriptions = [...descriptionsByValue.entries()].filter(
+                        ([, files]) => files.length > 1,
+                    );
+
+                    if (dupTitles.length === 0 && dupDescriptions.length === 0) {
+                        logger.info(
+                            `Metadata uniqueness: ${htmlFiles.length} pages checked, all good.`,
+                        );
+                    } else {
+                        for (const [title, files] of dupTitles) {
+                            logger.warn(
+                                `Metadata uniqueness: title ${JSON.stringify(title)} appears on ${files.length} pages: ${files.join(', ')}`,
+                            );
+                        }
+                        for (const [description, files] of dupDescriptions) {
+                            const preview =
+                                description.length > 80
+                                    ? description.slice(0, 77) + '…'
+                                    : description;
+                            logger.warn(
+                                `Metadata uniqueness: description ${JSON.stringify(preview)} appears on ${files.length} pages: ${files.join(', ')}`,
                             );
                         }
                     }

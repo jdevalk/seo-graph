@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countH1s } from '../src/integration.js';
+import { countH1s, extractTitle, extractMetaDescription } from '../src/integration.js';
 
 describe('countH1s', () => {
     it('returns 0 when there are no h1s', () => {
@@ -42,5 +42,55 @@ describe('countH1s', () => {
             </html>
         `;
         expect(countH1s(html)).toBe(1);
+    });
+});
+
+describe('extractTitle', () => {
+    it('returns the title text', () => {
+        expect(extractTitle('<title>Hello</title>')).toBe('Hello');
+    });
+
+    it('collapses whitespace and decodes entities', () => {
+        expect(extractTitle('<title>  Hello &amp;  World  </title>')).toBe('Hello & World');
+    });
+
+    it('returns null when absent or empty', () => {
+        expect(extractTitle('<p>No title</p>')).toBeNull();
+        expect(extractTitle('<title>   </title>')).toBeNull();
+    });
+
+    it('tolerates attributes on the title tag', () => {
+        expect(extractTitle('<title data-foo="bar">Hi</title>')).toBe('Hi');
+    });
+});
+
+describe('extractMetaDescription', () => {
+    it('reads content when name precedes content', () => {
+        expect(
+            extractMetaDescription('<meta name="description" content="A short desc">'),
+        ).toBe('A short desc');
+    });
+
+    it('reads content when content precedes name', () => {
+        expect(
+            extractMetaDescription('<meta content="Reversed order" name="description">'),
+        ).toBe('Reversed order');
+    });
+
+    it('decodes entities', () => {
+        expect(
+            extractMetaDescription('<meta name="description" content="Rock &amp; Roll">'),
+        ).toBe('Rock & Roll');
+    });
+
+    it('returns null when absent or empty', () => {
+        expect(extractMetaDescription('<meta name="keywords" content="x">')).toBeNull();
+        expect(extractMetaDescription('<meta name="description" content="">')).toBeNull();
+    });
+
+    it('is case-insensitive on the name attribute', () => {
+        expect(
+            extractMetaDescription('<META NAME="Description" CONTENT="caps">'),
+        ).toBe('caps');
     });
 });

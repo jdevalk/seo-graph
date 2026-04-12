@@ -339,6 +339,8 @@ actions. Currently:
 
 - Warns about built pages with zero or more than one `<h1>` element (a
   common SEO and accessibility issue).
+- Warns about duplicate `<title>` or meta description values across the
+  built corpus.
 - Optionally submits built URLs to [IndexNow](https://www.indexnow.org)
   after the build completes.
 
@@ -362,10 +364,11 @@ export default defineConfig({
 
 Options:
 
-| Prop         | Default | Description                                               |
-| ------------ | ------- | --------------------------------------------------------- |
-| `validateH1` | `true`  | Warn about pages without exactly one `<h1>`               |
-| `indexNow`   | —       | Submit built URLs to IndexNow. See below for sub-options. |
+| Prop                     | Default | Description                                                     |
+| ------------------------ | ------- | --------------------------------------------------------------- |
+| `validateH1`             | `true`  | Warn about pages without exactly one `<h1>`                     |
+| `validateUniqueMetadata` | `true`  | Warn about duplicate `<title>` or meta description across pages |
+| `indexNow`               | —       | Submit built URLs to IndexNow. See below for sub-options.       |
 
 `indexNow` sub-options: `key` (8–128 hex chars), `host` (bare host, e.g.
 `example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
@@ -390,6 +393,17 @@ export const GET = createIndexNowKeyRoute({ key: 'your-key-here' });
 The filename (minus `.txt.ts`) must equal the key. Pair this with the
 `indexNow` integration option above, or call `submitToIndexNow` from your
 own deploy hook.
+
+## Validating your output
+
+The build-time integration checks only catch a narrow set of issues.
+After deploying, verify the rendered JSON-LD against:
+
+1. [Google Rich Results Test](https://search.google.com/test/rich-results)
+2. [Schema.org Validator](https://validator.schema.org/)
+
+See [AGENTS.md](https://github.com/jdevalk/seo-graph/blob/main/AGENTS.md#validating-your-output)
+for details on what to look for.
 
 ## License
 
