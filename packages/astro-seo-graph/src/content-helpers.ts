@@ -14,6 +14,11 @@ type AstroImageFunction = any;
  * `image()` from the collection schema factory so the image is processed
  * through Astro's asset pipeline.
  *
+ * `alt` is **required** — missing alt text is an accessibility failure
+ * and an SEO failure. Decorative images should use `alt: ''` explicitly.
+ * If you want to make the whole image optional, wrap the schema:
+ * `imageSchema(image).optional()`.
+ *
  * @example
  * ```ts
  * import { defineCollection, z } from 'astro:content';
@@ -31,7 +36,7 @@ type AstroImageFunction = any;
 export function imageSchema(image: AstroImageFunction) {
     return z.object({
         src: image(),
-        alt: z.string().optional(),
+        alt: z.string(),
     });
 }
 

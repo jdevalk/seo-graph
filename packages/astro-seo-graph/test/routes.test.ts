@@ -44,6 +44,7 @@ describe('createSchemaEndpoint', () => {
         const response = await invoke(route);
         expect(response.status).toBe(200);
         expect(response.headers.get('Content-Type')).toBe('application/ld+json');
+        expect(response.headers.get('X-Robots-Tag')).toBe('noindex');
 
         const body = await response.json();
         expect(body['@context']).toBe('https://schema.org');
@@ -115,6 +116,7 @@ describe('createSchemaMap', () => {
 
         const response = await invoke(route);
         expect(response.headers.get('Content-Type')).toBe('application/xml');
+        expect(response.headers.get('X-Robots-Tag')).toBe('noindex');
 
         const xml = await response.text();
         expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');

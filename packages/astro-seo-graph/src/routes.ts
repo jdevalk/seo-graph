@@ -60,7 +60,10 @@ export function createSchemaEndpoint<Entry>(options: SchemaEndpointOptions<Entry
     return async () => {
         const entries = await options.entries();
         const graph = aggregate({ entries, mapper: options.mapper });
-        const headers: Record<string, string> = { 'Content-Type': contentType };
+        const headers: Record<string, string> = {
+            'Content-Type': contentType,
+            'X-Robots-Tag': 'noindex',
+        };
         if (cacheControl !== null) headers['Cache-Control'] = cacheControl;
         return new Response(JSON.stringify(graph, null, indent), { headers });
     };
@@ -143,7 +146,10 @@ export function createSchemaMap(options: SchemaMapOptions): APIRoute {
 ${urls}
 </urlset>`;
 
-        const headers: Record<string, string> = { 'Content-Type': 'application/xml' };
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/xml',
+            'X-Robots-Tag': 'noindex',
+        };
         if (cacheControl !== null) headers['Cache-Control'] = cacheControl;
         return new Response(xml, { headers });
     };

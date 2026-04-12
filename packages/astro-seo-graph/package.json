@@ -23,7 +23,11 @@
             "import": "./dist/index.js"
         },
         "./Seo.astro": "./dist/components/Seo.astro",
-        "./FuzzyRedirect.astro": "./dist/components/FuzzyRedirect.astro"
+        "./FuzzyRedirect.astro": "./dist/components/FuzzyRedirect.astro",
+        "./integration": {
+            "types": "./dist/integration.d.ts",
+            "import": "./dist/integration.js"
+        }
     },
     "files": [
         "dist",

@@ -9,16 +9,21 @@ import { imageSchema, seoSchema } from '../src/content-helpers.js';
 const fakeImage = () => z.object({ src: z.string(), width: z.number().optional() });
 
 describe('imageSchema', () => {
-    it('accepts an object with src and optional alt', () => {
+    it('accepts an object with src and alt', () => {
         const schema = imageSchema(fakeImage);
         const parsed = schema.parse({ src: { src: 'x.png' }, alt: 'A thing' });
         expect(parsed.alt).toBe('A thing');
     });
 
-    it('alt is optional', () => {
+    it('requires alt', () => {
         const schema = imageSchema(fakeImage);
-        const parsed = schema.parse({ src: { src: 'x.png' } });
-        expect(parsed.alt).toBeUndefined();
+        expect(() => schema.parse({ src: { src: 'x.png' } })).toThrow();
+    });
+
+    it('accepts empty alt for decorative images', () => {
+        const schema = imageSchema(fakeImage);
+        const parsed = schema.parse({ src: { src: 'decorative.png' }, alt: '' });
+        expect(parsed.alt).toBe('');
     });
 });
 

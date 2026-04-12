@@ -292,17 +292,48 @@ export const GET = createSchemaMap({
 ```ts
 // src/content.config.ts
 import { defineCollection, z } from 'astro:content';
-import { seoSchema } from '@jdevalk/astro-seo-graph';
+import { seoSchema, imageSchema } from '@jdevalk/astro-seo-graph';
 
 const blog = defineCollection({
     schema: ({ image }) =>
         z.object({
             title: z.string(),
             publishDate: z.coerce.date(),
+            featureImage: imageSchema(image).optional(),
             seo: seoSchema(image).optional(),
         }),
 });
 ```
+
+`imageSchema` **requires** `alt` — missing alt text is an accessibility
+failure and an SEO failure. Decorative images should use `alt: ''`
+explicitly. If you want the whole image to be optional, wrap the schema:
+`imageSchema(image).optional()`.
+
+## Astro integration
+
+An Astro integration that runs build-time SEO checks. Currently:
+
+- Warns about built pages with zero or more than one `<h1>` element (a
+  common SEO and accessibility issue).
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import seoGraph from '@jdevalk/astro-seo-graph/integration';
+
+export default defineConfig({
+    integrations: [seoGraph()],
+});
+```
+
+Options:
+
+| Prop         | Default | Description                                 |
+| ------------ | ------- | ------------------------------------------- |
+| `validateH1` | `true`  | Warn about pages without exactly one `<h1>` |
+
+Only static pages are checked (SSR pages aren't on disk at build time).
 
 ## License
 
