@@ -1,0 +1,57 @@
+name: Feature request
+description: Suggest a new builder, integration option, or helper.
+title: '[Feature]: '
+labels: [enhancement, triage]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for the suggestion. The more context you provide, the better I can judge fit.
+
+    - type: dropdown
+      id: package
+      attributes:
+          label: Which package?
+          options:
+              - '@jdevalk/seo-graph-core'
+              - '@jdevalk/astro-seo-graph'
+              - '@jdevalk/seo-graph-scanner'
+              - New package / cross-cutting
+      validations:
+          required: true
+
+    - type: textarea
+      id: problem
+      attributes:
+          label: What problem does this solve?
+          description: The concrete use case. Skip framing like "it would be nice if…" — show the real need.
+      validations:
+          required: true
+
+    - type: textarea
+      id: proposal
+      attributes:
+          label: Proposed solution
+          description: API shape, config option, new builder, etc. Pseudocode welcome.
+      validations:
+          required: true
+
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: Alternatives considered
+          description: Other ways you've tried or considered.
+
+    - type: textarea
+      id: schema-ref
+      attributes:
+          label: schema.org reference (if applicable)
+          description: Link to the relevant schema.org type/property.
+
+    - type: checkboxes
+      id: checks
+      attributes:
+          label: Sanity checks
+          options:
+              - label: I searched existing issues and didn't find a duplicate.
+                required: true

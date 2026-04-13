@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+    - name: Questions and general SEO help
+      url: https://joost.blog/contact/
+      about: For usage questions or broader SEO advice, reach out via my website rather than the issue tracker.
+    - name: Security vulnerabilities
+      url: https://github.com/jdevalk/.github/blob/main/SECURITY.md
+      about: Please follow the private disclosure path in SECURITY.md — don't file security issues publicly.

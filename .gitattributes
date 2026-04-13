@@ -1,0 +1,15 @@
+# Normalise line endings on checkout so Windows clones don't pollute diffs.
+* text=auto eol=lf
+
+# Exclude repo-only plumbing from `git archive` / GitHub source tarballs.
+# (npm tarballs are already scoped via each package's `files` field.)
+/.changeset          export-ignore
+/.github             export-ignore
+/.cursorrules        export-ignore
+/.editorconfig       export-ignore
+/.gitattributes      export-ignore
+/.gitignore          export-ignore
+/.prettierrc*        export-ignore
+/AGENTS.md           export-ignore
+/CLAUDE.md           export-ignore
+/pnpm-lock.yaml      export-ignore

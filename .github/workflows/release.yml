@@ -75,12 +75,15 @@ jobs:
             # The helper script skips packages whose current version is
             # already published, so reruns of the workflow are safe.
             - name: Publish packages (pnpm pack + npm publish)
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   set -euo pipefail
                   for pkg in seo-graph-core astro-seo-graph; do
                       cd "packages/$pkg"
                       name=$(node -p "require('./package.json').name")
                       version=$(node -p "require('./package.json').version")
+                      tag="$name@$version"
                       if npm view "$name@$version" version >/dev/null 2>&1; then
                           echo "::notice::$name@$version already published, skipping"
                       else
@@ -88,6 +91,28 @@ jobs:
                           tarball=$(pnpm pack 2>/dev/null | tail -1)
                           npm publish "$tarball" --access=public --provenance
                           rm "$tarball"
+
+                          # Create a matching GitHub Release, using the
+                          # just-bumped section of this package's CHANGELOG
+                          # as the release notes. Non-fatal: publishing
+                          # already succeeded, don't block on release UI.
+                          if gh release view "$tag" >/dev/null 2>&1; then
+                              echo "::notice::release $tag already exists"
+                          else
+                              notes=$(awk -v ver="$version" '
+                                  $0 == "## " ver { flag=1; next }
+                                  flag && /^## / { exit }
+                                  flag { print }
+                              ' CHANGELOG.md)
+                              if [ -z "$notes" ]; then
+                                  notes="Release $tag."
+                              fi
+                              gh release create "$tag" \
+                                  --title "$tag" \
+                                  --notes "$notes" \
+                                  --target "$GITHUB_SHA" \
+                                  || echo "::warning::failed to create release $tag"
+                          fi
                       fi
                       cd ../..
                   done

@@ -1,0 +1,90 @@
+name: Bug report
+description: Something in seo-graph-core, astro-seo-graph, or the CLI scanner is broken.
+title: '[Bug]: '
+labels: [bug, triage]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for filing a bug. Please fill out the sections below so it's actionable.
+              For security issues, see [SECURITY.md](https://github.com/jdevalk/.github/blob/main/SECURITY.md) — don't file them here.
+
+    - type: dropdown
+      id: package
+      attributes:
+          label: Which package?
+          options:
+              - '@jdevalk/seo-graph-core'
+              - '@jdevalk/astro-seo-graph'
+              - '@jdevalk/seo-graph-scanner'
+              - Not sure / multiple
+      validations:
+          required: true
+
+    - type: input
+      id: package-version
+      attributes:
+          label: Package version
+          placeholder: e.g. 0.9.0
+      validations:
+          required: true
+
+    - type: input
+      id: node-version
+      attributes:
+          label: Node.js version
+          placeholder: e.g. 22.11.0
+      validations:
+          required: true
+
+    - type: input
+      id: framework-version
+      attributes:
+          label: Astro / framework version (if relevant)
+          placeholder: e.g. astro@6.0.5
+
+    - type: textarea
+      id: description
+      attributes:
+          label: What's wrong?
+          description: A clear description of the bug.
+      validations:
+          required: true
+
+    - type: textarea
+      id: repro
+      attributes:
+          label: Reproduction
+          description: Minimal steps or a repo/StackBlitz link that reproduces the bug.
+          placeholder: |
+              1. Install …
+              2. Run …
+              3. See …
+      validations:
+          required: true
+
+    - type: textarea
+      id: expected
+      attributes:
+          label: Expected behaviour
+      validations:
+          required: true
+
+    - type: textarea
+      id: actual
+      attributes:
+          label: Actual behaviour
+          description: Include any error output, stack trace, or rendered JSON-LD.
+          render: text
+      validations:
+          required: true
+
+    - type: checkboxes
+      id: checks
+      attributes:
+          label: Sanity checks
+          options:
+              - label: I searched existing issues and didn't find a duplicate.
+                required: true
+              - label: I'm on the latest version of the affected package.
+                required: false

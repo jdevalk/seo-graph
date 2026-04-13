@@ -1,0 +1,26 @@
+version: 2
+updates:
+    - package-ecosystem: npm
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+      open-pull-requests-limit: 10
+      groups:
+          dev-dependencies:
+              dependency-type: development
+          prod-dependencies:
+              dependency-type: production
+              update-types:
+                  - patch
+                  - minor
+      ignore:
+          # Astro is a peer dep — pin intentionally, bump manually.
+          - dependency-name: astro
+
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+      open-pull-requests-limit: 5

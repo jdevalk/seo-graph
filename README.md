@@ -1,5 +1,10 @@
 # seo-graph
 
+[![CI](https://github.com/jdevalk/seo-graph/actions/workflows/ci.yml/badge.svg)](https://github.com/jdevalk/seo-graph/actions/workflows/ci.yml)
+[![seo-graph-core npm](https://img.shields.io/npm/v/%40jdevalk%2Fseo-graph-core?label=%40jdevalk%2Fseo-graph-core)](https://www.npmjs.com/package/@jdevalk/seo-graph-core)
+[![astro-seo-graph npm](https://img.shields.io/npm/v/%40jdevalk%2Fastro-seo-graph?label=%40jdevalk%2Fastro-seo-graph)](https://www.npmjs.com/package/@jdevalk/astro-seo-graph)
+[![license](https://img.shields.io/github/license/jdevalk/seo-graph)](./LICENSE)
+
 > Agent-ready SEO for JavaScript. A pure schema.org JSON-LD graph builder plus
 > an Astro integration, designed to be shared across frameworks and CMSes.
 
