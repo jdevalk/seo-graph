@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { countH1s, extractTitle, extractMetaDescription } from '../src/integration.js';
+import {
+    countH1s,
+    extractTitle,
+    extractMetaDescription,
+    isDefaultExcludedFromIndexNow,
+} from '../src/integration.js';
 
 describe('countH1s', () => {
     it('returns 0 when there are no h1s', () => {
@@ -90,5 +95,31 @@ describe('extractMetaDescription', () => {
 
     it('is case-insensitive on the name attribute', () => {
         expect(extractMetaDescription('<META NAME="Description" CONTENT="caps">')).toBe('caps');
+    });
+});
+
+describe('isDefaultExcludedFromIndexNow', () => {
+    it('excludes /404', () => {
+        expect(isDefaultExcludedFromIndexNow('https://example.com/404')).toBe(true);
+    });
+
+    it('excludes /404/', () => {
+        expect(isDefaultExcludedFromIndexNow('https://example.com/404/')).toBe(true);
+    });
+
+    it('does not exclude nested paths that merely contain 404', () => {
+        expect(isDefaultExcludedFromIndexNow('https://example.com/blog/404-error-post/')).toBe(
+            false,
+        );
+        expect(isDefaultExcludedFromIndexNow('https://example.com/errors/404/')).toBe(false);
+    });
+
+    it('does not exclude ordinary pages', () => {
+        expect(isDefaultExcludedFromIndexNow('https://example.com/')).toBe(false);
+        expect(isDefaultExcludedFromIndexNow('https://example.com/blog/post/')).toBe(false);
+    });
+
+    it('returns false for unparseable input rather than throwing', () => {
+        expect(isDefaultExcludedFromIndexNow('not a url')).toBe(false);
     });
 });

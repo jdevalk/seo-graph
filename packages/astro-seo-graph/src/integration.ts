@@ -43,9 +43,35 @@ export interface IndexNowIntegrationOptions {
     endpoint?: string;
     /**
      * Filter the list of URLs before submission. Return `false` to skip
-     * a URL. Useful for excluding 404 pages, drafts, etc.
+     * a URL. Composed on top of the built-in `/404` exclusion — you
+     * don't need to re-exclude that yourself.
+     *
+     * @example excluding paginated archives in addition to the default 404:
+     * ```ts
+     * filter: (url) => !/^\/blog\/\d+\/$/.test(new URL(url).pathname),
+     * ```
      */
     filter?: (url: string) => boolean;
+}
+
+/**
+ * Pathnames that `indexNow` excludes by default, regardless of any
+ * caller-supplied `filter`. The 404 page is the only universal case —
+ * search engines don't need to be notified about it, and submitting it
+ * wastes daily IndexNow quota.
+ *
+ * Matches both `/404` (from an Astro `src/pages/404.astro` → `404.html`
+ * that `htmlFileToUrl` strips to `/404`) and `/404/` (the directory form
+ * when the build emits `404/index.html`).
+ */
+export function isDefaultExcludedFromIndexNow(url: string): boolean {
+    let pathname: string;
+    try {
+        pathname = new URL(url).pathname;
+    } catch {
+        return false;
+    }
+    return pathname === '/404' || pathname === '/404/';
 }
 
 export interface LlmsTxtIntegrationOptions {
@@ -323,6 +349,7 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                 if (indexNow) {
                     const urls = htmlFiles
                         .map((f) => htmlFileToUrl(f, indexNow.siteUrl))
+                        .filter((u) => !isDefaultExcludedFromIndexNow(u))
                         .filter((u) => (indexNow.filter ? indexNow.filter(u) : true));
 
                     if (urls.length === 0) {

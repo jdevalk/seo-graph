@@ -2678,13 +2678,17 @@ seoGraph({
         siteUrl: 'https://example.com',
         // keyLocation?: defaults to https://<host>/<key>.txt
         // endpoint?: defaults to api.indexnow.org
-        // filter?: (url) => boolean — drop URLs before submission
+        // filter?: (url) => boolean — composed on top of the built-in
+        //   /404 exclusion. Example skipping paginated archives:
+        //   filter: (url) => !/^\/blog\/\d+\/$/.test(new URL(url).pathname),
     },
 });
 ```
 
 Only URLs on `host` are submitted. `index.html` paths are rewritten to
-their trailing-slash form.
+their trailing-slash form. `/404` (and `/404/`) are always excluded —
+search engines don't need to be notified about the 404 page and
+submitting it wastes daily IndexNow quota.
 
 **Deploy the key file first.** IndexNow verifies ownership by fetching
 `https://<host>/<key>.txt` on every submission. Submissions sent before

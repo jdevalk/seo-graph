@@ -381,7 +381,22 @@ Options:
 `indexNow` sub-options: `key` (8–128 hex chars), `host` (bare host, e.g.
 `example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
 `https://<host>/<key>.txt`), `endpoint?` (defaults to `api.indexnow.org`),
-`filter?` (drop URLs for which the callback returns `false`).
+`filter?` (drop URLs for which the callback returns `false`; composed on
+top of the built-in `/404` exclusion).
+
+The `/404` page is always excluded — no one needs search engines notified
+about it, and submitting it wastes daily IndexNow quota. Use `filter` to
+exclude site-specific utility pages:
+
+```js
+indexNow: {
+    key: process.env.INDEXNOW_KEY!,
+    host: 'example.com',
+    siteUrl: 'https://example.com',
+    // Skip paginated archives like /blog/2/, /videos/3/
+    filter: (url) => !/^\/(?:blog|videos)\/\d+\/$/.test(new URL(url).pathname),
+},
+```
 
 `llmsTxt` sub-options: `title` (required H1), `siteUrl` (required, used to
 resolve crawled HTML paths), `summary?` (rendered as a blockquote),
