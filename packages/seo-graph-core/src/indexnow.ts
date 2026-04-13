@@ -53,9 +53,7 @@ export async function submitToIndexNow(
 ): Promise<IndexNowSubmitResult[]> {
     const { host, key, urls } = options;
     if (!validateIndexNowKey(key)) {
-        throw new Error(
-            `IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} hex characters.`,
-        );
+        throw new Error(`IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} hex characters.`);
     }
     if (!host || host.includes('/') || host.includes(':')) {
         throw new Error(`IndexNow host must be a bare host (got: ${host}).`);
@@ -156,9 +154,7 @@ export function generateIndexNowKey(length = 32): string {
  */
 export function getIndexNowKeyFileContent(key: string): string {
     if (!validateIndexNowKey(key)) {
-        throw new Error(
-            `IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} hex characters.`,
-        );
+        throw new Error(`IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} hex characters.`);
     }
     return key;
 }

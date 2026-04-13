@@ -27,12 +27,14 @@ Two packages:
 ## Contents
 
 **Schema core** — concepts and builders for the JSON-LD graph:
+
 - [Architecture](#architecture)
 - [Installation](#installation)
 - [The @id system](#the-id-system)
 - [Piece builders reference](#piece-builders-reference)
 
 **Recipes and patterns** — how to model real sites:
+
 - [Site type recipes](#site-type-recipes)
 - [Trust and credibility signals](#trust-and-credibility-signals)
 - [Choosing the right Article subtype](#choosing-the-right-article-subtype)
@@ -43,6 +45,7 @@ Two packages:
 - [Reference implementations](#reference-implementations)
 
 **Astro integration** — runtime component and build-time checks:
+
 - [Astro integration guide](#astro-integration-guide) — the `<Seo>` component, hreflang, schema endpoints
 - [Build-time integration](#build-time-integration) — `seoGraph()` hook, H1 validation, metadata uniqueness, IndexNow, `llms.txt`
 - [Complete integration example](#complete-integration-example)
@@ -2634,12 +2637,12 @@ export default defineConfig({
 
 ### Options
 
-| Option                   | Default | Purpose                                                                    |
-| ------------------------ | ------- | -------------------------------------------------------------------------- |
-| `validateH1`             | `true`  | Warn when a page has zero or >1 `<h1>` elements.                           |
-| `validateUniqueMetadata` | `true`  | Warn when two pages share the same `<title>` or meta description.          |
-| `indexNow`               | —       | Submit built URLs to IndexNow. Omit to disable.                            |
-| `llmsTxt`                | —       | Generate `llms.txt` at the root of the build output. Omit to disable.     |
+| Option                   | Default | Purpose                                                               |
+| ------------------------ | ------- | --------------------------------------------------------------------- |
+| `validateH1`             | `true`  | Warn when a page has zero or >1 `<h1>` elements.                      |
+| `validateUniqueMetadata` | `true`  | Warn when two pages share the same `<title>` or meta description.     |
+| `indexNow`               | —       | Submit built URLs to IndexNow. Omit to disable.                       |
+| `llmsTxt`                | —       | Generate `llms.txt` at the root of the build output. Omit to disable. |
 
 ### H1 and metadata validation
 
@@ -2652,7 +2655,11 @@ can only be spotted across the whole corpus.
 Both extractors are exported for reuse:
 
 ```ts
-import { countH1s, extractTitle, extractMetaDescription } from '@jdevalk/astro-seo-graph/integration';
+import {
+    countH1s,
+    extractTitle,
+    extractMetaDescription,
+} from '@jdevalk/astro-seo-graph/integration';
 ```
 
 ### IndexNow submission
@@ -2678,7 +2685,7 @@ their trailing-slash form.
 the key is reachable in production get rejected (HTTP 403) and the key
 is treated as invalid — you'll have to rotate it. Serve the key via
 `createIndexNowKeyRoute` (see below), deploy, confirm the `.txt` loads
-over HTTPS, *then* enable `indexNow` in the integration.
+over HTTPS, _then_ enable `indexNow` in the integration.
 
 ```ts
 // src/pages/[your-key-here].txt.ts

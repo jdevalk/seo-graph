@@ -66,21 +66,21 @@ describe('extractTitle', () => {
 
 describe('extractMetaDescription', () => {
     it('reads content when name precedes content', () => {
-        expect(
-            extractMetaDescription('<meta name="description" content="A short desc">'),
-        ).toBe('A short desc');
+        expect(extractMetaDescription('<meta name="description" content="A short desc">')).toBe(
+            'A short desc',
+        );
     });
 
     it('reads content when content precedes name', () => {
-        expect(
-            extractMetaDescription('<meta content="Reversed order" name="description">'),
-        ).toBe('Reversed order');
+        expect(extractMetaDescription('<meta content="Reversed order" name="description">')).toBe(
+            'Reversed order',
+        );
     });
 
     it('decodes entities', () => {
-        expect(
-            extractMetaDescription('<meta name="description" content="Rock &amp; Roll">'),
-        ).toBe('Rock & Roll');
+        expect(extractMetaDescription('<meta name="description" content="Rock &amp; Roll">')).toBe(
+            'Rock & Roll',
+        );
     });
 
     it('returns null when absent or empty', () => {
@@ -89,8 +89,6 @@ describe('extractMetaDescription', () => {
     });
 
     it('is case-insensitive on the name attribute', () => {
-        expect(
-            extractMetaDescription('<META NAME="Description" CONTENT="caps">'),
-        ).toBe('caps');
+        expect(extractMetaDescription('<META NAME="Description" CONTENT="caps">')).toBe('caps');
     });
 });

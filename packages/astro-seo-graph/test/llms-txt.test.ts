@@ -49,9 +49,7 @@ describe('renderLlmsTxt', () => {
     it('escapes square brackets in link titles', () => {
         const out = renderLlmsTxt({
             title: 'T',
-            sections: [
-                { name: 'S', links: [{ url: 'https://x/', title: '[DRAFT] Post' }] },
-            ],
+            sections: [{ name: 'S', links: [{ url: 'https://x/', title: '[DRAFT] Post' }] }],
         });
         expect(out).toContain('- [\\[DRAFT\\] Post](https://x/)');
     });

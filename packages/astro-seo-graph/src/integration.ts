@@ -214,12 +214,7 @@ async function collectHtmlFiles(dir: string, base: string = dir): Promise<string
  * ```
  */
 export default function seoGraph(options: SeoGraphIntegrationOptions = {}): AstroIntegrationLike {
-    const {
-        validateH1 = true,
-        validateUniqueMetadata = true,
-        indexNow,
-        llmsTxt,
-    } = options;
+    const { validateH1 = true, validateUniqueMetadata = true, indexNow, llmsTxt } = options;
     const autoLlmsTxt = llmsTxt && !llmsTxt.sections;
 
     return {
@@ -229,9 +224,7 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                 const buildDir = fileURLToPath(dir);
                 const needsContentScan = validateH1 || validateUniqueMetadata || autoLlmsTxt;
                 const htmlFiles =
-                    needsContentScan || indexNow || llmsTxt
-                        ? await collectHtmlFiles(buildDir)
-                        : [];
+                    needsContentScan || indexNow || llmsTxt ? await collectHtmlFiles(buildDir) : [];
                 const autoLinks: Array<{ url: string; title: string; description?: string }> = [];
 
                 const h1Missing: string[] = [];
@@ -284,9 +277,7 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
 
                 if (validateH1) {
                     if (h1Missing.length === 0 && h1Multiple.length === 0) {
-                        logger.info(
-                            `H1 validation: ${htmlFiles.length} pages checked, all good.`,
-                        );
+                        logger.info(`H1 validation: ${htmlFiles.length} pages checked, all good.`);
                     } else {
                         for (const file of h1Missing) {
                             logger.warn(`H1 validation: ${file} has no <h1>.`);
@@ -359,9 +350,9 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                 }
 
                 if (llmsTxt) {
-                    const sections =
-                        llmsTxt.sections ??
-                        [{ name: llmsTxt.autoSectionName ?? 'Pages', links: autoLinks }];
+                    const sections = llmsTxt.sections ?? [
+                        { name: llmsTxt.autoSectionName ?? 'Pages', links: autoLinks },
+                    ];
                     const rendered = renderLlmsTxt({
                         title: llmsTxt.title,
                         summary: llmsTxt.summary,

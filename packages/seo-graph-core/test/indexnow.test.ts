@@ -58,9 +58,7 @@ describe('submitToIndexNow', () => {
     const key = 'abcdef0123456789abcdef0123456789';
 
     function mockFetch(status = 200, body = 'OK') {
-        return vi.fn(async () =>
-            new Response(body, { status }),
-        ) as unknown as typeof fetch;
+        return vi.fn(async () => new Response(body, { status })) as unknown as typeof fetch;
     }
 
     it('POSTs to the default endpoint with correct body', async () => {
@@ -85,9 +83,7 @@ describe('submitToIndexNow', () => {
             keyLocation: `https://example.com/${key}.txt`,
             urlList: ['https://example.com/a', 'https://example.com/b'],
         });
-        expect(results).toEqual([
-            { status: 200, ok: true, message: 'OK', submitted: 2 },
-        ]);
+        expect(results).toEqual([{ status: 200, ok: true, message: 'OK', submitted: 2 }]);
     });
 
     it('filters out URLs not on the host and deduplicates', async () => {
