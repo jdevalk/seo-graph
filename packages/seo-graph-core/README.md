@@ -35,6 +35,11 @@ npm install @jdevalk/seo-graph-core
 | `assembleGraph(pieces)`            | Wraps pieces in a `{ @context, @graph }` envelope with first-wins deduplication by `@id`. |
 | `deduplicateByGraphId(entities)`   | The dedup engine on its own, in case you need custom assembly.                            |
 
+Pass `{ warnOnDanglingReferences: true }` to `assembleGraph` to emit a
+console warning when any `{ '@id': '...' }` reference doesn't resolve to
+an entity in the graph — a cheap sanity check to catch typos and
+missing pieces during development.
+
 ### IndexNow
 
 | API                         | Purpose                                                                        |
