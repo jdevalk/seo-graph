@@ -228,8 +228,7 @@ export function buildSeoContext(props: SeoProps, pageUrl: string): SeoContext {
         twitter = t;
     }
 
-    const hreflangs =
-        props.alternates !== undefined ? buildAlternateLinks(props.alternates) : [];
+    const hreflangs = props.alternates !== undefined ? buildAlternateLinks(props.alternates) : [];
 
     const authorName = props.author ?? props.article?.authors?.[0];
 

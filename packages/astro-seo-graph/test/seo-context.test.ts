@@ -81,10 +81,7 @@ describe('buildSeoContext', () => {
         });
 
         it('falls back og:url to the stripped page URL when noindex omits canonical', () => {
-            const ctx = buildSeoContext(
-                { title: 'Hello', noindex: true },
-                `${pageUrl}?utm=x`,
-            );
+            const ctx = buildSeoContext({ title: 'Hello', noindex: true }, `${pageUrl}?utm=x`);
             expect(ctx.canonical).toBeUndefined();
             expect(ctx.og.url).toBe(pageUrl);
         });
@@ -109,10 +106,7 @@ describe('buildSeoContext', () => {
         });
 
         it('reflects both noindex and nofollow', () => {
-            const ctx = buildSeoContext(
-                { title: 'Hello', noindex: true, nofollow: true },
-                pageUrl,
-            );
+            const ctx = buildSeoContext({ title: 'Hello', noindex: true, nofollow: true }, pageUrl);
             expect(ctx.robots).toEqual({ noindex: true, nofollow: true, extras: ROBOTS_EXTRAS });
         });
     });
@@ -247,10 +241,7 @@ describe('buildSeoContext', () => {
         });
 
         it('respects an explicit card override', () => {
-            const ctx = buildSeoContext(
-                { title: 'Hello', twitter: { card: 'summary' } },
-                pageUrl,
-            );
+            const ctx = buildSeoContext({ title: 'Hello', twitter: { card: 'summary' } }, pageUrl);
             expect(ctx.twitter?.card).toBe('summary');
         });
 

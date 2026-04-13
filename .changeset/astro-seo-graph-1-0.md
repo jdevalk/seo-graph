@@ -26,7 +26,7 @@ silent bugs fixed, lighter install.
 - **Single `<meta name="robots">` tag.** The `astro-seo` path always
   emitted its own default `index, follow` tag that couldn't be suppressed,
   while we needed our own to add `max-snippet:-1, max-image-preview:large,
-  max-video-preview:-1`. Result was two robots tags per page. `<Seo>` now
+max-video-preview:-1`. Result was two robots tags per page. `<Seo>` now
   emits one merged tag with all directives.
 
 ### Cosmetic changes (HTML diff but equivalent meaning)
@@ -51,14 +51,14 @@ treat these as identical, but consumers running snapshot tests against
   returns a flat, render-ready normalization (`SeoContext`) rather than the
   nested `astro-seo`-shaped adapter. Migration:
 
-  ```diff
-  - import { buildAstroSeoProps } from '@jdevalk/astro-seo-graph';
-  - const props = buildAstroSeoProps(seo, Astro.url.href);
-  - props.openGraph.basic.title // nested
-  + import { buildSeoContext } from '@jdevalk/astro-seo-graph';
-  + const ctx = buildSeoContext(seo, Astro.url.href);
-  + ctx.og.title // flat
-  ```
+    ```diff
+    - import { buildAstroSeoProps } from '@jdevalk/astro-seo-graph';
+    - const props = buildAstroSeoProps(seo, Astro.url.href);
+    - props.openGraph.basic.title // nested
+    + import { buildSeoContext } from '@jdevalk/astro-seo-graph';
+    + const ctx = buildSeoContext(seo, Astro.url.href);
+    + ctx.og.title // flat
+    ```
 
 - **Removed `AstroSeoProps` type export**. The intermediate shape no
   longer exists. Use `SeoContext` (the new normalized shape) or `SeoProps`
@@ -71,4 +71,4 @@ treat these as identical, but consumers running snapshot tests against
 - `buildSeoContext(props, url): SeoContext` — pure-TS normalization.
 - `SeoContext` type — flat render-ready shape.
 - `ROBOTS_EXTRAS` constant — the `max-snippet:-1, max-image-preview:large,
-  max-video-preview:-1` directives `<Seo>` always appends to the robots tag.
+max-video-preview:-1` directives `<Seo>` always appends to the robots tag.
