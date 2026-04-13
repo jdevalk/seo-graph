@@ -11,6 +11,11 @@ component, and Zod helpers for content schemas.
 For detailed usage — including all builder signatures, site-type recipes, and
 schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-graph/blob/main/AGENTS.md).
 
+> **Using an AI coding assistant?** The [`astro-seo` skill](https://github.com/jdevalk/skills/tree/main/astro-seo)
+> audits and improves the full SEO setup of an Astro site — technical
+> foundation, structured data, sitemaps, IndexNow, agent discovery, and
+> more — and produces drop-in code routed through this package.
+
 ## What you get
 
 | API                            | Purpose                                                                                                                                                                                                                                                                 |
