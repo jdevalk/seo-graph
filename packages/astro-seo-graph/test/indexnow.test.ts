@@ -32,9 +32,7 @@ describe('htmlFileToUrl', () => {
     });
 
     it('maps root index.html to /', () => {
-        expect(htmlFileToUrl('index.html', 'https://example.com/')).toBe(
-            'https://example.com/',
-        );
+        expect(htmlFileToUrl('index.html', 'https://example.com/')).toBe('https://example.com/');
     });
 
     it('strips .html on standalone files', () => {

@@ -24,7 +24,7 @@ schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-gra
 | **`buildAlternateLinks`**      | Pure helper that turns a `{ hreflang, href }` entry list into normalized `<link rel="alternate">` tags plus an `x-default`. Used internally by `<Seo>`'s `alternates` prop, and exported for non-Astro callers (e.g. CMS plugins feeding their own metadata pipelines). |
 | **`breadcrumbsFromUrl`**       | Derives a breadcrumb trail from an Astro URL. Splits path segments, supports custom display names and segment skipping. Returns `BreadcrumbItem[]` ready to pass to `buildBreadcrumbList`.                                                                              |
 | **`<FuzzyRedirect>`**          | Drop-in 404 component. Fetches your sitemap, fuzzy-matches the current URL against known paths, and suggests or auto-redirects to the closest match.                                                                                                                    |
-| **`createIndexNowKeyRoute`**   | Factory returning an `APIRoute` that serves the IndexNow key-verification file at `/<key>.txt`. Pair with the `indexNow` option on the integration to auto-submit built URLs on `astro:build:done`.                                                                      |
+| **`createIndexNowKeyRoute`**   | Factory returning an `APIRoute` that serves the IndexNow key-verification file at `/<key>.txt`. Pair with the `indexNow` option on the integration to auto-submit built URLs on `astro:build:done`.                                                                     |
 
 ## Installation
 
@@ -366,11 +366,11 @@ export default defineConfig({
 
 Options:
 
-| Prop                     | Default | Description                                                     |
-| ------------------------ | ------- | --------------------------------------------------------------- |
-| `validateH1`             | `true`  | Warn about pages without exactly one `<h1>`                     |
-| `validateUniqueMetadata` | `true`  | Warn about duplicate `<title>` or meta description across pages |
-| `indexNow`               | —       | Submit built URLs to IndexNow. See below for sub-options.       |
+| Prop                     | Default | Description                                                       |
+| ------------------------ | ------- | ----------------------------------------------------------------- |
+| `validateH1`             | `true`  | Warn about pages without exactly one `<h1>`                       |
+| `validateUniqueMetadata` | `true`  | Warn about duplicate `<title>` or meta description across pages   |
+| `indexNow`               | —       | Submit built URLs to IndexNow. See below for sub-options.         |
 | `llmsTxt`                | —       | Generate `llms.txt` at the build root. See below for sub-options. |
 
 `indexNow` sub-options: `key` (8–128 hex chars), `host` (bare host, e.g.
@@ -409,7 +409,7 @@ own deploy hook.
 > sent before the key file is reachable in production get rejected
 > (HTTP 403) and the key is treated as invalid going forward — you'll
 > have to rotate it. Ship the route, deploy, confirm the `.txt` loads
-> over HTTPS, *then* enable `indexNow` in the integration.
+> over HTTPS, _then_ enable `indexNow` in the integration.
 
 ## Validating your output
 

@@ -37,12 +37,12 @@ npm install @jdevalk/seo-graph-core
 
 ### IndexNow
 
-| API                          | Purpose                                                                       |
-| ---------------------------- | ----------------------------------------------------------------------------- |
-| `submitToIndexNow`           | POST URLs to the IndexNow aggregator. Filters by host, dedupes, chunks at 10k. |
-| `generateIndexNowKey`        | Generate a random hex key (Web Crypto).                                       |
-| `validateIndexNowKey`        | Verify a key is 8–128 hex chars.                                              |
-| `getIndexNowKeyFileContent`  | Body to serve at `/<key>.txt` for host verification.                          |
+| API                         | Purpose                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `submitToIndexNow`          | POST URLs to the IndexNow aggregator. Filters by host, dedupes, chunks at 10k. |
+| `generateIndexNowKey`       | Generate a random hex key (Web Crypto).                                        |
+| `validateIndexNowKey`       | Verify a key is 8–128 hex chars.                                               |
+| `getIndexNowKeyFileContent` | Body to serve at `/<key>.txt` for host verification.                           |
 
 ### Piece builders
 
