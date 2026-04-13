@@ -12,8 +12,9 @@ export type { SchemaEndpointOptions, SchemaMapEntry, SchemaMapOptions } from './
 
 export { seoSchema, imageSchema } from './content-helpers.js';
 
-export { buildAstroSeoProps } from './components/seo-props.js';
-export type { SeoProps, AstroSeoProps } from './components/seo-props.js';
+export type { SeoProps } from './components/seo-props.js';
+export { buildSeoContext, ROBOTS_EXTRAS } from './components/seo-context.js';
+export type { SeoContext } from './components/seo-context.js';
 
 export { buildAlternateLinks } from './alternates.js';
 export type { AlternateLink, BuildAlternateLinksInput } from './alternates.js';

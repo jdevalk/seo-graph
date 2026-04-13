@@ -2576,17 +2576,23 @@ const blog = defineCollection({
 }
 ```
 
-### `buildAstroSeoProps`
+### `buildSeoContext`
 
-Pure-TS function that powers `<Seo>` internally. Use when you want to feed a
-different head component:
+Pure-TS function that powers `<Seo>` internally. Returns a flat,
+render-ready normalization of `SeoProps` (resolved title, canonical, OG
+fields, hreflang entries, robots directives, twitter overrides). Use when
+you want to render the head yourself:
 
 ```ts
-import { buildAstroSeoProps } from '@jdevalk/astro-seo-graph';
+import { buildSeoContext } from '@jdevalk/astro-seo-graph';
 
-const astroSeoProps = buildAstroSeoProps(mySeoProps, Astro.url.href);
-// Pass to astro-seo's <SEO> or any custom head component
+const ctx = buildSeoContext(mySeoProps, Astro.url.href);
+// ctx.title, ctx.canonical, ctx.og.*, ctx.twitter, ctx.hreflangs, ...
 ```
+
+The companion constant `ROBOTS_EXTRAS` exposes the
+`max-snippet:-1, max-image-preview:large, max-video-preview:-1`
+directives that `<Seo>` always appends to the robots tag.
 
 ### `buildAlternateLinks`
 
@@ -3269,7 +3275,8 @@ seo-graph/
 │           ├── alternates.ts     # buildAlternateLinks
 │           ├── content.ts        # seoSchema, imageSchema
 │           └── components/
-│               └── seo-props.ts  # buildAstroSeoProps
+│               ├── seo-props.ts    # SeoProps interface
+│               └── seo-context.ts  # buildSeoContext
 ├── AGENTS.md          # This file
 ├── README.md          # Project overview
 └── pnpm-workspace.yaml

@@ -1,14 +1,125 @@
 ---
-import { SEO } from 'astro-seo';
-import { buildAstroSeoProps, type SeoProps } from './seo-props.js';
+/**
+ * First-party <Seo> component. Consumes the flat `SeoContext` from
+ * `buildSeoContext()` and emits every `<head>` tag directly. No external
+ * `astro-seo` dependency.
+ *
+ * Tag order:
+ *   1. <title>
+ *   2. <link rel="canonical">          (omitted when noindex)
+ *   3. <meta name="description">
+ *   4. <meta name="robots">            (single merged tag)
+ *   5. og:title/type/image/url
+ *   6. og:description/site_name/locale/locale:alternate
+ *   7. og:image:alt/width/height       (when og:image is set)
+ *   8. article:published_time/etc.     (when ogType === 'article')
+ *   9. twitter:card/site/creator/...overrides
+ *  10. <link rel="alternate" hreflang> (incl. x-default)
+ *  11. <meta name="author">
+ *  12. extraLinks passthrough
+ *  13. extraMeta passthrough
+ *  14. <script type="application/ld+json">   (when graph is truthy)
+ */
+import { buildSeoContext } from './seo-context.js';
+import type { SeoProps } from './seo-props.js';
 
 const props = Astro.props as SeoProps;
-const astroSeo = buildAstroSeoProps(props, Astro.url.href);
+const ctx = buildSeoContext(props, Astro.url.href);
+
+function robotsContent(r: typeof ctx.robots): string {
+    const parts: string[] = [];
+    parts.push(r.noindex ? 'noindex' : 'index');
+    parts.push(r.nofollow ? 'nofollow' : 'follow');
+    if (r.extras) parts.push(r.extras);
+    return parts.join(', ');
+}
 ---
 
-<SEO {...astroSeo} />
+<title set:html={ctx.title} />
+
+{ctx.canonical && <link rel="canonical" href={ctx.canonical} />}
+
+{ctx.description && <meta name="description" content={ctx.description} />}
+
+<meta name="robots" content={robotsContent(ctx.robots)} />
+
+<meta property="og:title" content={ctx.og.title} />
+<meta property="og:type" content={ctx.og.type} />
+<meta property="og:image" content={ctx.og.image} />
+<meta property="og:url" content={ctx.og.url} />
+
+{ctx.og.description && <meta property="og:description" content={ctx.og.description} />}
+{ctx.og.siteName && <meta property="og:site_name" content={ctx.og.siteName} />}
+<meta property="og:locale" content={ctx.og.locale} />
 {
-    props.graph && (
-        <script type="application/ld+json" set:html={JSON.stringify(props.graph)} />
+    ctx.og.localeAlternate?.map((entry) => (
+        <meta property="og:locale:alternate" content={entry} />
+    ))
+}
+
+{ctx.og.imageAlt && <meta property="og:image:alt" content={ctx.og.imageAlt} />}
+{
+    ctx.og.imageWidth !== undefined && (
+        <meta property="og:image:width" content={String(ctx.og.imageWidth)} />
     )
 }
+{
+    ctx.og.imageHeight !== undefined && (
+        <meta property="og:image:height" content={String(ctx.og.imageHeight)} />
+    )
+}
+
+{
+    ctx.og.article && (
+        <>
+            {ctx.og.article.publishedTime && (
+                <meta property="article:published_time" content={ctx.og.article.publishedTime} />
+            )}
+            {ctx.og.article.modifiedTime && (
+                <meta property="article:modified_time" content={ctx.og.article.modifiedTime} />
+            )}
+            {ctx.og.article.expirationTime && (
+                <meta property="article:expiration_time" content={ctx.og.article.expirationTime} />
+            )}
+            {ctx.og.article.authors?.map((author) => (
+                <meta property="article:author" content={author} />
+            ))}
+            {ctx.og.article.tags?.map((tag) => <meta property="article:tag" content={tag} />)}
+            {ctx.og.article.section && (
+                <meta property="article:section" content={ctx.og.article.section} />
+            )}
+            {ctx.og.article.publisher && (
+                <meta property="article:publisher" content={ctx.og.article.publisher} />
+            )}
+        </>
+    )
+}
+
+{
+    ctx.twitter && (
+        <>
+            <meta name="twitter:card" content={ctx.twitter.card} />
+            {ctx.twitter.site && <meta name="twitter:site" content={ctx.twitter.site} />}
+            {ctx.twitter.creator && (
+                <meta name="twitter:creator" content={ctx.twitter.creator} />
+            )}
+            {ctx.twitter.title && <meta name="twitter:title" content={ctx.twitter.title} />}
+            {ctx.twitter.description && (
+                <meta name="twitter:description" content={ctx.twitter.description} />
+            )}
+            {ctx.twitter.image && <meta name="twitter:image" content={ctx.twitter.image} />}
+            {ctx.twitter.imageAlt && (
+                <meta name="twitter:image:alt" content={ctx.twitter.imageAlt} />
+            )}
+        </>
+    )
+}
+
+{ctx.hreflangs.map((entry) => <link rel="alternate" hreflang={entry.hreflang} href={entry.href} />)}
+
+{ctx.authorName && <meta name="author" content={ctx.authorName} />}
+
+{ctx.extraLinks.map((entry) => <link {...entry} />)}
+{ctx.extraMeta.map((entry) => <meta {...entry} />)}
+
+{ctx.graph && <script type="application/ld+json" set:html={JSON.stringify(ctx.graph)} />}

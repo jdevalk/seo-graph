@@ -55,7 +55,6 @@
     },
     "dependencies": {
         "@jdevalk/seo-graph-core": "workspace:*",
-        "astro-seo": "^1.1.0",
         "schema-dts": "^2.0.0",
         "zod": "^3.24.0"
     },
@@ -63,6 +62,6 @@
         "@types/node": "^22.0.0",
         "astro": "^6.0.5",
         "typescript": "^5.6.0",
-        "vitest": "^2.0.0"
+        "vitest": "^3.2.4"
     }
 }
