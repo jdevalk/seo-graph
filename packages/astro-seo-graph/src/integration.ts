@@ -1,7 +1,8 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { submitToIndexNow } from '@jdevalk/seo-graph-core';
+import { renderLlmsTxt, type LlmsTxtSection } from './llms-txt.js';
 
 // Narrow shape of the Astro integration hook we use. We don't import
 // Astro types here to keep this package installable without `astro`
@@ -47,6 +48,38 @@ export interface IndexNowIntegrationOptions {
     filter?: (url: string) => boolean;
 }
 
+export interface LlmsTxtIntegrationOptions {
+    /** H1 of the generated `llms.txt`. */
+    title: string;
+    /** Absolute site origin used to resolve built HTML paths into URLs. */
+    siteUrl: string;
+    /** Optional blockquote summary shown under the title. */
+    summary?: string;
+    /** Optional paragraphs of context between summary and sections. */
+    details?: string;
+    /**
+     * User-supplied sections. When provided, these are used verbatim and
+     * no pages are auto-collected from the build output. When omitted, a
+     * single "Pages" section is generated from all built HTML files.
+     */
+    sections?: LlmsTxtSection[];
+    /**
+     * Filter which crawled URLs end up in the auto-generated section.
+     * Ignored when `sections` is supplied.
+     */
+    filter?: (url: string) => boolean;
+    /**
+     * Section name used for auto-generated pages. Defaults to `Pages`.
+     * Ignored when `sections` is supplied.
+     */
+    autoSectionName?: string;
+    /**
+     * Output file path relative to the build output directory. Defaults
+     * to `llms.txt`.
+     */
+    outputPath?: string;
+}
+
 export interface SeoGraphIntegrationOptions {
     /**
      * Warn when a built page has zero or more than one `<h1>` element.
@@ -70,6 +103,11 @@ export interface SeoGraphIntegrationOptions {
      * `index.html` are rewritten to their directory form.
      */
     indexNow?: IndexNowIntegrationOptions;
+    /**
+     * Generate an `llms.txt` file at the root of the build output. Omit
+     * to disable.
+     */
+    llmsTxt?: LlmsTxtIntegrationOptions;
 }
 
 /**
@@ -176,16 +214,25 @@ async function collectHtmlFiles(dir: string, base: string = dir): Promise<string
  * ```
  */
 export default function seoGraph(options: SeoGraphIntegrationOptions = {}): AstroIntegrationLike {
-    const { validateH1 = true, validateUniqueMetadata = true, indexNow } = options;
+    const {
+        validateH1 = true,
+        validateUniqueMetadata = true,
+        indexNow,
+        llmsTxt,
+    } = options;
+    const autoLlmsTxt = llmsTxt && !llmsTxt.sections;
 
     return {
         name: '@jdevalk/astro-seo-graph',
         hooks: {
             'astro:build:done': async ({ dir, logger }) => {
                 const buildDir = fileURLToPath(dir);
-                const needsContentScan = validateH1 || validateUniqueMetadata;
+                const needsContentScan = validateH1 || validateUniqueMetadata || autoLlmsTxt;
                 const htmlFiles =
-                    needsContentScan || indexNow ? await collectHtmlFiles(buildDir) : [];
+                    needsContentScan || indexNow || llmsTxt
+                        ? await collectHtmlFiles(buildDir)
+                        : [];
+                const autoLinks: Array<{ url: string; title: string; description?: string }> = [];
 
                 const h1Missing: string[] = [];
                 const h1Multiple: Array<{ file: string; count: number }> = [];
@@ -202,18 +249,34 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                             else if (count > 1) h1Multiple.push({ file, count });
                         }
 
+                        const title =
+                            validateUniqueMetadata || autoLlmsTxt ? extractTitle(content) : null;
+                        const description =
+                            validateUniqueMetadata || autoLlmsTxt
+                                ? extractMetaDescription(content)
+                                : null;
+
                         if (validateUniqueMetadata) {
-                            const title = extractTitle(content);
                             if (title) {
                                 const list = titlesByValue.get(title) ?? [];
                                 list.push(file);
                                 titlesByValue.set(title, list);
                             }
-                            const description = extractMetaDescription(content);
                             if (description) {
                                 const list = descriptionsByValue.get(description) ?? [];
                                 list.push(file);
                                 descriptionsByValue.set(description, list);
+                            }
+                        }
+
+                        if (autoLlmsTxt && llmsTxt) {
+                            const url = htmlFileToUrl(file, llmsTxt.siteUrl);
+                            if (!llmsTxt.filter || llmsTxt.filter(url)) {
+                                autoLinks.push({
+                                    url,
+                                    title: title ?? url,
+                                    description: description ?? undefined,
+                                });
                             }
                         }
                     }
@@ -293,6 +356,24 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                             }
                         }
                     }
+                }
+
+                if (llmsTxt) {
+                    const sections =
+                        llmsTxt.sections ??
+                        [{ name: llmsTxt.autoSectionName ?? 'Pages', links: autoLinks }];
+                    const rendered = renderLlmsTxt({
+                        title: llmsTxt.title,
+                        summary: llmsTxt.summary,
+                        details: llmsTxt.details,
+                        sections,
+                    });
+                    const outPath = join(buildDir, llmsTxt.outputPath ?? 'llms.txt');
+                    await writeFile(outPath, rendered, 'utf8');
+                    const linkCount = sections.reduce((n, s) => n + s.links.length, 0);
+                    logger.info(
+                        `llms.txt: wrote ${relative(buildDir, outPath)} with ${linkCount} link(s).`,
+                    );
                 }
             },
         },

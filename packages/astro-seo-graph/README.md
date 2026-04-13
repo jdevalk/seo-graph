@@ -343,6 +343,8 @@ actions. Currently:
   built corpus.
 - Optionally submits built URLs to [IndexNow](https://www.indexnow.org)
   after the build completes.
+- Optionally generates an [`llms.txt`](https://llmstxt.org) file at the
+  root of the build output, summarising the site for LLMs.
 
 ```js
 // astro.config.mjs
@@ -369,11 +371,19 @@ Options:
 | `validateH1`             | `true`  | Warn about pages without exactly one `<h1>`                     |
 | `validateUniqueMetadata` | `true`  | Warn about duplicate `<title>` or meta description across pages |
 | `indexNow`               | —       | Submit built URLs to IndexNow. See below for sub-options.       |
+| `llmsTxt`                | —       | Generate `llms.txt` at the build root. See below for sub-options. |
 
 `indexNow` sub-options: `key` (8–128 hex chars), `host` (bare host, e.g.
 `example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
 `https://<host>/<key>.txt`), `endpoint?` (defaults to `api.indexnow.org`),
 `filter?` (drop URLs for which the callback returns `false`).
+
+`llmsTxt` sub-options: `title` (required H1), `siteUrl` (required, used to
+resolve crawled HTML paths), `summary?` (rendered as a blockquote),
+`details?` (extra paragraphs), `sections?` (user-supplied sections; when
+given, no pages are auto-collected), `filter?` (drop URLs from the
+auto-generated section), `autoSectionName?` (defaults to `Pages`),
+`outputPath?` (defaults to `llms.txt`).
 
 `index.html` paths are rewritten to their trailing-slash form. Only static
 pages are checked/submitted (SSR pages aren't on disk at build time).

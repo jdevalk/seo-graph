@@ -24,6 +24,35 @@ Two packages:
 
 ---
 
+## Contents
+
+**Schema core** — concepts and builders for the JSON-LD graph:
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [The @id system](#the-id-system)
+- [Piece builders reference](#piece-builders-reference)
+
+**Recipes and patterns** — how to model real sites:
+- [Site type recipes](#site-type-recipes)
+- [Trust and credibility signals](#trust-and-credibility-signals)
+- [Choosing the right Article subtype](#choosing-the-right-article-subtype)
+- [Actions: telling agents what they can do](#actions-telling-agents-what-they-can-do)
+- [Multi-type entities](#multi-type-entities)
+- [Rich Organization patterns](#rich-organization-patterns)
+- [Rich Person patterns](#rich-person-patterns)
+- [Reference implementations](#reference-implementations)
+
+**Astro integration** — runtime component and build-time checks:
+- [Astro integration guide](#astro-integration-guide) — the `<Seo>` component, hreflang, schema endpoints
+- [Build-time integration](#build-time-integration) — `seoGraph()` hook, H1 validation, metadata uniqueness, IndexNow, `llms.txt`
+- [Complete integration example](#complete-integration-example)
+- [Advanced patterns](#advanced-patterns)
+- [Common mistakes](#common-mistakes)
+- [Validating your output](#validating-your-output)
+- [Repository structure](#repository-structure)
+
+---
+
 ## Architecture
 
 ```
@@ -2572,6 +2601,144 @@ const links = buildAlternateLinks({
     ],
 });
 // → [{ rel: 'alternate', hreflang: 'en', href: '...' }, ..., { hreflang: 'x-default', ... }]
+```
+
+---
+
+## Build-time integration
+
+`@jdevalk/astro-seo-graph/integration` exports a default `seoGraph()`
+function that returns an Astro integration. It hooks `astro:build:done`
+to run cross-page SEO checks and optional post-build actions against the
+static HTML output. SSR pages aren't on disk at build time, so they're
+not checked.
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import seoGraph from '@jdevalk/astro-seo-graph/integration';
+
+export default defineConfig({
+    site: 'https://example.com',
+    integrations: [
+        seoGraph({
+            // All options below are optional; listed with defaults.
+            validateH1: true,
+            validateUniqueMetadata: true,
+            // indexNow: { ... },
+            // llmsTxt: { ... },
+        }),
+    ],
+});
+```
+
+### Options
+
+| Option                   | Default | Purpose                                                                    |
+| ------------------------ | ------- | -------------------------------------------------------------------------- |
+| `validateH1`             | `true`  | Warn when a page has zero or >1 `<h1>` elements.                           |
+| `validateUniqueMetadata` | `true`  | Warn when two pages share the same `<title>` or meta description.          |
+| `indexNow`               | —       | Submit built URLs to IndexNow. Omit to disable.                            |
+| `llmsTxt`                | —       | Generate `llms.txt` at the root of the build output. Omit to disable.     |
+
+### H1 and metadata validation
+
+`validateH1` flags pages with missing or duplicate `<h1>` elements — the
+most common on-page SEO/accessibility miss. `validateUniqueMetadata`
+flags `<title>` or `<meta name="description">` values that repeat across
+pages; duplicates hurt Google's ability to pick a canonical result and
+can only be spotted across the whole corpus.
+
+Both extractors are exported for reuse:
+
+```ts
+import { countH1s, extractTitle, extractMetaDescription } from '@jdevalk/astro-seo-graph/integration';
+```
+
+### IndexNow submission
+
+```js
+seoGraph({
+    indexNow: {
+        key: process.env.INDEXNOW_KEY!, // 8–128 hex chars
+        host: 'example.com',
+        siteUrl: 'https://example.com',
+        // keyLocation?: defaults to https://<host>/<key>.txt
+        // endpoint?: defaults to api.indexnow.org
+        // filter?: (url) => boolean — drop URLs before submission
+    },
+});
+```
+
+Only URLs on `host` are submitted. `index.html` paths are rewritten to
+their trailing-slash form.
+
+**Deploy the key file first.** IndexNow verifies ownership by fetching
+`https://<host>/<key>.txt` on every submission. Submissions sent before
+the key is reachable in production get rejected (HTTP 403) and the key
+is treated as invalid — you'll have to rotate it. Serve the key via
+`createIndexNowKeyRoute` (see below), deploy, confirm the `.txt` loads
+over HTTPS, *then* enable `indexNow` in the integration.
+
+```ts
+// src/pages/[your-key-here].txt.ts
+import { createIndexNowKeyRoute } from '@jdevalk/astro-seo-graph';
+
+export const GET = createIndexNowKeyRoute({ key: 'your-key-here' });
+```
+
+The filename (minus `.txt.ts`) must equal the key.
+
+### llms.txt generation
+
+Generates an [`llms.txt`](https://llmstxt.org) file — a markdown summary
+of the site that LLMs can use as a concise entry point.
+
+```js
+seoGraph({
+    llmsTxt: {
+        title: 'Example Site',
+        siteUrl: 'https://example.com',
+        summary: 'A demo site about X, Y, and Z.',
+        // details?: extra paragraphs between summary and sections
+        // sections?: user-supplied sections (skips auto-collection)
+        // filter?: (url) => boolean — drop URLs from auto-section
+        // autoSectionName?: defaults to 'Pages'
+        // outputPath?: defaults to 'llms.txt'
+    },
+});
+```
+
+By default, one "Pages" section is auto-generated from every built HTML
+file's `<title>` + meta description. Supply `sections` to take full
+control of the structure:
+
+```js
+llmsTxt: {
+    title: 'Example Site',
+    siteUrl: 'https://example.com',
+    sections: [
+        {
+            name: 'Docs',
+            links: [
+                { url: 'https://example.com/docs/intro/', title: 'Intro', description: 'Start here' },
+            ],
+        },
+        { name: 'Blog', links: [/* ... */] },
+    ],
+}
+```
+
+The renderer is also exported for non-Astro contexts:
+
+```ts
+import { renderLlmsTxt } from '@jdevalk/astro-seo-graph';
+
+const markdown = renderLlmsTxt({
+    title: 'Example',
+    summary: 'A demo site.',
+    sections: [{ name: 'Pages', links: [{ url: 'https://x/', title: 'Home' }] }],
+});
 ```
 
 ---

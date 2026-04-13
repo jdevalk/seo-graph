@@ -23,3 +23,6 @@ export type { BreadcrumbsFromUrlInput } from './breadcrumbs.js';
 
 export { createIndexNowKeyRoute, submitToIndexNow, validateIndexNowKey } from './indexnow.js';
 export type { IndexNowKeyRouteOptions, IndexNowSubmitResult } from './indexnow.js';
+
+export { renderLlmsTxt } from './llms-txt.js';
+export type { LlmsTxtInput, LlmsTxtSection, LlmsTxtLink } from './llms-txt.js';
