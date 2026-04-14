@@ -13,9 +13,23 @@ interface BuildDoneHook {
     logger: { warn: (msg: string) => void; info: (msg: string) => void; [key: string]: any };
 }
 
+/**
+ * Subset of `AstroConfig` we read in `astro:config:setup`. Only the
+ * fields we actually use, so the integration stays decoupled from
+ * Astro's full type surface.
+ */
+interface ConfigSetupHook {
+    config: {
+        site?: string | URL;
+        trailingSlash?: 'always' | 'never' | 'ignore';
+        redirects?: Record<string, string | { status?: number; destination: string } | undefined>;
+    };
+}
+
 interface AstroIntegrationLike {
     name: string;
     hooks: {
+        'astro:config:setup'?: (args: ConfigSetupHook) => void | Promise<void>;
         'astro:build:done'?: (args: BuildDoneHook) => void | Promise<void>;
     };
 }
@@ -106,6 +120,74 @@ export interface LlmsTxtIntegrationOptions {
     outputPath?: string;
 }
 
+/**
+ * Options for `validateInternalLinks`. Pass `true` to enable with
+ * defaults, `false` to disable, or an object to customize.
+ */
+export interface ValidateInternalLinksOptions {
+    /**
+     * Skip a specific href from validation. Return `true` to exclude.
+     * Useful for SSR-only routes, dynamic redirects, or paths handled
+     * at the host/CDN layer that aren't present in the build output.
+     *
+     * Receives the raw `href` attribute value as it appeared in the
+     * HTML (not resolved/normalized), so callers can match on the
+     * source form.
+     */
+    skip?: (href: string) => boolean;
+    /**
+     * Treat explicit redirect sources as valid link targets. Defaults
+     * to `true` — unions literal `from` paths from `public/_redirects`
+     * (Netlify / Cloudflare Pages format) and literal keys from
+     * Astro's `redirects` config into the built-paths set, so linking
+     * to an intentional redirect doesn't warn.
+     *
+     * Set to `false` to treat only actual built pages as valid. Useful
+     * when you want to surface "this link hits a redirect, even if
+     * that's on purpose" — e.g. during an audit pass where you're
+     * actively eliminating redirect hops for performance.
+     */
+    honorRedirects?: boolean;
+}
+
+/**
+ * Configurable bounds for `validateMetadataLength`. Missing fields fall
+ * back to the defaults (title 30–65, description 70–200).
+ */
+export interface MetadataLengthBounds {
+    title?: { min?: number; max?: number };
+    description?: { min?: number; max?: number };
+}
+
+/** Defaults applied when `validateMetadataLength: true`. */
+export const DEFAULT_METADATA_LENGTH_BOUNDS = {
+    title: { min: 30, max: 65 },
+    description: { min: 70, max: 200 },
+} as const;
+
+/**
+ * Resolve the `validateMetadataLength` option into concrete bounds, or
+ * `null` when the check is disabled. Exported so callers can reuse the
+ * same resolution in their own pipelines (and so tests can cover the
+ * merge logic without running a full build).
+ */
+export function resolveMetadataLengthBounds(
+    option: boolean | MetadataLengthBounds | undefined,
+): { title: { min: number; max: number }; description: { min: number; max: number } } | null {
+    if (option === false || option === undefined) return null;
+    const overrides = option === true ? {} : option;
+    return {
+        title: {
+            min: overrides.title?.min ?? DEFAULT_METADATA_LENGTH_BOUNDS.title.min,
+            max: overrides.title?.max ?? DEFAULT_METADATA_LENGTH_BOUNDS.title.max,
+        },
+        description: {
+            min: overrides.description?.min ?? DEFAULT_METADATA_LENGTH_BOUNDS.description.min,
+            max: overrides.description?.max ?? DEFAULT_METADATA_LENGTH_BOUNDS.description.max,
+        },
+    };
+}
+
 export interface SeoGraphIntegrationOptions {
     /**
      * Warn when a built page has zero or more than one `<h1>` element.
@@ -123,6 +205,44 @@ export interface SeoGraphIntegrationOptions {
      * are present on multiple pages.
      */
     validateUniqueMetadata?: boolean;
+    /**
+     * Warn when a built page contains `<img>` tags without an `alt`
+     * attribute. Missing alt text is both an accessibility and SEO
+     * issue. Defaults to `true`.
+     *
+     * Decorative images with `alt=""` are treated as correct — that's
+     * the intended WCAG pattern for images that convey no information.
+     * Only a fully missing `alt` attribute triggers a warning.
+     */
+    validateImageAlt?: boolean;
+    /**
+     * Warn when `<title>` or `<meta name="description">` length falls
+     * outside SERP-friendly bounds. Defaults to `true` (title 30–65
+     * chars, description 70–200 chars).
+     *
+     * Pass `false` to disable, or an object to override the bounds.
+     * Length is measured on the whitespace-collapsed, entity-decoded
+     * text — the same thing Google displays in the SERP.
+     */
+    validateMetadataLength?: boolean | MetadataLengthBounds;
+    /**
+     * Warn when an internal `<a href>` points to a URL that doesn't
+     * match a built page. Catches two common classes of bug:
+     *
+     * - **Trailing-slash mismatches.** Linking to `/about-me` when the
+     *   site emits `/about-me/` (or vice versa). The link "works" via
+     *   a redirect but wastes a round-trip and hurts SEO.
+     * - **Broken internal links.** A link to a path that isn't in the
+     *   build at all — a 404 waiting to happen.
+     *
+     * Defaults to `true`. Only checks links with the same origin as
+     * `config.site` (plus root-relative `/foo`-style links). External
+     * links, `mailto:`, `tel:`, fragment-only (`#x`), and SSR-only
+     * routes are not checked. Pass `false` to disable, or
+     * `{ skip: (href) => boolean }` to exclude specific hrefs (e.g.
+     * dynamic redirects handled at the host layer).
+     */
+    validateInternalLinks?: boolean | ValidateInternalLinksOptions;
     /**
      * Submit built URLs to IndexNow after the build completes. Omit to
      * disable. Only URLs on `host` are submitted; URLs with trailing
@@ -166,6 +286,178 @@ export function htmlFileToUrl(relativePath: string, siteUrl: string): string {
 export function countH1s(html: string): number {
     const matches = html.match(/<h1[\s>]/gi);
     return matches ? matches.length : 0;
+}
+
+/**
+ * Parse a Netlify/Cloudflare Pages `_redirects` file and return the
+ * `from` paths of rules with literal sources (no wildcards or
+ * placeholders). The literal subset is enough to treat those paths as
+ * valid link targets — if a rule uses `*` or `:splat` it's dynamic and
+ * we can't meaningfully pre-validate hrefs against it.
+ *
+ * Format per line: `from to [status]`. `#` starts a comment. Blank
+ * lines are ignored. See:
+ *   https://docs.netlify.com/routing/redirects/
+ *   https://developers.cloudflare.com/pages/configuration/redirects/
+ */
+export function parseNetlifyRedirects(content: string): string[] {
+    const sources: string[] = [];
+    for (const rawLine of content.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (line === '' || line.startsWith('#')) continue;
+        const from = line.split(/\s+/)[0];
+        if (!from) continue;
+        // Skip dynamic rules — we only union literal paths into the
+        // built-paths set. Glob/splat matching is out of scope.
+        if (/[*:]/.test(from)) continue;
+        // Ignore non-path sources (full URLs in _redirects denote
+        // proxy/rewrite rules; not a link target we'd validate).
+        if (!from.startsWith('/')) continue;
+        sources.push(from);
+    }
+    return sources;
+}
+
+/**
+ * Return the literal `from` paths from an Astro `config.redirects`
+ * object. Parameterized routes (`/old/[slug]` or `/old/*`) are skipped
+ * for the same reason `parseNetlifyRedirects` skips dynamic rules.
+ */
+export function collectAstroRedirectSources(
+    redirects: ConfigSetupHook['config']['redirects'] | undefined,
+): string[] {
+    if (!redirects) return [];
+    const sources: string[] = [];
+    for (const from of Object.keys(redirects)) {
+        if (!from.startsWith('/')) continue;
+        if (/[[\]*]/.test(from)) continue;
+        sources.push(from);
+    }
+    return sources;
+}
+
+/**
+ * Turn a built HTML file path into its canonical pathname (the `url`
+ * form without origin). Used by `validateInternalLinks` to build the
+ * set of paths that actually exist in the build.
+ */
+export function htmlFileToPath(relativePath: string): string {
+    const normalized = relativePath.split(/[\\/]/).join('/');
+    if (normalized === 'index.html' || normalized === '/index.html') return '/';
+    if (normalized.endsWith('/index.html')) {
+        return '/' + normalized.slice(0, -'index.html'.length);
+    }
+    if (normalized.endsWith('.html')) {
+        return '/' + normalized.slice(0, -'.html'.length);
+    }
+    return '/' + normalized;
+}
+
+/**
+ * Extract all `<a href="...">` values from an HTML string. Returns the
+ * raw attribute values (not decoded) in document order.
+ */
+export function extractAnchorHrefs(html: string): string[] {
+    const hrefs: string[] = [];
+    for (const match of html.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"']*)["'][^>]*>/gi)) {
+        hrefs.push(match[1]!);
+    }
+    return hrefs;
+}
+
+/**
+ * Classify an internal link's href against the set of built pathnames.
+ *
+ * Returns:
+ *   - `{ status: 'external' }` for off-origin, `mailto:`, `tel:`,
+ *     fragment-only, or non-http(s) schemes.
+ *   - `{ status: 'ok' }` when the resolved pathname exactly matches a
+ *     built page.
+ *   - `{ status: 'trailing-slash', suggested }` when the other form
+ *     (with/without trailing slash) matches — your case.
+ *   - `{ status: 'not-found' }` when no form matches — a broken link.
+ *
+ * `origin` is the site's canonical origin (from Astro's `config.site`).
+ * When omitted, only root-relative hrefs (`/foo`) are classified;
+ * absolute URLs return `external`.
+ */
+export function classifyInternalLink(
+    href: string,
+    builtPaths: ReadonlySet<string>,
+    origin: string | undefined,
+):
+    | { status: 'external' }
+    | { status: 'ok' }
+    | { status: 'trailing-slash'; suggested: string }
+    | {
+          status: 'not-found';
+      } {
+    if (!href) return { status: 'external' };
+    // Same-page anchors and non-http schemes.
+    if (href.startsWith('#')) return { status: 'external' };
+    if (/^(?:mailto:|tel:|javascript:|data:|blob:)/i.test(href)) return { status: 'external' };
+
+    let pathname: string;
+    if (href.startsWith('/') && !href.startsWith('//')) {
+        // Root-relative. Strip query + fragment.
+        pathname = href.split('#')[0]!.split('?')[0]!;
+    } else if (/^https?:\/\//i.test(href) || href.startsWith('//')) {
+        // Absolute (or protocol-relative). Compare origins if we know ours.
+        if (!origin) return { status: 'external' };
+        let parsed: URL;
+        try {
+            parsed = new URL(href.startsWith('//') ? `https:${href}` : href);
+        } catch {
+            return { status: 'external' };
+        }
+        let ourOrigin: URL;
+        try {
+            ourOrigin = new URL(origin);
+        } catch {
+            return { status: 'external' };
+        }
+        if (parsed.origin !== ourOrigin.origin) return { status: 'external' };
+        pathname = parsed.pathname;
+    } else {
+        // Relative or unknown shape — not worth guessing.
+        return { status: 'external' };
+    }
+
+    if (builtPaths.has(pathname)) return { status: 'ok' };
+
+    const flipped = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname + '/';
+    if (builtPaths.has(flipped)) {
+        return { status: 'trailing-slash', suggested: flipped };
+    }
+    return { status: 'not-found' };
+}
+
+/**
+ * Find `<img>` tags missing an `alt` attribute. Returns the `src` value
+ * of each offending tag (or `"(no src)"` when src is absent too) so the
+ * warning can identify which image to fix.
+ *
+ * Two WCAG-sanctioned ways to mark an image as decorative are respected
+ * and NOT flagged:
+ *
+ *   - `alt=""` — the canonical decorative-image pattern.
+ *   - `role="presentation"` (or `role="none"`) — removes the image from
+ *     the accessibility tree; typically paired with `alt=""` but some
+ *     codebases use it alone.
+ *
+ * Only a tag that has neither an `alt` attribute nor a decorative role
+ * triggers a warning.
+ */
+export function findImagesWithoutAlt(html: string): string[] {
+    const results: string[] = [];
+    for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+        const tag = match[0];
+        if (/\balt\s*=/i.test(tag)) continue;
+        if (/\brole\s*=\s*["'](?:presentation|none)["']/i.test(tag)) continue;
+        const src = tag.match(/\bsrc\s*=\s*["']([^"']*)["']/i)?.[1] ?? '(no src)';
+        results.push(src);
+    }
+    return results;
 }
 
 const HTML_ENTITIES: Record<string, string> = {
@@ -240,23 +532,101 @@ async function collectHtmlFiles(dir: string, base: string = dir): Promise<string
  * ```
  */
 export default function seoGraph(options: SeoGraphIntegrationOptions = {}): AstroIntegrationLike {
-    const { validateH1 = true, validateUniqueMetadata = true, indexNow, llmsTxt } = options;
+    const {
+        validateH1 = true,
+        validateUniqueMetadata = true,
+        validateImageAlt = true,
+        validateMetadataLength = true,
+        validateInternalLinks = true,
+        indexNow,
+        llmsTxt,
+    } = options;
     const autoLlmsTxt = llmsTxt && !llmsTxt.sections;
+    const lengthBounds = resolveMetadataLengthBounds(validateMetadataLength);
+    const internalLinksEnabled = validateInternalLinks !== false;
+    const internalLinksSkip =
+        typeof validateInternalLinks === 'object' ? validateInternalLinks.skip : undefined;
+    const internalLinksHonorRedirects =
+        typeof validateInternalLinks === 'object'
+            ? (validateInternalLinks.honorRedirects ?? true)
+            : true;
+
+    // Captured in astro:config:setup so astro:build:done can classify
+    // absolute same-origin links against the site's canonical origin
+    // and treat Astro-configured redirect sources as valid link targets.
+    let siteOrigin: string | undefined;
+    let astroRedirectSources: string[] = [];
 
     return {
         name: '@jdevalk/astro-seo-graph',
         hooks: {
+            'astro:config:setup': ({ config }) => {
+                if (config.site) {
+                    try {
+                        siteOrigin = new URL(config.site.toString()).origin;
+                    } catch {
+                        // Leave undefined — validateInternalLinks will
+                        // still work for root-relative hrefs.
+                    }
+                }
+                astroRedirectSources = collectAstroRedirectSources(config.redirects);
+            },
             'astro:build:done': async ({ dir, logger }) => {
                 const buildDir = fileURLToPath(dir);
-                const needsContentScan = validateH1 || validateUniqueMetadata || autoLlmsTxt;
+                const needsContentScan =
+                    validateH1 ||
+                    validateUniqueMetadata ||
+                    validateImageAlt ||
+                    lengthBounds !== null ||
+                    internalLinksEnabled ||
+                    autoLlmsTxt;
                 const htmlFiles =
                     needsContentScan || indexNow || llmsTxt ? await collectHtmlFiles(buildDir) : [];
+                let builtPaths: Set<string> | null = null;
+                if (internalLinksEnabled) {
+                    builtPaths = new Set(htmlFiles.map(htmlFileToPath));
+                    if (internalLinksHonorRedirects) {
+                        // Treat explicit redirect sources as valid link
+                        // targets. Reads `_redirects` (Netlify/Cloudflare
+                        // Pages) from the build output and merges Astro's
+                        // `config.redirects` captured at setup time.
+                        try {
+                            const redirectsContent = await readFile(
+                                join(buildDir, '_redirects'),
+                                'utf8',
+                            );
+                            for (const from of parseNetlifyRedirects(redirectsContent)) {
+                                builtPaths.add(from);
+                            }
+                        } catch {
+                            // No `_redirects` file; that's fine.
+                        }
+                        for (const from of astroRedirectSources) {
+                            builtPaths.add(from);
+                        }
+                    }
+                }
                 const autoLinks: Array<{ url: string; title: string; description?: string }> = [];
 
                 const h1Missing: string[] = [];
                 const h1Multiple: Array<{ file: string; count: number }> = [];
                 const titlesByValue = new Map<string, string[]>();
                 const descriptionsByValue = new Map<string, string[]>();
+                const imagesMissingAlt: Array<{ file: string; srcs: string[] }> = [];
+                const internalLinkIssues: Array<{
+                    file: string;
+                    href: string;
+                    kind: 'trailing-slash' | 'not-found';
+                    suggested?: string;
+                }> = [];
+                const lengthIssues: Array<{
+                    file: string;
+                    field: 'title' | 'description';
+                    length: number;
+                    bound: 'short' | 'long';
+                    limit: number;
+                    value: string;
+                }> = [];
 
                 if (needsContentScan) {
                     for (const file of htmlFiles) {
@@ -268,12 +638,39 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                             else if (count > 1) h1Multiple.push({ file, count });
                         }
 
-                        const title =
-                            validateUniqueMetadata || autoLlmsTxt ? extractTitle(content) : null;
-                        const description =
-                            validateUniqueMetadata || autoLlmsTxt
-                                ? extractMetaDescription(content)
-                                : null;
+                        if (validateImageAlt) {
+                            const srcs = findImagesWithoutAlt(content);
+                            if (srcs.length > 0) imagesMissingAlt.push({ file, srcs });
+                        }
+
+                        if (builtPaths !== null) {
+                            for (const href of extractAnchorHrefs(content)) {
+                                if (internalLinksSkip && internalLinksSkip(href)) continue;
+                                const result = classifyInternalLink(href, builtPaths, siteOrigin);
+                                if (result.status === 'trailing-slash') {
+                                    internalLinkIssues.push({
+                                        file,
+                                        href,
+                                        kind: 'trailing-slash',
+                                        suggested: result.suggested,
+                                    });
+                                } else if (result.status === 'not-found') {
+                                    internalLinkIssues.push({
+                                        file,
+                                        href,
+                                        kind: 'not-found',
+                                    });
+                                }
+                            }
+                        }
+
+                        const needsTitle =
+                            validateUniqueMetadata || autoLlmsTxt || lengthBounds !== null;
+                        const needsDescription = needsTitle;
+                        const title = needsTitle ? extractTitle(content) : null;
+                        const description = needsDescription
+                            ? extractMetaDescription(content)
+                            : null;
 
                         if (validateUniqueMetadata) {
                             if (title) {
@@ -285,6 +682,51 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                                 const list = descriptionsByValue.get(description) ?? [];
                                 list.push(file);
                                 descriptionsByValue.set(description, list);
+                            }
+                        }
+
+                        if (lengthBounds !== null) {
+                            if (title) {
+                                if (title.length < lengthBounds.title.min) {
+                                    lengthIssues.push({
+                                        file,
+                                        field: 'title',
+                                        length: title.length,
+                                        bound: 'short',
+                                        limit: lengthBounds.title.min,
+                                        value: title,
+                                    });
+                                } else if (title.length > lengthBounds.title.max) {
+                                    lengthIssues.push({
+                                        file,
+                                        field: 'title',
+                                        length: title.length,
+                                        bound: 'long',
+                                        limit: lengthBounds.title.max,
+                                        value: title,
+                                    });
+                                }
+                            }
+                            if (description) {
+                                if (description.length < lengthBounds.description.min) {
+                                    lengthIssues.push({
+                                        file,
+                                        field: 'description',
+                                        length: description.length,
+                                        bound: 'short',
+                                        limit: lengthBounds.description.min,
+                                        value: description,
+                                    });
+                                } else if (description.length > lengthBounds.description.max) {
+                                    lengthIssues.push({
+                                        file,
+                                        field: 'description',
+                                        length: description.length,
+                                        bound: 'long',
+                                        limit: lengthBounds.description.max,
+                                        value: description,
+                                    });
+                                }
                             }
                         }
 
@@ -311,6 +753,59 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                         for (const { file, count } of h1Multiple) {
                             logger.warn(
                                 `H1 validation: ${file} has ${count} <h1> elements (expected 1).`,
+                            );
+                        }
+                    }
+                }
+
+                if (builtPaths !== null) {
+                    if (internalLinkIssues.length === 0) {
+                        logger.info(`Internal links: ${htmlFiles.length} pages checked, all good.`);
+                    } else {
+                        for (const issue of internalLinkIssues) {
+                            if (issue.kind === 'trailing-slash') {
+                                logger.warn(
+                                    `Internal links: ${issue.file} links to ${JSON.stringify(issue.href)} but built page is ${JSON.stringify(issue.suggested!)} (redirect on every visit).`,
+                                );
+                            } else {
+                                logger.warn(
+                                    `Internal links: ${issue.file} links to ${JSON.stringify(issue.href)} which isn't in the build (404).`,
+                                );
+                            }
+                        }
+                    }
+                }
+
+                if (validateImageAlt) {
+                    if (imagesMissingAlt.length === 0) {
+                        logger.info(
+                            `Image alt validation: ${htmlFiles.length} pages checked, all good.`,
+                        );
+                    } else {
+                        for (const { file, srcs } of imagesMissingAlt) {
+                            const preview = srcs.slice(0, 5).join(', ');
+                            const more = srcs.length > 5 ? ` (+${srcs.length - 5} more)` : '';
+                            logger.warn(
+                                `Image alt validation: ${file} has ${srcs.length} <img> without alt: ${preview}${more}`,
+                            );
+                        }
+                    }
+                }
+
+                if (lengthBounds !== null) {
+                    if (lengthIssues.length === 0) {
+                        logger.info(
+                            `Metadata length: ${htmlFiles.length} pages checked, all good.`,
+                        );
+                    } else {
+                        for (const issue of lengthIssues) {
+                            const direction = issue.bound === 'short' ? 'min' : 'max';
+                            const preview =
+                                issue.value.length > 80
+                                    ? issue.value.slice(0, 77) + '…'
+                                    : issue.value;
+                            logger.warn(
+                                `Metadata length: ${issue.file} ${issue.field} is ${issue.length} chars (${direction} ${issue.limit}): ${JSON.stringify(preview)}`,
                             );
                         }
                     }

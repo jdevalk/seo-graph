@@ -2634,6 +2634,9 @@ export default defineConfig({
             // All options below are optional; listed with defaults.
             validateH1: true,
             validateUniqueMetadata: true,
+            validateImageAlt: true,
+            validateMetadataLength: true, // or { title: { max: 60 }, ... }
+            validateInternalLinks: true, // or { skip: (href) => href.startsWith('/api/') }
             // indexNow: { ... },
             // llmsTxt: { ... },
         }),
@@ -2643,12 +2646,15 @@ export default defineConfig({
 
 ### Options
 
-| Option                   | Default | Purpose                                                               |
-| ------------------------ | ------- | --------------------------------------------------------------------- |
-| `validateH1`             | `true`  | Warn when a page has zero or >1 `<h1>` elements.                      |
-| `validateUniqueMetadata` | `true`  | Warn when two pages share the same `<title>` or meta description.     |
-| `indexNow`               | —       | Submit built URLs to IndexNow. Omit to disable.                       |
-| `llmsTxt`                | —       | Generate `llms.txt` at the root of the build output. Omit to disable. |
+| Option                   | Default | Purpose                                                                                                                                           |
+| ------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validateH1`             | `true`  | Warn when a page has zero or >1 `<h1>` elements.                                                                                                  |
+| `validateUniqueMetadata` | `true`  | Warn when two pages share the same `<title>` or meta description.                                                                                 |
+| `validateImageAlt`       | `true`  | Warn when a page has `<img>` tags missing an `alt` attribute.                                                                                     |
+| `validateMetadataLength` | `true`  | Warn when `<title>` or description length falls outside SERP-friendly bounds (title 30–65, description 70–200 by default; overridable per-field). |
+| `validateInternalLinks`  | `true`  | Warn on trailing-slash mismatches and links to pages not in the build. Accepts `{ skip }` to exclude SSR-only routes.                             |
+| `indexNow`               | —       | Submit built URLs to IndexNow. Omit to disable.                                                                                                   |
+| `llmsTxt`                | —       | Generate `llms.txt` at the root of the build output. Omit to disable.                                                                             |
 
 ### H1 and metadata validation
 
@@ -2656,15 +2662,57 @@ export default defineConfig({
 most common on-page SEO/accessibility miss. `validateUniqueMetadata`
 flags `<title>` or `<meta name="description">` values that repeat across
 pages; duplicates hurt Google's ability to pick a canonical result and
-can only be spotted across the whole corpus.
+can only be spotted across the whole corpus. `validateImageAlt` flags
+`<img>` tags missing an `alt` attribute. WCAG-sanctioned decorative
+markers are respected: `alt=""` (the canonical pattern) and
+`role="presentation"`/`role="none"` (removes the image from the
+accessibility tree) are not flagged. Only a tag with neither triggers a
+warning.
 
-Both extractors are exported for reuse:
+`validateMetadataLength` flags `<title>` and `<meta name="description">`
+values outside the configured bounds. Pass `true` for the defaults
+(title 30–65, description 70–200) or an object to override per-field:
+
+```ts
+validateMetadataLength: {
+    title: { min: 40, max: 60 },
+    description: { max: 160 },
+},
+```
+
+`validateInternalLinks` scans `<a href>` values across every built page
+and flags two classes of issue: trailing-slash mismatches (e.g. linking
+to `/about-me` when the built page is `/about-me/` — "works" via
+redirect but wastes a round-trip on every click) and true 404s (links
+to paths not in the build). Only same-origin (via `config.site`) and
+root-relative links are checked; external URLs, `mailto:`, `tel:`, and
+fragment-only links are skipped.
+
+Explicit redirects are honored by default: sources in
+`public/_redirects` (Netlify / Cloudflare Pages format) and literal
+keys in Astro's `redirects` config are treated as valid link targets.
+Dynamic rules (`*`, `:splat`, `[slug]` params) are skipped — use
+`skip` for those cases. Set `honorRedirects: false` to opt out (useful
+when auditing for redirect hops).
+
+Pass `{ skip: (href) => boolean }` to exclude SSR-only routes or paths
+handled at the host/CDN layer.
+
+The extractors, helpers, and the length resolver are exported for reuse:
 
 ```ts
 import {
+    classifyInternalLink,
+    collectAstroRedirectSources,
     countH1s,
+    DEFAULT_METADATA_LENGTH_BOUNDS,
+    extractAnchorHrefs,
     extractTitle,
     extractMetaDescription,
+    findImagesWithoutAlt,
+    htmlFileToPath,
+    parseNetlifyRedirects,
+    resolveMetadataLengthBounds,
 } from '@jdevalk/astro-seo-graph/integration';
 ```
 

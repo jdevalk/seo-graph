@@ -346,6 +346,15 @@ actions. Currently:
   common SEO and accessibility issue).
 - Warns about duplicate `<title>` or meta description values across the
   built corpus.
+- Warns about `<img>` tags missing an `alt` attribute. Decorative
+  images marked with `alt=""` or `role="presentation"`/`role="none"`
+  are respected and not flagged; only a fully missing attribute is.
+- Warns about `<title>` and meta description lengths outside
+  SERP-friendly bounds (defaults: title 30–65, description 70–200).
+  Bounds are configurable.
+- Warns about internal `<a href>` links that point to a URL missing a
+  trailing slash (or carrying an extra one) relative to the built
+  page. Also flags links to paths that aren't in the build (true 404s).
 - Optionally submits built URLs to [IndexNow](https://www.indexnow.org)
   after the build completes.
 - Optionally generates an [`llms.txt`](https://llmstxt.org) file at the
@@ -371,18 +380,59 @@ export default defineConfig({
 
 Options:
 
-| Prop                     | Default | Description                                                       |
-| ------------------------ | ------- | ----------------------------------------------------------------- |
-| `validateH1`             | `true`  | Warn about pages without exactly one `<h1>`                       |
-| `validateUniqueMetadata` | `true`  | Warn about duplicate `<title>` or meta description across pages   |
-| `indexNow`               | —       | Submit built URLs to IndexNow. See below for sub-options.         |
-| `llmsTxt`                | —       | Generate `llms.txt` at the build root. See below for sub-options. |
+| Prop                     | Default | Description                                                                    |
+| ------------------------ | ------- | ------------------------------------------------------------------------------ |
+| `validateH1`             | `true`  | Warn about pages without exactly one `<h1>`                                    |
+| `validateUniqueMetadata` | `true`  | Warn about duplicate `<title>` or meta description across pages                |
+| `validateImageAlt`       | `true`  | Warn about `<img>` tags missing an `alt` attribute                             |
+| `validateMetadataLength` | `true`  | Warn when title or description length is outside configured bounds (see below) |
+| `validateInternalLinks`  | `true`  | Warn on trailing-slash mismatches and links to pages not in the build          |
+| `indexNow`               | —       | Submit built URLs to IndexNow. See below for sub-options.                      |
+| `llmsTxt`                | —       | Generate `llms.txt` at the build root. See below for sub-options.              |
 
 `indexNow` sub-options: `key` (8–128 hex chars), `host` (bare host, e.g.
 `example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
 `https://<host>/<key>.txt`), `endpoint?` (defaults to `api.indexnow.org`),
 `filter?` (drop URLs for which the callback returns `false`; composed on
 top of the built-in `/404` exclusion).
+
+`validateMetadataLength` accepts `true`/`false` for the defaults, or an
+object to override bounds. Length is measured on the whitespace-collapsed,
+entity-decoded text — the same thing Google renders in the SERP.
+
+```js
+validateMetadataLength: {
+    title: { min: 40, max: 60 }, // tighter than the default 30–65
+    description: { max: 160 }, // keep description min at its default (70)
+},
+```
+
+`validateInternalLinks` scans every built page's `<a href>` values and
+checks them against the set of paths actually produced by the build.
+Catches the common "I linked to `/about-me` but the page is `/about-me/`"
+bug (which "works" via redirect but wastes a round-trip). Only checks
+same-origin links (via `config.site`) and root-relative `/foo`-style
+hrefs; `mailto:`, `tel:`, fragment-only (`#x`), and off-origin URLs are
+skipped.
+
+Explicit redirects are honored as valid targets by default. Sources in
+`public/_redirects` (Netlify / Cloudflare Pages format) and literal
+keys in Astro's `redirects` config are unioned into the built-paths
+set, so linking to a redirect source doesn't warn. Dynamic rules
+(wildcards, splats, `[slug]` params) are skipped — glob matching is
+out of scope; use `skip` for those cases. Set `honorRedirects: false`
+to opt out — useful when you're actively eliminating redirect hops and
+want to see every internal link that doesn't hit a built page
+directly.
+
+Pass a `skip` callback to exclude specific hrefs — useful for SSR-only
+routes or paths handled at the host/CDN layer:
+
+```js
+validateInternalLinks: {
+    skip: (href) => href.startsWith('/api/') || href === '/search',
+},
+```
 
 The `/404` page is always excluded — no one needs search engines notified
 about it, and submitting it wastes daily IndexNow quota. Use `filter` to
