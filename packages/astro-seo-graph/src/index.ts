@@ -27,3 +27,13 @@ export type { IndexNowKeyRouteOptions, IndexNowSubmitResult } from './indexnow.j
 
 export { renderLlmsTxt } from './llms-txt.js';
 export type { LlmsTxtInput, LlmsTxtSection, LlmsTxtLink } from './llms-txt.js';
+
+export { renderMarkdownAlternate, deriveMdUrl } from './markdown-alternate.js';
+export type {
+    MarkdownAlternateFrontmatter,
+    RenderMarkdownAlternateOptions,
+    RenderedMarkdownAlternate,
+} from './markdown-alternate.js';
+
+export { createMarkdownEndpoint } from './markdown-routes.js';
+export type { MarkdownEndpointOptions } from './markdown-routes.js';

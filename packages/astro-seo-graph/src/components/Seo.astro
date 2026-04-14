@@ -26,6 +26,17 @@ import type { SeoProps } from './seo-props.js';
 const props = Astro.props as SeoProps;
 const ctx = buildSeoContext(props, Astro.url.href);
 
+// Auto-emitted <link rel="alternate" type="text/markdown"> is OFF by
+// default — enable it via `seoGraph({ markdownAlternate: true })` in
+// astro.config once you've wired up `createMarkdownEndpoint`. The flag
+// travels through a Vite `define` that replaces this sentinel at build
+// time. `typeof` keeps this safe when the integration isn't installed
+// — the identifier stays a free variable and `typeof` yields
+// `'undefined'` without throwing.
+declare const __JDV_SEO_GRAPH_MD_ALT__: boolean | undefined;
+const mdAltEnabled =
+    typeof __JDV_SEO_GRAPH_MD_ALT__ !== 'undefined' ? __JDV_SEO_GRAPH_MD_ALT__ : false;
+
 function robotsContent(r: typeof ctx.robots): string {
     const parts: string[] = [];
     parts.push(r.noindex ? 'noindex' : 'index');
@@ -116,6 +127,12 @@ function robotsContent(r: typeof ctx.robots): string {
 }
 
 {ctx.hreflangs.map((entry) => <link rel="alternate" hreflang={entry.hreflang} href={entry.href} />)}
+
+{
+    mdAltEnabled && ctx.markdownAlternateHref && (
+        <link rel="alternate" type="text/markdown" href={ctx.markdownAlternateHref} />
+    )
+}
 
 {ctx.authorName && <meta name="author" content={ctx.authorName} />}
 

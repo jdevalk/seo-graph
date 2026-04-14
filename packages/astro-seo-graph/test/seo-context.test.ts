@@ -27,6 +27,18 @@ describe('buildSeoContext', () => {
         expect(ctx.robots).toEqual({ noindex: false, nofollow: false, extras: ROBOTS_EXTRAS });
     });
 
+    describe('markdownAlternateHref', () => {
+        it('derives a .md href from the canonical (trailing slash)', () => {
+            const ctx = buildSeoContext({ title: 'Hello' }, 'https://example.com/blog/post/');
+            expect(ctx.markdownAlternateHref).toBe('https://example.com/blog/post.md');
+        });
+
+        it('falls back to the page URL when canonical is omitted (noindex)', () => {
+            const ctx = buildSeoContext({ title: 'Hello', noindex: true }, pageUrl);
+            expect(ctx.markdownAlternateHref).toBe('https://example.com/my-post.md');
+        });
+    });
+
     describe('title', () => {
         it('applies titleTemplate with %s substitution', () => {
             const ctx = buildSeoContext(

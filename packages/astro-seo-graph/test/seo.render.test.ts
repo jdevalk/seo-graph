@@ -157,6 +157,11 @@ describe('Seo rendering', () => {
         expect(html).toContain('<meta property="og:locale:alternate" content="de">');
     });
 
+    it('does not emit <link rel="alternate" type="text/markdown"> by default', async () => {
+        const html = await render({ title: 'Hello' });
+        expect(html).not.toContain('type="text/markdown"');
+    });
+
     it('renders author from explicit prop', async () => {
         const html = await render({ title: 'Hello', author: 'Joost' });
         expect(html).toContain('<meta name="author" content="Joost">');

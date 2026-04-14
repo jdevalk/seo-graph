@@ -30,6 +30,8 @@ schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-gra
 | **`breadcrumbsFromUrl`**       | Derives a breadcrumb trail from an Astro URL. Splits path segments, supports custom display names and segment skipping. Returns `BreadcrumbItem[]` ready to pass to `buildBreadcrumbList`.                                                                              |
 | **`<FuzzyRedirect>`**          | Drop-in 404 component. Fetches your sitemap, fuzzy-matches the current URL against known paths, and suggests or auto-redirects to the closest match.                                                                                                                    |
 | **`createIndexNowKeyRoute`**   | Factory returning an `APIRoute` that serves the IndexNow key-verification file at `/<key>.txt`. Pair with the `indexNow` option on the integration to auto-submit built URLs on `astro:build:done`.                                                                     |
+| **`createMarkdownEndpoint`**   | Factory returning an `APIRoute` that serves a clean markdown version of a content-collection entry (frontmatter + body + token count). Pair with the auto-emitted `<link rel="alternate" type="text/markdown">` on `<Seo>` for AI-agent discovery.                      |
+| **`renderMarkdownAlternate`**  | Pure renderer behind the endpoint. Importable from non-Astro code for the same markdown output.                                                                                                                                                                         |
 
 ## Installation
 
@@ -296,6 +298,96 @@ export const GET = createSchemaEndpoint({
             ),
         ];
     },
+});
+```
+
+## Markdown alternate
+
+Serve a markdown version of every page at a parallel `.md` URL so AI agents (Claude, ChatGPT, Perplexity, Cloudflare's AI crawlers) can consume your content without HTML parsing. `<Seo>` auto-emits `<link rel="alternate" type="text/markdown" href="…">` on every page so agents discover it.
+
+### 1. Create the endpoint
+
+```ts
+// src/pages/blog/[...slug].md.ts
+import { getCollection } from 'astro:content';
+import { createMarkdownEndpoint } from '@jdevalk/astro-seo-graph';
+
+export const getStaticPaths = async () => {
+    const posts = await getCollection('blog');
+    return posts.map((p) => ({ params: { slug: p.id } }));
+};
+
+export const GET = createMarkdownEndpoint({
+    entries: () => getCollection('blog'),
+    mapper: (post, slug) =>
+        post.id !== slug
+            ? null
+            : {
+                  frontmatter: {
+                      title: post.data.title,
+                      canonical: `https://example.com/blog/${post.id}/`,
+                      pubDate: post.data.publishDate,
+                      author: post.data.author,
+                      description: post.data.excerpt,
+                      tags: post.data.tags,
+                  },
+                  body: post.body ?? '',
+              },
+});
+```
+
+Response headers:
+
+- `Content-Type: text/markdown; charset=utf-8`
+- `Cache-Control: max-age=300`
+- `X-Robots-Tag: noindex, follow` — the `.md` is a representation, not a separately indexable page.
+- `X-Markdown-Tokens: <n>` — rough estimate (`chars/4`); swap in a real tokenizer via `estimateTokens` for accuracy.
+- `Link: <canonical>; rel="canonical"` — points crawlers at the HTML.
+
+### 2. Discovery link (opt-in)
+
+Once the endpoint is in place, enable the discovery link on the integration:
+
+```ts
+// astro.config.mjs
+seoGraph({ markdownAlternate: true })
+```
+
+`<Seo>` then emits `<link rel="alternate" type="text/markdown" href="…">` on every page, with `href` derived from the canonical URL (e.g. `/blog/post/` → `/blog/post.md`). Default is `false` — enable it only after the endpoint is live, or the link will 404.
+
+### 3. `Accept: text/markdown` content negotiation (Cloudflare)
+
+Static sites can still honour `Accept: text/markdown` by adding a **Cloudflare Transform Rule** — no SSR, no middleware, dashboard-configured.
+
+**Rewrite URL rule:**
+
+```
+When incoming requests match:
+  (any(lower(http.request.headers["accept"][*]) contains "text/markdown"))
+  and (not http.request.uri.path matches "\\.[a-z0-9]+$")
+
+Then rewrite:
+  URI path → regex_replace(http.request.uri.path, "/?$", ".md")
+```
+
+**Response Header Modification rule (on HTML responses):**
+
+```
+Set static:  Vary: Accept
+```
+
+Without `Vary: Accept`, CF's cache will serve whichever variant it saw first to every subsequent visitor. With it, HTML and markdown are cached as separate variants of the same URL.
+
+### Using the renderer directly
+
+`renderMarkdownAlternate` is a pure function — importable from non-Astro code (build scripts, EmDash plugins) for the same frontmatter + body + token-count output:
+
+```ts
+import { renderMarkdownAlternate } from '@jdevalk/astro-seo-graph';
+
+const { markdown, tokenCount, canonicalHref } = renderMarkdownAlternate({
+    frontmatter: { title: 'Hello', canonical: 'https://example.com/hello/' },
+    body: '# Hello\n\nWorld.',
 });
 ```
 

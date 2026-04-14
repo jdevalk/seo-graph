@@ -24,6 +24,8 @@ interface ConfigSetupHook {
         trailingSlash?: 'always' | 'never' | 'ignore';
         redirects?: Record<string, string | { status?: number; destination: string } | undefined>;
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    updateConfig: (patch: Record<string, any>) => void;
 }
 
 interface AstroIntegrationLike {
@@ -254,6 +256,19 @@ export interface SeoGraphIntegrationOptions {
      * to disable.
      */
     llmsTxt?: LlmsTxtIntegrationOptions;
+    /**
+     * Auto-emit `<link rel="alternate" type="text/markdown">` from `<Seo>`
+     * on every page, with `href` derived from the canonical URL (e.g.
+     * `/blog/post/` → `/blog/post.md`). Pair with `createMarkdownEndpoint`
+     * to actually serve the markdown — this flag only controls the
+     * discovery link, not whether the endpoint exists.
+     *
+     * Default: `false`. Enable explicitly once you've added
+     * `createMarkdownEndpoint` at the matching path — otherwise the link
+     * will point at a 404. Implemented via a Vite `define` that replaces
+     * a sentinel token in the compiled `<Seo>` component at build time.
+     */
+    markdownAlternate?: boolean;
 }
 
 /**
@@ -574,6 +589,7 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
         validateInternalLinks = true,
         indexNow,
         llmsTxt,
+        markdownAlternate = false,
     } = options;
     const autoLlmsTxt = llmsTxt && !llmsTxt.sections;
     const lengthBounds = resolveMetadataLengthBounds(validateMetadataLength);
@@ -594,7 +610,20 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
     return {
         name: '@jdevalk/astro-seo-graph',
         hooks: {
-            'astro:config:setup': ({ config }) => {
+            'astro:config:setup': ({ config, updateConfig }) => {
+                // Vite `define` controls the auto-emitted
+                // <link rel="alternate" type="text/markdown"> in <Seo>.
+                // The sentinel is replaced token-by-token at build time;
+                // when the integration isn't installed, the identifier
+                // stays free and <Seo>'s `typeof` check falls back to
+                // the default (enabled).
+                updateConfig({
+                    vite: {
+                        define: {
+                            __JDV_SEO_GRAPH_MD_ALT__: JSON.stringify(markdownAlternate),
+                        },
+                    },
+                });
                 if (config.site) {
                     try {
                         siteOrigin = new URL(config.site.toString()).origin;

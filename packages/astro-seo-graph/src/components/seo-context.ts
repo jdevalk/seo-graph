@@ -7,6 +7,7 @@
  */
 
 import { buildAlternateLinks, type AlternateLink } from '../alternates.js';
+import { deriveMdUrl } from '../markdown-alternate.js';
 import type { SeoProps } from './seo-props.js';
 
 /**
@@ -82,6 +83,14 @@ export interface SeoContext {
     hreflangs: readonly AlternateLink[];
     /** Resolved author name for `<meta name="author">`. */
     authorName?: string;
+    /**
+     * Derived href for the auto-emitted `<link rel="alternate"
+     * type="text/markdown">`. Empty string when no canonical is available
+     * or when canonical can't be parsed — callers must not emit a link in
+     * that case. The build-time disable flag is checked in the template,
+     * not here (pure TS can't see the Vite define).
+     */
+    markdownAlternateHref: string;
     /** Passthrough extras. Empty arrays when not provided. */
     extraLinks: ReadonlyArray<Record<string, string>>;
     extraMeta: ReadonlyArray<Record<string, string>>;
@@ -232,6 +241,8 @@ export function buildSeoContext(props: SeoProps, pageUrl: string): SeoContext {
 
     const authorName = props.author ?? props.article?.authors?.[0];
 
+    const markdownAlternateHref = deriveMdUrl(canonical ?? ogUrl);
+
     const ctx: SeoContext = {
         title: fullTitle,
         robots: {
@@ -241,6 +252,7 @@ export function buildSeoContext(props: SeoProps, pageUrl: string): SeoContext {
         },
         og,
         hreflangs,
+        markdownAlternateHref,
         extraLinks: props.extraLinks ?? [],
         extraMeta: props.extraMeta ?? [],
     };
