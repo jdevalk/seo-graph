@@ -34,3 +34,6 @@ export type { DiffOptions } from './diff.js';
 
 export { formatReport } from './format.js';
 export type { FormatOptions } from './format.js';
+
+export { extractOrganizationFactsFromHtml, pickContactUrl } from './contact.js';
+export type { OrganizationFacts, OrganizationIdentifier } from './contact.js';

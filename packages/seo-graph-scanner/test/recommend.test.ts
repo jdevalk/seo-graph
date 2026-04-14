@@ -276,6 +276,81 @@ describe('inferOrganizationType', () => {
         });
     });
 
+    describe('contact-page signals', () => {
+        const facts = (url = 'https://example.com/') => ({
+            url,
+            allImages: [],
+            breadcrumbs: [],
+            microdata: [],
+        });
+
+        it('upgrades to NGO when non-profit keywords are present', () => {
+            expect(
+                inferOrganizationType(facts(), [], {
+                    sourceUrl: 'https://example.com/contact',
+                    identifiers: [],
+                    vatIds: [],
+                    telephones: [],
+                    isNonProfit: true,
+                    registrySameAs: [],
+                }),
+            ).toBe('NGO');
+        });
+
+        it('upgrades to Corporation when a business id is present and no phone', () => {
+            expect(
+                inferOrganizationType(facts(), [], {
+                    sourceUrl: 'https://example.com/contact',
+                    identifiers: [{ kind: 'KvK', value: '12345678' }],
+                    vatIds: [],
+                    telephones: [],
+                    isNonProfit: false,
+                    registrySameAs: [],
+                }),
+            ).toBe('Corporation');
+        });
+
+        it('upgrades to LocalBusiness when business id + phone co-occur', () => {
+            expect(
+                inferOrganizationType(facts(), [], {
+                    sourceUrl: 'https://example.com/contact',
+                    identifiers: [{ kind: 'KvK', value: '12345678' }],
+                    vatIds: [],
+                    telephones: ['+31 24 1234567'],
+                    isNonProfit: false,
+                    registrySameAs: [],
+                }),
+            ).toBe('LocalBusiness');
+        });
+
+        it('upgrades to LocalBusiness on phone alone (weaker but still findable)', () => {
+            expect(
+                inferOrganizationType(facts(), [], {
+                    sourceUrl: 'https://example.com/contact',
+                    identifiers: [],
+                    vatIds: [],
+                    telephones: ['+1 555 0100'],
+                    isNonProfit: false,
+                    registrySameAs: [],
+                }),
+            ).toBe('LocalBusiness');
+        });
+
+        it('still preserves a live NewsMediaOrganization over contact signals', () => {
+            // Live subtype wins over anything downstream.
+            expect(
+                inferOrganizationType(facts(), [{ '@type': 'NewsMediaOrganization', '@id': 'x' }], {
+                    sourceUrl: 'https://example.com/contact',
+                    identifiers: [{ kind: 'KvK', value: '12345678' }],
+                    vatIds: [],
+                    telephones: [],
+                    isNonProfit: false,
+                    registrySameAs: [],
+                }),
+            ).toBe('NewsMediaOrganization');
+        });
+    });
+
     describe('NewsArticle classification tiebreaker', () => {
         it('falls back to NewsMediaOrganization when the page is classified as NewsArticle', () => {
             expect(
@@ -313,6 +388,65 @@ describe('recommend', () => {
             const org = out.entities.find((e) => e['@id']?.toString().endsWith('publisher'));
             expect(org?.['@type']).toBe('GovernmentOrganization');
             expect(out.organizationType).toBe('GovernmentOrganization');
+        });
+
+        it('enriches the Organization entity with identifier / vatID / telephone / sameAs from contact facts', () => {
+            const out = recommend(
+                facts({
+                    url: 'https://example.com/',
+                    siteName: { value: 'Example', source: 'og' },
+                }),
+                {
+                    contactFacts: {
+                        sourceUrl: 'https://example.com/contact',
+                        identifiers: [
+                            { kind: 'KvK', value: '12345678' },
+                            { kind: 'CompaniesHouse', value: '00000001' },
+                        ],
+                        vatIds: ['NL123456789B01'],
+                        telephones: ['+31 24 1234567'],
+                        isNonProfit: false,
+                        registrySameAs: [
+                            'https://find-and-update.company-information.service.gov.uk/company/00000001',
+                        ],
+                    },
+                },
+            );
+            const org = out.entities.find((e) => e['@id']?.toString().endsWith('publisher'));
+            expect(org?.identifier).toEqual([
+                { '@type': 'PropertyValue', propertyID: 'KvK', value: '12345678' },
+                {
+                    '@type': 'PropertyValue',
+                    propertyID: 'CompaniesHouse',
+                    value: '00000001',
+                },
+            ]);
+            expect(org?.vatID).toBe('NL123456789B01');
+            expect(org?.telephone).toBe('+31 24 1234567');
+            expect(org?.sameAs).toEqual([
+                'https://find-and-update.company-information.service.gov.uk/company/00000001',
+            ]);
+        });
+
+        it('merges Twitter sameAs with registry sameAs without duplicates', () => {
+            const out = recommend(
+                facts({
+                    twitterSite: { value: '@example', source: 'twitter' },
+                    siteName: { value: 'Example', source: 'og' },
+                }),
+                {
+                    contactFacts: {
+                        sourceUrl: 'https://example.com/contact',
+                        identifiers: [],
+                        vatIds: [],
+                        telephones: [],
+                        isNonProfit: false,
+                        registrySameAs: ['https://twitter.com/example'], // overlap
+                    },
+                },
+            );
+            const org = out.entities.find((e) => e['@id']?.toString().endsWith('publisher'));
+            expect(org?.sameAs).toEqual(['https://twitter.com/example']); // deduped
         });
 
         it('honors liveEntities for subtype preservation', () => {

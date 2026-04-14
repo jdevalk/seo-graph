@@ -1,3 +1,8 @@
+import {
+    extractOrganizationFactsFromHtml,
+    pickContactUrl,
+    type OrganizationFacts,
+} from './contact.js';
 import { diffRecommendedVsLive, flattenLiveEntities, type DiffOptions } from './diff.js';
 import { extractFromHtml } from './extract.js';
 import { fetchHtml, type FetchOptions } from './fetcher.js';
@@ -16,6 +21,18 @@ export interface RecommendOptions {
     enabled?: boolean;
     /** Forwarded to the diff step. See `DiffOptions` for details. */
     diff?: DiffOptions;
+    /**
+     * Contact-page extraction. When enabled, the scanner discovers a
+     * contact/imprint page from the sitemap, fetches it once, and
+     * feeds the extracted facts (business ids, VAT, phones, legal
+     * form) into every per-page recommendation so the publisher
+     * Organization entity is richer. Defaults to `true`.
+     */
+    contact?: {
+        enabled?: boolean;
+        /** Explicit contact page URL — overrides auto-discovery. */
+        url?: string;
+    };
 }
 
 export interface ScanOptions {
@@ -49,6 +66,12 @@ export interface ScanReport {
     sitemapUrl: string;
     discoveredCount: number;
     pages: PageReport[];
+    /**
+     * Facts extracted from the site's contact/about/imprint page,
+     * when one was discovered and fetched. Shared across all pages in
+     * the report — this is site-wide information.
+     */
+    contactFacts?: OrganizationFacts;
     summary: {
         pagesScanned: number;
         pagesWithJsonLd: number;
@@ -68,6 +91,31 @@ export async function scanSite(
         options.fetch,
     );
     const recommendEnabled = options.recommend?.enabled !== false;
+    const contactEnabled = options.recommend?.contact?.enabled !== false;
+
+    // Pre-pass: pick a contact/imprint/about page from the sitemap,
+    // fetch it once, and extract site-wide Organization facts. These
+    // flow into every per-page recommend() call so the publisher
+    // Organization entity gets registry ids, VAT, phone, etc. — not
+    // just a generic name + URL.
+    let contactFacts: OrganizationFacts | undefined;
+    if (recommendEnabled && contactEnabled) {
+        const explicit = options.recommend?.contact?.url;
+        const candidate = explicit ?? pickContactUrl(discovered.map((d) => d.url)) ?? undefined;
+        if (candidate) {
+            // If we already fetched the contact URL in the main batch,
+            // reuse its HTML. Otherwise do a one-off fetch.
+            const cached = results.find((r) => r.url === candidate && r.html);
+            if (cached?.html) {
+                contactFacts = extractOrganizationFactsFromHtml(cached.html, candidate);
+            } else {
+                const [extra] = await fetchHtml([candidate], options.fetch);
+                if (extra?.html) {
+                    contactFacts = extractOrganizationFactsFromHtml(extra.html, candidate);
+                }
+            }
+        }
+    }
 
     const pages: PageReport[] = results.map((res) => {
         if (!res.html) {
@@ -113,8 +161,10 @@ export async function scanSite(
             // Pass live entities so the recommender preserves any
             // Organization subtype the site has explicitly declared
             // (NewsMediaOrganization, LocalBusiness, etc.) rather than
-            // downgrading to generic Organization.
-            const recommended = recommend(inferred, { liveEntities });
+            // downgrading to generic Organization. Pass contact facts
+            // so the publisher entity gets enriched with registry ids,
+            // VAT, phone, sameAs registry URLs.
+            const recommended = recommend(inferred, { liveEntities, contactFacts });
             report.classification = recommended.classification;
             report.inferred = inferred;
             report.recommended = recommended;
@@ -161,6 +211,7 @@ export async function scanSite(
         sitemapUrl,
         discoveredCount: discovered.length,
         pages,
+        ...(contactFacts ? { contactFacts } : {}),
         summary,
     };
 }

@@ -24,6 +24,7 @@ import {
     type WebPageType,
 } from '@jdevalk/seo-graph-core';
 
+import type { OrganizationFacts } from './contact.js';
 import type { InferredFacts } from './infer.js';
 
 /** Page classification used to drive which pieces get recommended. */
@@ -84,6 +85,15 @@ export interface RecommendOptions {
      * explicitly declared, rather than downgrading it to `Organization`.
      */
     liveEntities?: ReadonlyArray<Record<string, unknown>>;
+    /**
+     * Facts harvested from the site's contact/about/imprint page
+     * (business registration ids, VAT, phones, legal form, non-profit
+     * keywords). Typically produced once per scan by
+     * `extractOrganizationFactsFromHtml` and reused across every page
+     * on the site. Drives both subtype inference and enrichment of
+     * the publisher Organization entity.
+     */
+    contactFacts?: OrganizationFacts;
 }
 
 /** Flat list of recommended entities, ready for diffing. */
@@ -187,6 +197,7 @@ const LOCAL_BUSINESS_MICRODATA_PROPS = ['telephone', 'address', 'openingHours'];
 export function inferOrganizationType(
     facts: InferredFacts,
     liveEntities: ReadonlyArray<Record<string, unknown>> = [],
+    contactFacts?: OrganizationFacts,
 ): OrganizationType | string {
     // 1. Preserve existing subtype in live JSON-LD.
     for (const entity of liveEntities) {
@@ -211,7 +222,23 @@ export function inferOrganizationType(
         }
     }
 
-    // 4–6. Host-based heuristics.
+    // 4. Contact-page signals. Non-profit keywords are the most
+    //    directive ("Stichting", "e.V.", "501(c)(3)"). After that,
+    //    business-registration ids + a visible phone number suggest a
+    //    LocalBusiness (they're findable), while ids alone suggest a
+    //    straight Corporation.
+    if (contactFacts) {
+        if (contactFacts.isNonProfit) return 'NGO';
+        const hasBusinessId = contactFacts.identifiers.length > 0 || contactFacts.vatIds.length > 0;
+        if (hasBusinessId) {
+            return contactFacts.telephones.length > 0 ? 'LocalBusiness' : 'Corporation';
+        }
+        // No id but a phone on the contact page — still reasonable to
+        // treat as LocalBusiness (weaker signal, so ranked below ids).
+        if (contactFacts.telephones.length > 0) return 'LocalBusiness';
+    }
+
+    // 5–7. Host-based heuristics.
     let host = '';
     try {
         host = new URL(facts.url).hostname.toLowerCase();
@@ -224,7 +251,7 @@ export function inferOrganizationType(
         if (NEWS_HOST_PATTERNS.some((re) => re.test(host))) return 'NewsMediaOrganization';
     }
 
-    // 7. Page classification signal — NewsArticle implies a news publisher.
+    // 8. Page classification signal — NewsArticle implies a news publisher.
     if (classifyPage(facts) === 'NewsArticle') return 'NewsMediaOrganization';
 
     return 'Organization';
@@ -285,7 +312,11 @@ function resolveSiteUrl(facts: InferredFacts): string {
  */
 export function recommend(facts: InferredFacts, options: RecommendOptions = {}): RecommendedGraph {
     const classification = classifyPage(facts);
-    const organizationType = inferOrganizationType(facts, options.liveEntities);
+    const organizationType = inferOrganizationType(
+        facts,
+        options.liveEntities,
+        options.contactFacts,
+    );
     const siteUrl = resolveSiteUrl(facts);
     const ids = makeIds({ siteUrl });
     const pageUrl = facts.canonical?.value ?? facts.url;
@@ -299,17 +330,37 @@ export function recommend(facts: InferredFacts, options: RecommendOptions = {}):
     // The subtype (Organization, NewsMediaOrganization, LocalBusiness,
     // GovernmentOrganization, etc.) comes from `inferOrganizationType`.
     const publisherName = facts.siteName?.value ?? new URL(siteUrl).hostname;
-    const orgSameAs: string[] = [];
+
+    // Merge `sameAs` from Twitter handle + public-registry deep links
+    // harvested from the contact page. Dedupe so repeated mentions
+    // don't produce duplicate entries.
+    const sameAsSet = new Set<string>();
     if (facts.twitterSite?.value) {
         const handle = facts.twitterSite.value.replace(/^@/, '');
-        if (handle) orgSameAs.push(`https://twitter.com/${handle}`);
+        if (handle) sameAsSet.add(`https://twitter.com/${handle}`);
     }
+    for (const url of options.contactFacts?.registrySameAs ?? []) sameAsSet.add(url);
+
+    // Shape identifiers from the contact page into schema.org PropertyValues.
+    const identifiers = (options.contactFacts?.identifiers ?? []).map((id) => ({
+        '@type': 'PropertyValue' as const,
+        propertyID: id.kind,
+        value: id.value,
+    }));
+
+    const contactFacts = options.contactFacts;
     const publisherPiece = buildPiece({
         '@type': organizationType,
         '@id': ids.organization('publisher'),
         name: publisherName,
         url: siteUrl,
-        ...(orgSameAs.length > 0 ? { sameAs: orgSameAs } : {}),
+        ...(identifiers.length > 0 ? { identifier: identifiers } : {}),
+        ...(contactFacts?.vatIds[0] ? { vatID: contactFacts.vatIds[0] } : {}),
+        ...(contactFacts?.telephones[0] ? { telephone: contactFacts.telephones[0] } : {}),
+        ...(contactFacts?.legalForm && !publisherName.includes(contactFacts.legalForm)
+            ? { legalName: `${publisherName} ${contactFacts.legalForm}` }
+            : {}),
+        ...(sameAsSet.size > 0 ? { sameAs: [...sameAsSet] } : {}),
     });
     entities.push(publisherPiece);
 
