@@ -319,6 +319,9 @@ export const getStaticPaths = async () => {
 
 export const GET = createMarkdownEndpoint({
     entries: () => getCollection('blog'),
+    // The slug-match guard below is required. Without it the first
+    // entry whose `mapper` returns non-null wins for *every* URL — a
+    // silent bug that produces a 200 with wrong content.
     mapper: (post, slug) =>
         post.id !== slug
             ? null
@@ -357,26 +360,26 @@ seoGraph({ markdownAlternate: true });
 
 ### 3. `Accept: text/markdown` content negotiation (Cloudflare)
 
-Static sites can still honour `Accept: text/markdown` by adding a **Cloudflare Transform Rule** — no SSR, no middleware, dashboard-configured.
+Static sites can still honour `Accept: text/markdown` by adding a **Cloudflare Transform Rule** — no SSR, no middleware, dashboard-configured, and works on the free plan (`regex_replace` is paid-only; the rule below uses `wildcard_replace` instead).
 
-**Rewrite URL rule:**
+**Rewrite URL rule** (assumes trailing-slash canonical URLs, e.g. `/blog/post/`):
 
 ```
 When incoming requests match:
-  (any(lower(http.request.headers["accept"][*]) contains "text/markdown"))
-  and (not http.request.uri.path matches "\\.[a-z0-9]+$")
+  http.request.headers["accept"][0] contains "text/markdown"
+  and ends_with(http.request.uri.path, "/")
+  and not starts_with(http.request.uri.path, "/_")
+  and not starts_with(http.request.uri.path, "/api/")
 
-Then rewrite:
-  URI path → regex_replace(http.request.uri.path, "/?$", ".md")
+Then rewrite URI path (dynamic):
+  wildcard_replace(http.request.uri.path, "*/", "${1}.md")
 ```
 
-**Response Header Modification rule (on HTML responses):**
+Turns `/blog/post/` → `/blog/post.md` before the cache lookup, so HTML and markdown end up under different cache keys automatically.
 
-```
-Set static:  Vary: Accept
-```
+**Do not bother with a `Vary: Accept` response header rule.** Cloudflare strips custom `Vary` values at the edge (they conflict with CF's own cache model), so the rule won't take effect. It's unnecessary anyway — the URL rewrite already separates cache entries per content type.
 
-Without `Vary: Accept`, CF's cache will serve whichever variant it saw first to every subsequent visitor. With it, HTML and markdown are cached as separate variants of the same URL.
+Sites using extensionless URLs without a trailing slash need a separate rule: match `not ends_with(…, "/")` and rewrite to `concat(http.request.uri.path, ".md")`.
 
 ### Using the renderer directly
 
