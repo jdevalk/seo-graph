@@ -1,5 +1,52 @@
 # @jdevalk/astro-seo-graph
 
+## 1.1.0
+
+### Minor Changes
+
+- e8367dc: Three new build-time validators on the `seoGraph()` integration.
+
+    **`validateImageAlt`** (default `true`) — warns about `<img>` tags
+    missing an `alt` attribute. Common SEO and accessibility miss that's
+    easy to overlook while drafting. Respects both WCAG decorative-image
+    patterns: `alt=""` (the canonical form) and
+    `role="presentation"`/`role="none"` (removes the image from the
+    accessibility tree). Only a tag with neither is flagged. Warnings
+    identify each page and list the first few `src` values so offenders
+    are findable without reopening the file.
+
+    **`validateMetadataLength`** (default `true`) — warns when `<title>` or
+    `<meta name="description">` length falls outside SERP-friendly bounds.
+    Defaults: title 30–65 characters, description 70–200. Pass `false` to
+    disable or an object to override per-field — e.g.
+    `{ title: { max: 60 }, description: { min: 120 } }` applies the
+    overrides and keeps defaults for the rest. Length is measured on the
+    whitespace-collapsed, entity-decoded text (the same thing Google
+    renders in the SERP).
+
+    **`validateInternalLinks`** (default `true`) — warns when an internal
+    `<a href>` points to a URL that doesn't match a built page. Catches two
+    common bugs: trailing-slash mismatches (e.g. linking to `/about-me`
+    when the built page is `/about-me/` — "works" via redirect but wastes
+    a round-trip on every click) and true 404s. Only same-origin (via
+    `config.site`) and root-relative links are checked; external URLs,
+    `mailto:`/`tel:`, and fragment-only links are skipped. Explicit
+    redirects are honored as valid targets by default: literal sources in
+    `public/_redirects` (Netlify / Cloudflare Pages format) and literal
+    keys in Astro's `redirects` config are unioned into the built-paths
+    set. Set `honorRedirects: false` to opt out when auditing for redirect
+    hops. Dynamic rules (wildcards, splats, `[slug]` params) are skipped;
+    use `skip` for those. Pass `{ skip: (href) => boolean }` to exclude
+    additional hrefs (e.g. SSR-only routes).
+
+    New exports on `@jdevalk/astro-seo-graph/integration`:
+    `findImagesWithoutAlt`, `resolveMetadataLengthBounds`,
+    `MetadataLengthBounds`, `DEFAULT_METADATA_LENGTH_BOUNDS`,
+    `classifyInternalLink`, `extractAnchorHrefs`, `htmlFileToPath`,
+    `parseNetlifyRedirects`, `collectAstroRedirectSources`,
+    `ValidateInternalLinksOptions` — for callers running the same checks
+    in their own pipelines (pre-commit hooks, CI scripts, etc.).
+
 ## 1.0.1
 
 ### Patch Changes
@@ -25,68 +72,68 @@
   and renders every `<head>` tag directly. Net result: cleaner output, two
   silent bugs fixed, lighter install.
 
-        ### Bug fixes (behavior changes that fix wrong output)
-        - **`articlePublisher` now actually renders.** Previously the prop typechecked
-          but was silently dropped — `astro-seo`'s `OpenGraphArticleTags` doesn't
-          destructure `publisher`, and its `openGraph.article` type doesn't include
-          the field. Anyone using `articlePublisher` was getting no output. `<Seo>`
-          now emits `<meta property="article:publisher" content="…">` as documented.
-          Filed upstream: [jonasmerlin/astro-seo#110](https://github.com/jonasmerlin/astro-seo/issues/110).
-        - **`<link rel="canonical">` no longer leaks on `noindex` pages.** The
-          intent ("omit canonical on noindex" per Google recommendation) was
-          defeated by `astro-seo`'s built-in canonical fallback that reconstructs
-          the tag from `Astro.url` when the prop is undefined. `<Seo>` now omits
-          the tag cleanly. Tracked upstream:
-          [jonasmerlin/astro-seo#107](https://github.com/jonasmerlin/astro-seo/issues/107).
-        - **Single `og:image` tag instead of `og:image` + `og:image:url`.** The
-          `astro-seo` path emitted both with the same value — synonymous, harmless,
-          but noise. `<Seo>` emits just `og:image`.
-        - **Single `<meta name="robots">` tag.** The `astro-seo` path always
-          emitted its own default `index, follow` tag that couldn't be suppressed,
-          while we needed our own to add `max-snippet:-1, max-image-preview:large,
+          ### Bug fixes (behavior changes that fix wrong output)
+          - **`articlePublisher` now actually renders.** Previously the prop typechecked
+            but was silently dropped — `astro-seo`'s `OpenGraphArticleTags` doesn't
+            destructure `publisher`, and its `openGraph.article` type doesn't include
+            the field. Anyone using `articlePublisher` was getting no output. `<Seo>`
+            now emits `<meta property="article:publisher" content="…">` as documented.
+            Filed upstream: [jonasmerlin/astro-seo#110](https://github.com/jonasmerlin/astro-seo/issues/110).
+          - **`<link rel="canonical">` no longer leaks on `noindex` pages.** The
+            intent ("omit canonical on noindex" per Google recommendation) was
+            defeated by `astro-seo`'s built-in canonical fallback that reconstructs
+            the tag from `Astro.url` when the prop is undefined. `<Seo>` now omits
+            the tag cleanly. Tracked upstream:
+            [jonasmerlin/astro-seo#107](https://github.com/jonasmerlin/astro-seo/issues/107).
+          - **Single `og:image` tag instead of `og:image` + `og:image:url`.** The
+            `astro-seo` path emitted both with the same value — synonymous, harmless,
+            but noise. `<Seo>` emits just `og:image`.
+          - **Single `<meta name="robots">` tag.** The `astro-seo` path always
+            emitted its own default `index, follow` tag that couldn't be suppressed,
+            while we needed our own to add `max-snippet:-1, max-image-preview:large,
 
     max-video-preview:-1`. Result was two robots tags per page. `<Seo>` now
     emits one merged tag with all directives.
 
-        ### Cosmetic changes (HTML diff but equivalent meaning)
+          ### Cosmetic changes (HTML diff but equivalent meaning)
 
-        The byte-for-byte head output differs from 0.x in tag ordering. Search engines
-        treat these as identical, but consumers running snapshot tests against
-        `<Seo>` output will see diffs.
-        - **Tag grouping by concern**: title → canonical → description → robots →
-          OG basic → OG optional → OG image meta → OG article → twitter →
-          hreflang → author → extras → JSON-LD. Previously the order was driven
-          by `astro-seo`'s sub-components.
-        - **Twitter overrides** follow the same field order as their OG counterparts
-          (card / site / creator / title / description / image / imageAlt). The
-          legacy order was card / site / title / image / imageAlt / description / creator.
-        - **Hreflang link attribute order**: `rel` → `hreflang` → `href`.
-          The legacy order was `rel` → `href` → `hreflang`.
+          The byte-for-byte head output differs from 0.x in tag ordering. Search engines
+          treat these as identical, but consumers running snapshot tests against
+          `<Seo>` output will see diffs.
+          - **Tag grouping by concern**: title → canonical → description → robots →
+            OG basic → OG optional → OG image meta → OG article → twitter →
+            hreflang → author → extras → JSON-LD. Previously the order was driven
+            by `astro-seo`'s sub-components.
+          - **Twitter overrides** follow the same field order as their OG counterparts
+            (card / site / creator / title / description / image / imageAlt). The
+            legacy order was card / site / title / image / imageAlt / description / creator.
+          - **Hreflang link attribute order**: `rel` → `hreflang` → `href`.
+            The legacy order was `rel` → `href` → `hreflang`.
 
-        ### Breaking API changes
-        - **Removed `buildAstroSeoProps`**. Replaced by `buildSeoContext`, which
-          returns a flat, render-ready normalization (`SeoContext`) rather than the
-          nested `astro-seo`-shaped adapter. Migration:
+          ### Breaking API changes
+          - **Removed `buildAstroSeoProps`**. Replaced by `buildSeoContext`, which
+            returns a flat, render-ready normalization (`SeoContext`) rather than the
+            nested `astro-seo`-shaped adapter. Migration:
 
-            ```diff
-            - import { buildAstroSeoProps } from '@jdevalk/astro-seo-graph';
-            - const props = buildAstroSeoProps(seo, Astro.url.href);
-            - props.openGraph.basic.title // nested
-            + import { buildSeoContext } from '@jdevalk/astro-seo-graph';
-            + const ctx = buildSeoContext(seo, Astro.url.href);
-            + ctx.og.title // flat
-            ```
+              ```diff
+              - import { buildAstroSeoProps } from '@jdevalk/astro-seo-graph';
+              - const props = buildAstroSeoProps(seo, Astro.url.href);
+              - props.openGraph.basic.title // nested
+              + import { buildSeoContext } from '@jdevalk/astro-seo-graph';
+              + const ctx = buildSeoContext(seo, Astro.url.href);
+              + ctx.og.title // flat
+              ```
 
-        - **Removed `AstroSeoProps` type export**. The intermediate shape no
-          longer exists. Use `SeoContext` (the new normalized shape) or `SeoProps`
-          (the public input shape) depending on which side of the boundary you're on.
-        - **Removed `astro-seo` from dependencies**. If you imported it transitively
-          through this package, install it directly: `pnpm add astro-seo`.
+          - **Removed `AstroSeoProps` type export**. The intermediate shape no
+            longer exists. Use `SeoContext` (the new normalized shape) or `SeoProps`
+            (the public input shape) depending on which side of the boundary you're on.
+          - **Removed `astro-seo` from dependencies**. If you imported it transitively
+            through this package, install it directly: `pnpm add astro-seo`.
 
-        ### New exports
-        - `buildSeoContext(props, url): SeoContext` — pure-TS normalization.
-        - `SeoContext` type — flat render-ready shape.
-        - `ROBOTS_EXTRAS` constant — the `max-snippet:-1, max-image-preview:large,
+          ### New exports
+          - `buildSeoContext(props, url): SeoContext` — pure-TS normalization.
+          - `SeoContext` type — flat render-ready shape.
+          - `ROBOTS_EXTRAS` constant — the `max-snippet:-1, max-image-preview:large,
 
     max-video-preview:-1`directives`<Seo>` always appends to the robots tag.
 
