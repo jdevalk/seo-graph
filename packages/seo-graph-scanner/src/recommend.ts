@@ -131,17 +131,54 @@ function primaryType(entity: Record<string, unknown>): string | undefined {
 }
 
 /**
+ * Host patterns that identify government domains. Each regex is
+ * anchored at the end of the hostname so subdomains match naturally
+ * (`digital.service.gov.uk` matches `.gov.uk`).
+ */
+const GOVERNMENT_HOST_PATTERNS: RegExp[] = [
+    /\.gov(\.[a-z]{2,})?$/, // .gov (US federal), .gov.uk, .gov.au, .gov.nl, .gov.sg, etc.
+    /\.mil$/, // US military
+    /\.gob(\.[a-z]{2,})?$/, // Spanish / Latin American government (.gob.mx, .gob.ar, .gob.es)
+    /\.gouv\.fr$/, // France — central government portal
+    /\.gc\.ca$/, // Government of Canada
+    /\.go\.jp$/, // Japan — central/local government
+    /\.bund\.de$/, // Germany — federal government
+    /\.overheid\.nl$/, // Netherlands — government portal
+];
+
+/** Academic-domain patterns — catches institutional hosts outside `.edu`. */
+const EDUCATION_HOST_PATTERNS: RegExp[] = [
+    /\.edu(\.[a-z]{2,})?$/, // .edu (US), .edu.au, .edu.sg, etc.
+    /\.ac\.[a-z]{2,}$/, // .ac.uk, .ac.jp, .ac.at, .ac.nz, etc. (academic second-level)
+];
+
+/** News-org host patterns. */
+const NEWS_HOST_PATTERNS: RegExp[] = [
+    /^news\./, // news.bbc.co.uk, news.ycombinator.com, etc.
+    /\.news$/, // the `.news` gTLD
+];
+
+/** Itemprops on a bare-`Organization` microdata island that imply LocalBusiness. */
+const LOCAL_BUSINESS_MICRODATA_PROPS = ['telephone', 'address', 'openingHours'];
+
+/**
  * Pick the most specific Organization subtype to recommend, honoring
- * signals in this order:
+ * signals in this order (strongest first):
  *
  *   1. Whatever the site already declares in its JSON-LD. If a live
  *      entity's @type is a known Organization subtype (e.g.
  *      NewsMediaOrganization, LocalBusiness), we preserve it — never
  *      downgrade a caller's explicit choice.
- *   2. The microdata itemtype on the page (`<div itemtype="…Restaurant">`).
- *   3. URL TLD: `.gov`/`.gov.<cc>` → GovernmentOrganization;
- *      `.edu`/`.edu.<cc>` → EducationalOrganization.
- *   4. Fall back to the generic `Organization`.
+ *   2. A specific subtype encoded in page microdata (`<div itemtype="…Restaurant">`).
+ *   3. A bare-`Organization` microdata island that carries LocalBusiness
+ *      itemprops (`telephone`, `address`, `openingHours`).
+ *   4. URL host matches a known government pattern (`.gov*`, `.mil`,
+ *      `.gouv.fr`, `.gc.ca`, `.go.jp`, `.bund.de`, `.overheid.nl`, etc.).
+ *   5. URL host matches a known academic pattern (`.edu*`, `.ac.<cc>`).
+ *   6. URL host matches a news pattern (`news.*` subdomain or `.news` TLD).
+ *   7. Page-level classification — if this page itself reads as a
+ *      NewsArticle, the publisher is almost certainly news.
+ *   8. Fall back to the generic `Organization`.
  *
  * The id scheme keeps `/#/schema.org/Organization/publisher` regardless
  * of the subtype chosen; the URL is an opaque identifier, not a type
@@ -157,23 +194,38 @@ export function inferOrganizationType(
         if (t && t !== 'Organization' && KNOWN_ORG_SUBTYPES.has(t)) return t;
     }
 
-    // 2. Microdata itemtype on the page (`<div itemtype="https://schema.org/Restaurant">`).
+    // 2. Specific Organization subtype in microdata itemtype.
     for (const item of facts.microdata) {
         const match = item.itemtype.match(/schema\.org\/(\w+)$/);
         const type = match?.[1];
         if (type && type !== 'Organization' && KNOWN_ORG_SUBTYPES.has(type)) return type;
     }
 
-    // 3. TLD heuristics.
-    try {
-        const host = new URL(facts.url).hostname.toLowerCase();
-        // `.gov`, `.gov.uk`, `.gov.nl`, etc.
-        if (/\.gov(\.[a-z]{2,})?$/.test(host)) return 'GovernmentOrganization';
-        // `.edu`, `.edu.au`, etc.
-        if (/\.edu(\.[a-z]{2,})?$/.test(host)) return 'EducationalOrganization';
-    } catch {
-        // Fall through to default.
+    // 3. Bare-Organization microdata island carrying LocalBusiness props.
+    for (const item of facts.microdata) {
+        const match = item.itemtype.match(/schema\.org\/(\w+)$/);
+        const type = match?.[1];
+        if (type !== 'Organization') continue;
+        if (LOCAL_BUSINESS_MICRODATA_PROPS.some((prop) => item.props[prop])) {
+            return 'LocalBusiness';
+        }
     }
+
+    // 4–6. Host-based heuristics.
+    let host = '';
+    try {
+        host = new URL(facts.url).hostname.toLowerCase();
+    } catch {
+        // Malformed URL — fall straight through to the default below.
+    }
+    if (host) {
+        if (GOVERNMENT_HOST_PATTERNS.some((re) => re.test(host))) return 'GovernmentOrganization';
+        if (EDUCATION_HOST_PATTERNS.some((re) => re.test(host))) return 'EducationalOrganization';
+        if (NEWS_HOST_PATTERNS.some((re) => re.test(host))) return 'NewsMediaOrganization';
+    }
+
+    // 7. Page classification signal — NewsArticle implies a news publisher.
+    if (classifyPage(facts) === 'NewsArticle') return 'NewsMediaOrganization';
 
     return 'Organization';
 }

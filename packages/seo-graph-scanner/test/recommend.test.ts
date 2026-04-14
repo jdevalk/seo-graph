@@ -156,6 +156,152 @@ describe('inferOrganizationType', () => {
             ]),
         ).toBe('Organization');
     });
+
+    describe('extended government host patterns', () => {
+        it.each([
+            ['https://army.mil/', 'GovernmentOrganization'],
+            ['https://www.gouv.fr/', 'GovernmentOrganization'],
+            ['https://canada.gc.ca/', 'GovernmentOrganization'],
+            ['https://www.mofa.go.jp/', 'GovernmentOrganization'],
+            ['https://www.bund.de/', 'GovernmentOrganization'],
+            ['https://www.overheid.nl/', 'GovernmentOrganization'],
+            ['https://www.gob.mx/', 'GovernmentOrganization'],
+        ])('%s → %s', (url, expected) => {
+            expect(inferOrganizationType(facts({ url }))).toBe(expected);
+        });
+
+        it('does not match near-misses like .gob alone in the middle of a host', () => {
+            expect(inferOrganizationType(facts({ url: 'https://gob.example.com/' }))).toBe(
+                'Organization',
+            );
+        });
+    });
+
+    describe('extended academic host patterns', () => {
+        it.each([
+            ['https://www.ox.ac.uk/', 'EducationalOrganization'],
+            ['https://u-tokyo.ac.jp/', 'EducationalOrganization'],
+            ['https://www.sydney.edu.au/', 'EducationalOrganization'],
+        ])('%s → %s', (url, expected) => {
+            expect(inferOrganizationType(facts({ url }))).toBe(expected);
+        });
+    });
+
+    describe('news host patterns', () => {
+        it('returns NewsMediaOrganization for a `news.` subdomain', () => {
+            expect(inferOrganizationType(facts({ url: 'https://news.bbc.co.uk/article' }))).toBe(
+                'NewsMediaOrganization',
+            );
+        });
+
+        it('returns NewsMediaOrganization for the .news gTLD', () => {
+            expect(inferOrganizationType(facts({ url: 'https://examplepaper.news/' }))).toBe(
+                'NewsMediaOrganization',
+            );
+        });
+
+        it('government host outranks news subdomain (stronger signal wins)', () => {
+            // e.g. news.gov.uk would be gov-first.
+            expect(inferOrganizationType(facts({ url: 'https://news.gov.uk/release' }))).toBe(
+                'GovernmentOrganization',
+            );
+        });
+    });
+
+    describe('microdata LocalBusiness props signal', () => {
+        it('returns LocalBusiness when a bare Organization island has telephone', () => {
+            expect(
+                inferOrganizationType(
+                    facts({
+                        url: 'https://example.com/',
+                        microdata: [
+                            {
+                                itemtype: 'https://schema.org/Organization',
+                                props: { name: 'X', telephone: '+31-24-1234567' },
+                            },
+                        ],
+                    }),
+                ),
+            ).toBe('LocalBusiness');
+        });
+
+        it('returns LocalBusiness when address is set', () => {
+            expect(
+                inferOrganizationType(
+                    facts({
+                        url: 'https://example.com/',
+                        microdata: [
+                            {
+                                itemtype: 'https://schema.org/Organization',
+                                props: { address: 'Somewhere 1, Wijchen' },
+                            },
+                        ],
+                    }),
+                ),
+            ).toBe('LocalBusiness');
+        });
+
+        it('does NOT override an explicit microdata subtype with LocalBusiness', () => {
+            // Restaurant is more specific and comes from step 2; step 3
+            // shouldn't downgrade it to LocalBusiness.
+            expect(
+                inferOrganizationType(
+                    facts({
+                        url: 'https://example.com/',
+                        microdata: [
+                            {
+                                itemtype: 'https://schema.org/Restaurant',
+                                props: { telephone: '+1 555 0100' },
+                            },
+                        ],
+                    }),
+                ),
+            ).toBe('Restaurant');
+        });
+
+        it('does not fire when the bare-Organization island has no relevant props', () => {
+            expect(
+                inferOrganizationType(
+                    facts({
+                        url: 'https://example.com/',
+                        microdata: [
+                            {
+                                itemtype: 'https://schema.org/Organization',
+                                props: { name: 'X' }, // no telephone/address/openingHours
+                            },
+                        ],
+                    }),
+                ),
+            ).toBe('Organization');
+        });
+    });
+
+    describe('NewsArticle classification tiebreaker', () => {
+        it('falls back to NewsMediaOrganization when the page is classified as NewsArticle', () => {
+            expect(
+                inferOrganizationType(
+                    facts({
+                        url: 'https://generic.example.com/',
+                        ogType: { value: 'article', source: 'og' },
+                        articleSection: { value: 'Breaking News', source: 'og' },
+                    }),
+                ),
+            ).toBe('NewsMediaOrganization');
+        });
+
+        it('does not override a stronger TLD signal', () => {
+            // .gov.uk wins even if the page is news-flavored.
+            expect(
+                inferOrganizationType(
+                    facts({
+                        url: 'https://example.gov.uk/news/breaking',
+                        ogType: { value: 'article', source: 'og' },
+                        articleSection: { value: 'Breaking News', source: 'og' },
+                    }),
+                ),
+            ).toBe('GovernmentOrganization');
+        });
+    });
 });
 
 describe('recommend', () => {
