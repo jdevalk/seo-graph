@@ -350,7 +350,7 @@ Once the endpoint is in place, enable the discovery link on the integration:
 
 ```ts
 // astro.config.mjs
-seoGraph({ markdownAlternate: true })
+seoGraph({ markdownAlternate: true });
 ```
 
 `<Seo>` then emits `<link rel="alternate" type="text/markdown" href="…">` on every page, with `href` derived from the canonical URL (e.g. `/blog/post/` → `/blog/post.md`). Default is `false` — enable it only after the endpoint is live, or the link will 404.

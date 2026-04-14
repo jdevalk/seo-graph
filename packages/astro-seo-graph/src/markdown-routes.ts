@@ -63,12 +63,9 @@ export interface MarkdownEndpointOptions<Entry> {
  * });
  * ```
  */
-export function createMarkdownEndpoint<Entry>(
-    options: MarkdownEndpointOptions<Entry>,
-): APIRoute {
+export function createMarkdownEndpoint<Entry>(options: MarkdownEndpointOptions<Entry>): APIRoute {
     const paramName = options.paramName ?? 'slug';
-    const cacheControl =
-        options.cacheControl === undefined ? 'max-age=300' : options.cacheControl;
+    const cacheControl = options.cacheControl === undefined ? 'max-age=300' : options.cacheControl;
     const contentType = options.contentType ?? 'text/markdown; charset=utf-8';
     const emitTokenHeader = options.emitTokenHeader !== false;
 

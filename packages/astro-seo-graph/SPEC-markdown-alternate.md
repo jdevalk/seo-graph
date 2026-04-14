@@ -10,7 +10,7 @@ Modified files: `src/routes.ts` (or new `src/markdown-routes.ts`), `src/componen
 
 Agents (Claude, ChatGPT, Perplexity) increasingly prefer markdown over HTML when reading web content. The WordPress plugin `progressplanner/markdown-alternate` and Cloudflare both expose site content as markdown via three mechanisms: dedicated `.md` URLs, `Accept: text/markdown` content negotiation, and `<link rel="alternate" type="text/markdown">` discovery.
 
-Astro sites are unusually well-placed to do this because content collections *start* as markdown — no HTML→MD conversion needed. `@jdevalk/astro-seo-graph` already owns the head-metadata surface (`<Seo>`) and the endpoint-factory pattern (`createSchemaEndpoint`), so this is the natural home.
+Astro sites are unusually well-placed to do this because content collections _start_ as markdown — no HTML→MD conversion needed. `@jdevalk/astro-seo-graph` already owns the head-metadata surface (`<Seo>`) and the endpoint-factory pattern (`createSchemaEndpoint`), so this is the natural home.
 
 ## Goal
 
@@ -104,9 +104,7 @@ export interface MarkdownEndpointOptions<Entry> {
     extraHeaders?: Record<string, string>;
 }
 
-export function createMarkdownEndpoint<Entry>(
-    options: MarkdownEndpointOptions<Entry>,
-): APIRoute;
+export function createMarkdownEndpoint<Entry>(options: MarkdownEndpointOptions<Entry>): APIRoute;
 ```
 
 The returned `APIRoute` reads `Astro.params.slug` (or configurable param name — see §5) to pick the matching entry. Returns 404 when no match.
@@ -237,10 +235,7 @@ import { markdownAlternate as cfgMarkdownAlternate } from 'virtual:astro-seo-gra
 if (cfgMarkdownAlternate !== false) {
     const href = deriveMdUrl(canonicalUrl);
     if (href) {
-        extend.link = [
-            ...(extend.link ?? []),
-            { rel: 'alternate', type: 'text/markdown', href },
-        ];
+        extend.link = [...(extend.link ?? []), { rel: 'alternate', type: 'text/markdown', href }];
     }
 }
 ```

@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-    renderMarkdownAlternate,
-    deriveMdUrl,
-} from '../src/markdown-alternate.js';
+import { renderMarkdownAlternate, deriveMdUrl } from '../src/markdown-alternate.js';
 import { createMarkdownEndpoint } from '../src/markdown-routes.js';
 
 describe('renderMarkdownAlternate', () => {
@@ -253,7 +250,9 @@ describe('createMarkdownEndpoint', () => {
                           body: p.body,
                       },
         });
-        const res = await (GET({ params: { slug: ['nested', 'slug'] } } as never) as Promise<Response>);
+        const res = await (GET({
+            params: { slug: ['nested', 'slug'] },
+        } as never) as Promise<Response>);
         expect(res.status).toBe(200);
     });
 });
