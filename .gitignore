@@ -10,3 +10,7 @@ coverage
 
 # AGENTS.md copies created by build scripts (the source of truth is the root copy)
 packages/*/AGENTS.md
+
+# Scanner output files
+packages/seo-graph-scanner/report.json
+packages/seo-graph-scanner/*.report.json
