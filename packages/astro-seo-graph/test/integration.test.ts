@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    buildLinkTargetSet,
     classifyInternalLink,
     collectAstroRedirectSources,
     countH1s,
@@ -103,6 +104,44 @@ describe('extractMetaDescription', () => {
 
     it('is case-insensitive on the name attribute', () => {
         expect(extractMetaDescription('<META NAME="Description" CONTENT="caps">')).toBe('caps');
+    });
+
+    it('preserves apostrophes inside a double-quoted value', () => {
+        const content = "She said don't stop and he wouldn't listen";
+        const html = `<meta name="description" content="${content}">`;
+        const extracted = extractMetaDescription(html);
+        expect(extracted).toBe(content);
+        expect(extracted?.length).toBe(content.length);
+    });
+
+    it('preserves double quotes inside a single-quoted value', () => {
+        const inner = 'She said "hi" and left';
+        const html = `<meta name='description' content='${inner}'>`;
+        const extracted = extractMetaDescription(html);
+        expect(extracted).toBe(inner);
+        expect(extracted?.length).toBe(inner.length);
+    });
+
+    it('decodes numeric entities (&#39;) alongside named ones (&amp;)', () => {
+        const html =
+            '<meta name="description" content="Rock &amp; Roll &#39;50s &quot;classics&quot;">';
+        const extracted = extractMetaDescription(html);
+        expect(extracted).toBe(`Rock & Roll '50s "classics"`);
+        expect(extracted?.length).toBe(`Rock & Roll '50s "classics"`.length);
+    });
+
+    it('reports the decoded length, not the raw encoded length', () => {
+        // A ~90-char description with an apostrophe — the old regex
+        // truncated to a handful of chars. Regression guard for the
+        // bug where meta length validation reported wildly short
+        // values on pages whose description contained `'`.
+        const raw =
+            "I like cats, don't you? This description is intentionally long so the regression check is meaningful.";
+        const html = `<meta name="description" content="${raw}">`;
+        const extracted = extractMetaDescription(html);
+        expect(extracted).toBe(raw);
+        expect(extracted?.length).toBe(raw.length);
+        expect(extracted?.length).toBeGreaterThan(80);
     });
 });
 
@@ -231,6 +270,41 @@ describe('htmlFileToPath', () => {
 
     it('normalizes backslashes (Windows paths)', () => {
         expect(htmlFileToPath('blog\\post\\index.html')).toBe('/blog/post/');
+    });
+});
+
+describe('buildLinkTargetSet', () => {
+    it('maps HTML files to their pretty-URL paths', () => {
+        const set = buildLinkTargetSet(['index.html', 'about/index.html', 'blog/post/index.html']);
+        expect(set.has('/')).toBe(true);
+        expect(set.has('/about/')).toBe(true);
+        expect(set.has('/blog/post/')).toBe(true);
+    });
+
+    it('includes non-HTML assets verbatim as root-relative paths', () => {
+        const set = buildLinkTargetSet([
+            'index.html',
+            'images/test.avif',
+            'fonts/inter.woff2',
+            'downloads/spec.pdf',
+        ]);
+        expect(set.has('/images/test.avif')).toBe(true);
+        expect(set.has('/fonts/inter.woff2')).toBe(true);
+        expect(set.has('/downloads/spec.pdf')).toBe(true);
+    });
+
+    it('regression: classifyInternalLink does not 404 on a static asset in the build', () => {
+        // The original bug: validateInternalLinks indexed only *.html
+        // so a link to a public/ asset was classified as not-found.
+        const set = buildLinkTargetSet(['index.html', 'images/test.avif']);
+        expect(classifyInternalLink('/images/test.avif', set, 'https://example.com').status).toBe(
+            'ok',
+        );
+    });
+
+    it('normalizes backslashes (Windows paths)', () => {
+        const set = buildLinkTargetSet(['images\\logo.svg']);
+        expect(set.has('/images/logo.svg')).toBe(true);
     });
 });
 

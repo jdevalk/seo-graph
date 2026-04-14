@@ -354,6 +354,32 @@ export function htmlFileToPath(relativePath: string): string {
 }
 
 /**
+ * Build the set of root-relative paths that count as valid link
+ * targets, given the full list of files produced by the build.
+ *
+ * HTML files become their pretty-URL form (via `htmlFileToPath`, so
+ * `blog/post/index.html` → `/blog/post/`). Every other file —
+ * static assets copied from `public/`, sitemap files, etc. — is
+ * included verbatim as `/<path>`, because those are valid link
+ * targets too even though they're not pages.
+ *
+ * Adding non-HTML files here is what stops `validateInternalLinks`
+ * from flagging `<a href="/images/foo.avif">` as a 404.
+ */
+export function buildLinkTargetSet(files: readonly string[]): Set<string> {
+    const paths = new Set<string>();
+    for (const file of files) {
+        if (file.endsWith('.html')) {
+            paths.add(htmlFileToPath(file));
+        } else {
+            const normalized = file.split(/[\\/]/).join('/');
+            paths.add('/' + normalized);
+        }
+    }
+    return paths;
+}
+
+/**
  * Extract all `<a href="...">` values from an HTML string. Returns the
  * raw attribute values (not decoded) in document order.
  */
@@ -489,25 +515,33 @@ export function extractTitle(html: string): string | null {
 /**
  * Extract the `content` attribute of the first `<meta name="description">`
  * tag. Returns `null` when absent. Entity-decoded for duplicate detection.
+ *
+ * Uses a backreference on the opening quote so the capture terminates
+ * only on the *matching* quote — `content="don't stop"` keeps its
+ * apostrophe, and `content='She said "hi"'` keeps its double quotes.
+ * A naive `[^"']*` character class would cut both short.
  */
 export function extractMetaDescription(html: string): string | null {
-    const re =
-        /<meta\s+[^>]*name\s*=\s*["']description["'][^>]*content\s*=\s*["']([^"']*)["'][^>]*>|<meta\s+[^>]*content\s*=\s*["']([^"']*)["'][^>]*name\s*=\s*["']description["'][^>]*>/i;
-    const match = html.match(re);
+    // Two orderings: name-before-content or content-before-name.
+    const nameFirst =
+        /<meta\b[^>]*?\bname\s*=\s*["']description["'][^>]*?\bcontent\s*=\s*(["'])([\s\S]*?)\1/i;
+    const contentFirst =
+        /<meta\b[^>]*?\bcontent\s*=\s*(["'])([\s\S]*?)\1[^>]*?\bname\s*=\s*["']description["']/i;
+    const match = nameFirst.exec(html) ?? contentFirst.exec(html);
     if (!match) return null;
-    const raw = (match[1] ?? match[2] ?? '').trim();
+    const raw = (match[2] ?? '').trim();
     if (!raw) return null;
     return decodeHtmlEntities(raw);
 }
 
-async function collectHtmlFiles(dir: string, base: string = dir): Promise<string[]> {
+async function collectBuildFiles(dir: string, base: string = dir): Promise<string[]> {
     const entries = await readdir(dir, { withFileTypes: true });
     const files: string[] = [];
     for (const entry of entries) {
         const fullPath = join(dir, entry.name);
         if (entry.isDirectory()) {
-            files.push(...(await collectHtmlFiles(fullPath, base)));
-        } else if (entry.isFile() && entry.name.endsWith('.html')) {
+            files.push(...(await collectBuildFiles(fullPath, base)));
+        } else if (entry.isFile()) {
             files.push(relative(base, fullPath));
         }
     }
@@ -580,11 +614,18 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                     lengthBounds !== null ||
                     internalLinksEnabled ||
                     autoLlmsTxt;
-                const htmlFiles =
-                    needsContentScan || indexNow || llmsTxt ? await collectHtmlFiles(buildDir) : [];
+                const needsAnyFiles =
+                    needsContentScan || indexNow || llmsTxt || internalLinksEnabled;
+                const allFiles = needsAnyFiles ? await collectBuildFiles(buildDir) : [];
+                const htmlFiles = allFiles.filter((f) => f.endsWith('.html'));
                 let builtPaths: Set<string> | null = null;
                 if (internalLinksEnabled) {
-                    builtPaths = new Set(htmlFiles.map(htmlFileToPath));
+                    // Include every build artefact, not just HTML pages.
+                    // Static assets copied from public/ (images, fonts,
+                    // downloads, etc.) are valid link targets too —
+                    // filtering to .html would flag <a href="/images/foo.avif">
+                    // as a 404.
+                    builtPaths = buildLinkTargetSet(allFiles);
                     if (internalLinksHonorRedirects) {
                         // Treat explicit redirect sources as valid link
                         // targets. Reads `_redirects` (Netlify/Cloudflare
