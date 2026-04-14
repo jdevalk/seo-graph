@@ -1,11 +1,31 @@
-import { discoverFromSitemap, type DiscoverOptions } from './sitemap.js';
-import { fetchHtml, type FetchOptions } from './fetcher.js';
+import { diffRecommendedVsLive, flattenLiveEntities, type DiffOptions } from './diff.js';
 import { extractFromHtml } from './extract.js';
+import { fetchHtml, type FetchOptions } from './fetcher.js';
+import { inferFromHtml, type InferredFacts } from './infer.js';
+import { recommend, type PageClassification, type RecommendedGraph } from './recommend.js';
+import { discoverFromSitemap, type DiscoverOptions } from './sitemap.js';
 import { validateBlock, type Finding, type ValidatedBlock } from './validate.js';
+
+export interface RecommendOptions {
+    /**
+     * Enable the HTML-inference → recommended-graph → diff pipeline.
+     * When `true`, each page is additionally audited against a graph
+     * the scanner *would have* emitted based on the page's HTML, and
+     * any gaps show up in `findings`. Defaults to `true`.
+     */
+    enabled?: boolean;
+    /** Forwarded to the diff step. See `DiffOptions` for details. */
+    diff?: DiffOptions;
+}
 
 export interface ScanOptions {
     sitemap: DiscoverOptions;
     fetch?: FetchOptions;
+    /**
+     * Recommendation/diff controls. Omit to run with defaults
+     * (enabled, no spurious-entity reporting).
+     */
+    recommend?: RecommendOptions;
 }
 
 export interface PageReport {
@@ -17,6 +37,12 @@ export interface PageReport {
     canonical?: string;
     blocks: ValidatedBlock[];
     findings: Finding[];
+    /** Page classification from the recommender, when enabled. */
+    classification?: PageClassification;
+    /** The inferred facts used to build the recommendation. */
+    inferred?: InferredFacts;
+    /** The recommended graph — useful for debugging / offline diffs. */
+    recommended?: RecommendedGraph;
 }
 
 export interface ScanReport {
@@ -41,6 +67,7 @@ export async function scanSite(
         discovered.map((d) => d.url),
         options.fetch,
     );
+    const recommendEnabled = options.recommend?.enabled !== false;
 
     const pages: PageReport[] = results.map((res) => {
         if (!res.html) {
@@ -70,7 +97,7 @@ export async function scanSite(
             });
         }
 
-        return {
+        const report: PageReport = {
             url: res.url,
             status: res.status,
             title: extracted.title,
@@ -79,6 +106,23 @@ export async function scanSite(
             blocks,
             findings: pageFindings,
         };
+
+        if (recommendEnabled) {
+            const inferred = inferFromHtml(res.html, res.url);
+            const recommended = recommend(inferred);
+            const liveEntities = flattenLiveEntities(extracted.jsonLd);
+            const diffFindings = diffRecommendedVsLive(
+                recommended,
+                liveEntities,
+                options.recommend?.diff,
+            );
+            report.classification = recommended.classification;
+            report.inferred = inferred;
+            report.recommended = recommended;
+            report.findings = [...pageFindings, ...diffFindings];
+        }
+
+        return report;
     });
 
     const summary = {

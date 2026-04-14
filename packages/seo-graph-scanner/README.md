@@ -2,7 +2,7 @@
 
 Sitemap-driven scanner that audits a live site's JSON-LD against seo-graph conventions. No crawling — the sitemap is the URL list.
 
-**Status:** Prototype. MVP slice is sitemap → fetch → existing-JSON-LD validation. Recommendation/inference layer is not built yet.
+**Status:** Prototype. Does two passes per page: structural validation of existing JSON-LD, and HTML inference → recommended-graph → diff against what the page actually emitted.
 
 ## CLI
 
@@ -15,6 +15,12 @@ npx seo-graph-scan https://example.com --limit 50
 
 # JSON output for piping into other tools
 npx seo-graph-scan https://example.com --json > report.json
+
+# Skip the HTML-inference/recommendation pass (structural validation only)
+npx seo-graph-scan https://example.com --no-recommend
+
+# Also report live JSON-LD entity types the scanner didn't recommend
+npx seo-graph-scan https://example.com --report-spurious
 ```
 
 ## Library
@@ -25,6 +31,7 @@ import { scanSite } from '@jdevalk/seo-graph-scanner';
 const report = await scanSite('https://example.com/sitemap.xml', {
     sitemap: { limit: 100 },
     fetch: { concurrency: 4, intervalMs: 250 },
+    recommend: { enabled: true, diff: { reportSpurious: false } },
 });
 
 for (const page of report.pages) {
@@ -36,7 +43,7 @@ for (const page of report.pages) {
 
 ## What it checks today
 
-Per JSON-LD block on each page:
+### Structural validation (per JSON-LD block)
 
 - JSON parseability
 - Valid shape (`@graph`, entity, or array of entities)
@@ -44,17 +51,24 @@ Per JSON-LD block on each page:
 - Every entity has `@id` (warning — references won't resolve otherwise)
 - Every `{ "@id": "..." }` reference resolves to an entity in the same block
 
-Per page:
+### Per page
 
 - No JSON-LD at all → warning
 - Fetch failure → error
 
+### HTML inference → recommendation → diff
+
+The scanner infers facts from the page's HTML (OpenGraph, microdata, visible bylines, breadcrumb markup, images) and asks `@jdevalk/seo-graph-core`'s piece builders what a well-instrumented graph would look like. It then diffs that recommendation against the page's actual JSON-LD:
+
+- **`missing-entity`** — a recommended type (WebSite, WebPage, Article, BreadcrumbList, ImageObject, Person, Organization, Product) isn't present in the live graph.
+- **`missing-property`** — a matched entity is missing a property the recommender set (e.g. `headline`, `datePublished`, `breadcrumb`).
+- **`property-mismatch`** — a scalar value or reference `@id` differs from the recommendation.
+- **`spurious-entity`** _(opt-in via `--report-spurious`)_ — a live entity whose `@type` the scanner didn't recommend.
+
+Page classification drives which entities get recommended: `og:type=article` → `BlogPosting` (or `NewsArticle` when the section is news-flavored), `og:type=profile` → `ProfilePage`, `og:type=website` on the root → `CollectionPage`, microdata `Product` → `Product`, everything else → `WebPage`. See `src/recommend.ts` for the full rules.
+
 ## What it does NOT do yet
 
-- Infer recommended entities from HTML (author bylines, OG, microdata)
-- Call seo-graph-core piece builders to produce a "recommended graph"
-- Diff recommended vs. live
-- Cross-block / cross-page reference resolution
+- Cross-block / cross-page reference resolution (the structural validator checks within a block only)
 - Required-property checks per schema.org type
-
-That's the next slice.
+- Deep comparison of nested objects without `@id` (skipped to avoid noise)

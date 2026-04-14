@@ -3,7 +3,13 @@ import { scanSite } from './scan.js';
 import { resolveSitemapUrl } from './sitemap.js';
 
 function parseArgs(argv: readonly string[]) {
-    const args: { target?: string; limit?: number; json?: boolean } = {};
+    const args: {
+        target?: string;
+        limit?: number;
+        json?: boolean;
+        noRecommend?: boolean;
+        reportSpurious?: boolean;
+    } = {};
     for (let i = 0; i < argv.length; i += 1) {
         const a = argv[i];
         if (a === '--limit') {
@@ -12,6 +18,10 @@ function parseArgs(argv: readonly string[]) {
             i += 1;
         } else if (a === '--json') {
             args.json = true;
+        } else if (a === '--no-recommend') {
+            args.noRecommend = true;
+        } else if (a === '--report-spurious') {
+            args.reportSpurious = true;
         } else if (a && !a.startsWith('-')) {
             args.target = a;
         }
@@ -20,9 +30,11 @@ function parseArgs(argv: readonly string[]) {
 }
 
 async function main() {
-    const { target, limit, json } = parseArgs(process.argv.slice(2));
+    const { target, limit, json, noRecommend, reportSpurious } = parseArgs(process.argv.slice(2));
     if (!target) {
-        console.error('Usage: seo-graph-scan <sitemap-url-or-origin> [--limit N] [--json]');
+        console.error(
+            'Usage: seo-graph-scan <sitemap-url-or-origin> [--limit N] [--json] [--no-recommend] [--report-spurious]',
+        );
         process.exit(2);
     }
 
@@ -38,6 +50,10 @@ async function main() {
 
     const report = await scanSite(sitemapUrl, {
         sitemap: { limit },
+        recommend: {
+            enabled: !noRecommend,
+            diff: { reportSpurious },
+        },
     });
 
     if (json) {
