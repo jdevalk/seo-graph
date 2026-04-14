@@ -51,8 +51,8 @@
         "sitemapper": "^3.2.9"
     },
     "devDependencies": {
-        "@types/node": "^22.0.0",
-        "typescript": "^5.6.0",
-        "vitest": "^2.0.0"
+        "@types/node": "^25.6.0",
+        "typescript": "^6.0.2",
+        "vitest": "^4.1.4"
     }
 }
