@@ -1,0 +1,1 @@
+Read `AGENTS.md` in the repository root for the complete API reference, site type recipes, and integration guide. It covers every piece builder, every common site type, and how to wire entities together.

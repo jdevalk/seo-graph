@@ -1,0 +1,58 @@
+{
+    "name": "@jdevalk/seo-graph-scanner",
+    "version": "0.0.1",
+    "description": "Scan a live site's JSON-LD against seo-graph conventions. Sitemap-driven, no crawling.",
+    "keywords": [
+        "schema.org",
+        "json-ld",
+        "seo",
+        "scanner",
+        "audit",
+        "sitemap"
+    ],
+    "author": "Joost de Valk <joost@joost.blog>",
+    "license": "MIT",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "bin": {
+        "seo-graph-scan": "./dist/cli.js"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jdevalk/seo-graph.git",
+        "directory": "packages/seo-graph-scanner"
+    },
+    "bugs": "https://github.com/jdevalk/seo-graph/issues",
+    "homepage": "https://github.com/jdevalk/seo-graph/tree/main/packages/seo-graph-scanner#readme",
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@jdevalk/seo-graph-core": "workspace:*",
+        "cheerio": "^1.0.0",
+        "p-queue": "^8.0.1",
+        "sitemapper": "^3.2.9"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "typescript": "^5.6.0",
+        "vitest": "^2.0.0"
+    }
+}
