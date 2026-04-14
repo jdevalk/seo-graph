@@ -109,17 +109,32 @@ export async function scanSite(
 
         if (recommendEnabled) {
             const inferred = inferFromHtml(res.html, res.url);
-            const recommended = recommend(inferred);
             const liveEntities = flattenLiveEntities(extracted.jsonLd);
-            const diffFindings = diffRecommendedVsLive(
-                recommended,
-                liveEntities,
-                options.recommend?.diff,
-            );
+            // Pass live entities so the recommender preserves any
+            // Organization subtype the site has explicitly declared
+            // (NewsMediaOrganization, LocalBusiness, etc.) rather than
+            // downgrading to generic Organization.
+            const recommended = recommend(inferred, { liveEntities });
             report.classification = recommended.classification;
             report.inferred = inferred;
             report.recommended = recommended;
-            report.findings = [...pageFindings, ...diffFindings];
+
+            // When the page has no JSON-LD at all, suppress the N
+            // `missing-entity` findings — the single `no-json-ld`
+            // warning plus the recommended graph on the PageReport is
+            // enough (the formatter will render it as a copy-paste
+            // snippet). Diffing only makes sense when there's a live
+            // graph to compare against.
+            if (liveEntities.length === 0) {
+                report.findings = pageFindings;
+            } else {
+                const diffFindings = diffRecommendedVsLive(
+                    recommended,
+                    liveEntities,
+                    options.recommend?.diff,
+                );
+                report.findings = [...pageFindings, ...diffFindings];
+            }
         }
 
         return report;

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { scanSite } from './scan.js';
+import { readFile } from 'node:fs/promises';
+import { formatReport } from './format.js';
+import { scanSite, type ScanReport } from './scan.js';
 import { resolveSitemapUrl } from './sitemap.js';
 
 function parseArgs(argv: readonly string[]) {
@@ -9,6 +11,12 @@ function parseArgs(argv: readonly string[]) {
         json?: boolean;
         noRecommend?: boolean;
         reportSpurious?: boolean;
+        /** Path to a previously-saved JSON report to re-render. */
+        read?: string;
+        /** Override per-page detail line count; 0 to suppress. */
+        detailsPerPage?: number;
+        /** Override top-pages list size; 0 to suppress. */
+        topPages?: number;
     } = {};
     for (let i = 0; i < argv.length; i += 1) {
         const a = argv[i];
@@ -22,6 +30,18 @@ function parseArgs(argv: readonly string[]) {
             args.noRecommend = true;
         } else if (a === '--report-spurious') {
             args.reportSpurious = true;
+        } else if (a === '--read') {
+            const next = argv[i + 1];
+            if (next) args.read = next;
+            i += 1;
+        } else if (a === '--details') {
+            const next = argv[i + 1];
+            if (next !== undefined) args.detailsPerPage = Number.parseInt(next, 10);
+            i += 1;
+        } else if (a === '--top') {
+            const next = argv[i + 1];
+            if (next !== undefined) args.topPages = Number.parseInt(next, 10);
+            i += 1;
         } else if (a && !a.startsWith('-')) {
             args.target = a;
         }
@@ -29,12 +49,39 @@ function parseArgs(argv: readonly string[]) {
     return args;
 }
 
+const USAGE =
+    'Usage:\n' +
+    '  seo-graph-scan <sitemap-url-or-origin> [--limit N] [--json] [--no-recommend] [--report-spurious]\n' +
+    '  seo-graph-scan --read <report.json> [--details N] [--top N]';
+
+async function loadReport(path: string): Promise<ScanReport> {
+    const raw = await readFile(path, 'utf8');
+    return JSON.parse(raw) as ScanReport;
+}
+
 async function main() {
-    const { target, limit, json, noRecommend, reportSpurious } = parseArgs(process.argv.slice(2));
-    if (!target) {
-        console.error(
-            'Usage: seo-graph-scan <sitemap-url-or-origin> [--limit N] [--json] [--no-recommend] [--report-spurious]',
+    const { target, limit, json, noRecommend, reportSpurious, read, detailsPerPage, topPages } =
+        parseArgs(process.argv.slice(2));
+
+    // --- Replay mode: pretty-print a saved JSON report ---
+    if (read) {
+        const report = await loadReport(read);
+        if (json) {
+            console.log(JSON.stringify(report, null, 2));
+            return;
+        }
+        console.log(
+            formatReport(report, {
+                ...(detailsPerPage !== undefined ? { detailsPerPage } : {}),
+                ...(topPages !== undefined ? { topPages } : {}),
+            }),
         );
+        return;
+    }
+
+    // --- Scan mode: fetch + analyse + render ---
+    if (!target) {
+        console.error(USAGE);
         process.exit(2);
     }
 
@@ -61,22 +108,12 @@ async function main() {
         return;
     }
 
-    const { summary } = report;
-    console.log(`\nScanned ${summary.pagesScanned} pages from ${report.sitemapUrl}`);
-    console.log(`  with JSON-LD:    ${summary.pagesWithJsonLd}`);
-    console.log(`  without JSON-LD: ${summary.pagesWithoutJsonLd}`);
-    console.log(`  fetch errors:    ${summary.pagesWithErrors}`);
     console.log(
-        `Findings: ${summary.totalFindingsBySeverity.error} errors, ${summary.totalFindingsBySeverity.warning} warnings\n`,
+        formatReport(report, {
+            ...(detailsPerPage !== undefined ? { detailsPerPage } : {}),
+            ...(topPages !== undefined ? { topPages } : {}),
+        }),
     );
-
-    for (const page of report.pages) {
-        if (page.findings.length === 0) continue;
-        console.log(`${page.url}`);
-        for (const f of page.findings) {
-            console.log(`  [${f.severity}] ${f.code}: ${f.message}`);
-        }
-    }
 }
 
 main().catch((err) => {

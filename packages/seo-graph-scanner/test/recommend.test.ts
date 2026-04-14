@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InferredFacts } from '../src/infer.js';
-import { classifyPage, recommend } from '../src/recommend.js';
+import { classifyPage, inferOrganizationType, recommend } from '../src/recommend.js';
 
 /** Build an `InferredFacts` with a handful of overrides. */
 function facts(overrides: Partial<InferredFacts> = {}): InferredFacts {
@@ -91,7 +91,93 @@ describe('classifyPage', () => {
     });
 });
 
+describe('inferOrganizationType', () => {
+    it('returns Organization for a generic .com URL with no other signals', () => {
+        expect(inferOrganizationType(facts({ url: 'https://example.com/' }))).toBe('Organization');
+    });
+
+    it('returns GovernmentOrganization for a .gov TLD', () => {
+        expect(inferOrganizationType(facts({ url: 'https://whitehouse.gov/' }))).toBe(
+            'GovernmentOrganization',
+        );
+    });
+
+    it('returns GovernmentOrganization for country-code government TLDs (.gov.uk)', () => {
+        expect(inferOrganizationType(facts({ url: 'https://example.gov.uk/page/' }))).toBe(
+            'GovernmentOrganization',
+        );
+    });
+
+    it('returns EducationalOrganization for a .edu TLD', () => {
+        expect(inferOrganizationType(facts({ url: 'https://mit.edu/' }))).toBe(
+            'EducationalOrganization',
+        );
+    });
+
+    it('picks up a LocalBusiness subtype from page microdata', () => {
+        expect(
+            inferOrganizationType(
+                facts({
+                    url: 'https://example.com/',
+                    microdata: [
+                        { itemtype: 'https://schema.org/Restaurant', props: { name: 'X' } },
+                    ],
+                }),
+            ),
+        ).toBe('Restaurant');
+    });
+
+    it('preserves a live Organization subtype over inference', () => {
+        // Even though the URL is .com (would default to Organization),
+        // the live JSON-LD declares NewsMediaOrganization. We must not
+        // downgrade what the site already says.
+        expect(
+            inferOrganizationType(facts({ url: 'https://news.example.com/' }), [
+                { '@type': 'NewsMediaOrganization', '@id': 'x' },
+            ]),
+        ).toBe('NewsMediaOrganization');
+    });
+
+    it('ignores a live plain Organization when a stronger signal exists', () => {
+        // Live says `Organization` (the default); TLD says `.gov`.
+        // The live type is too weak to preserve against a stronger
+        // inference.
+        expect(
+            inferOrganizationType(facts({ url: 'https://example.gov/' }), [
+                { '@type': 'Organization', '@id': 'x' },
+            ]),
+        ).toBe('GovernmentOrganization');
+    });
+
+    it('honors the first array-typed Organization entry', () => {
+        expect(
+            inferOrganizationType(facts({ url: 'https://example.com/' }), [
+                { '@type': ['Organization', 'LocalBusiness'], '@id': 'x' },
+            ]),
+        ).toBe('Organization');
+    });
+});
+
 describe('recommend', () => {
+    describe('organization subtype threading', () => {
+        it('emits the inferred Organization subtype on the publisher piece', () => {
+            const out = recommend(
+                facts({ url: 'https://example.gov/', siteName: { value: 'State', source: 'og' } }),
+            );
+            const org = out.entities.find((e) => e['@id']?.toString().endsWith('publisher'));
+            expect(org?.['@type']).toBe('GovernmentOrganization');
+            expect(out.organizationType).toBe('GovernmentOrganization');
+        });
+
+        it('honors liveEntities for subtype preservation', () => {
+            const out = recommend(facts({ url: 'https://example.com/' }), {
+                liveEntities: [{ '@type': 'NewsMediaOrganization', '@id': 'x' }],
+            });
+            const org = out.entities.find((e) => e['@id']?.toString().endsWith('publisher'));
+            expect(org?.['@type']).toBe('NewsMediaOrganization');
+        });
+    });
+
     describe('baseline (WebPage only)', () => {
         it('always emits Organization, WebSite, WebPage at minimum', () => {
             const out = recommend(

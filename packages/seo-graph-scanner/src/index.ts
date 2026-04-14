@@ -31,3 +31,6 @@ export type { RecommendedGraph, PageClassification } from './recommend.js';
 
 export { diffRecommendedVsLive, flattenLiveEntities } from './diff.js';
 export type { DiffOptions } from './diff.js';
+
+export { formatReport } from './format.js';
+export type { FormatOptions } from './format.js';

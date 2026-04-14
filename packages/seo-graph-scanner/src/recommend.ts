@@ -36,10 +36,62 @@ export type PageClassification =
     | 'CollectionPage'
     | 'Product';
 
+/**
+ * Well-known Organization subtypes we're willing to recommend. Kept
+ * narrow on purpose — recommending an aggressive subtype (e.g. LocalBusiness
+ * when there's only weak evidence) would be noisier than just defaulting
+ * to Organization.
+ */
+export type OrganizationType =
+    | 'Organization'
+    | 'NewsMediaOrganization'
+    | 'GovernmentOrganization'
+    | 'EducationalOrganization'
+    | 'Corporation'
+    | 'NGO'
+    | 'OnlineBusiness'
+    | 'LocalBusiness'
+    | 'Restaurant'
+    | 'Store'
+    | 'Hotel';
+
+/** Known Organization-adjacent schema.org types we'll preserve verbatim from live JSON-LD. */
+const KNOWN_ORG_SUBTYPES = new Set<string>([
+    'Organization',
+    'NewsMediaOrganization',
+    'GovernmentOrganization',
+    'EducationalOrganization',
+    'CollegeOrUniversity',
+    'School',
+    'ResearchOrganization',
+    'Corporation',
+    'NGO',
+    'OnlineBusiness',
+    'LocalBusiness',
+    'Restaurant',
+    'Store',
+    'Hotel',
+    'MedicalOrganization',
+    'SportsOrganization',
+    'PerformingGroup',
+    'LibrarySystem',
+]);
+
+export interface RecommendOptions {
+    /**
+     * Live JSON-LD entities the page already emits. When provided, the
+     * recommender preserves any Organization subtype the site has
+     * explicitly declared, rather than downgrading it to `Organization`.
+     */
+    liveEntities?: ReadonlyArray<Record<string, unknown>>;
+}
+
 /** Flat list of recommended entities, ready for diffing. */
 export interface RecommendedGraph {
     /** The classification chosen for this page. */
     classification: PageClassification;
+    /** Organization subtype we recommend for the publisher. */
+    organizationType: OrganizationType | string;
     /** Root URL of the site (derived from canonical/page URL). */
     siteUrl: string;
     /** The recommended `@graph` entries, in emission order. */
@@ -61,6 +113,69 @@ function originOf(url: string): string {
  */
 function normalizeLocale(value: string | undefined): string | undefined {
     return value?.includes('_') ? value.replace('_', '-') : value;
+}
+
+/**
+ * Extract the plain @type string from an entity, ignoring array forms.
+ * Returns the first string in an array-of-types so we can still match
+ * against KNOWN_ORG_SUBTYPES for multi-typed entities.
+ */
+function primaryType(entity: Record<string, unknown>): string | undefined {
+    const t = entity['@type'];
+    if (typeof t === 'string') return t;
+    if (Array.isArray(t)) {
+        const first = t.find((v): v is string => typeof v === 'string');
+        return first;
+    }
+    return undefined;
+}
+
+/**
+ * Pick the most specific Organization subtype to recommend, honoring
+ * signals in this order:
+ *
+ *   1. Whatever the site already declares in its JSON-LD. If a live
+ *      entity's @type is a known Organization subtype (e.g.
+ *      NewsMediaOrganization, LocalBusiness), we preserve it — never
+ *      downgrade a caller's explicit choice.
+ *   2. The microdata itemtype on the page (`<div itemtype="…Restaurant">`).
+ *   3. URL TLD: `.gov`/`.gov.<cc>` → GovernmentOrganization;
+ *      `.edu`/`.edu.<cc>` → EducationalOrganization.
+ *   4. Fall back to the generic `Organization`.
+ *
+ * The id scheme keeps `/#/schema.org/Organization/publisher` regardless
+ * of the subtype chosen; the URL is an opaque identifier, not a type
+ * assertion, and keeping it stable matches core's convention.
+ */
+export function inferOrganizationType(
+    facts: InferredFacts,
+    liveEntities: ReadonlyArray<Record<string, unknown>> = [],
+): OrganizationType | string {
+    // 1. Preserve existing subtype in live JSON-LD.
+    for (const entity of liveEntities) {
+        const t = primaryType(entity);
+        if (t && t !== 'Organization' && KNOWN_ORG_SUBTYPES.has(t)) return t;
+    }
+
+    // 2. Microdata itemtype on the page (`<div itemtype="https://schema.org/Restaurant">`).
+    for (const item of facts.microdata) {
+        const match = item.itemtype.match(/schema\.org\/(\w+)$/);
+        const type = match?.[1];
+        if (type && type !== 'Organization' && KNOWN_ORG_SUBTYPES.has(type)) return type;
+    }
+
+    // 3. TLD heuristics.
+    try {
+        const host = new URL(facts.url).hostname.toLowerCase();
+        // `.gov`, `.gov.uk`, `.gov.nl`, etc.
+        if (/\.gov(\.[a-z]{2,})?$/.test(host)) return 'GovernmentOrganization';
+        // `.edu`, `.edu.au`, etc.
+        if (/\.edu(\.[a-z]{2,})?$/.test(host)) return 'EducationalOrganization';
+    } catch {
+        // Fall through to default.
+    }
+
+    return 'Organization';
 }
 
 /**
@@ -116,8 +231,9 @@ function resolveSiteUrl(facts: InferredFacts): string {
  * primary ImageObject, author Person (distinct from publisher), and a
  * Product for commerce pages.
  */
-export function recommend(facts: InferredFacts): RecommendedGraph {
+export function recommend(facts: InferredFacts, options: RecommendOptions = {}): RecommendedGraph {
     const classification = classifyPage(facts);
+    const organizationType = inferOrganizationType(facts, options.liveEntities);
     const siteUrl = resolveSiteUrl(facts);
     const ids = makeIds({ siteUrl });
     const pageUrl = facts.canonical?.value ?? facts.url;
@@ -125,9 +241,11 @@ export function recommend(facts: InferredFacts): RecommendedGraph {
 
     const entities: Array<Record<string, unknown>> = [];
 
-    // --- Publisher (Organization) ---
+    // --- Publisher (Organization subtype) ---
     // Every site gets a publisher entity. Without a siteName we still
     // emit an Organization pinned to the site root so references resolve.
+    // The subtype (Organization, NewsMediaOrganization, LocalBusiness,
+    // GovernmentOrganization, etc.) comes from `inferOrganizationType`.
     const publisherName = facts.siteName?.value ?? new URL(siteUrl).hostname;
     const orgSameAs: string[] = [];
     if (facts.twitterSite?.value) {
@@ -135,7 +253,7 @@ export function recommend(facts: InferredFacts): RecommendedGraph {
         if (handle) orgSameAs.push(`https://twitter.com/${handle}`);
     }
     const publisherPiece = buildPiece({
-        '@type': 'Organization',
+        '@type': organizationType,
         '@id': ids.organization('publisher'),
         name: publisherName,
         url: siteUrl,
@@ -333,5 +451,5 @@ export function recommend(facts: InferredFacts): RecommendedGraph {
         }
     }
 
-    return { classification, siteUrl, entities };
+    return { classification, organizationType, siteUrl, entities };
 }

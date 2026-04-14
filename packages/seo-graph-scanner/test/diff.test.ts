@@ -13,7 +13,12 @@ function recommended(
     entities: Array<Record<string, unknown>>,
     classification: RecommendedGraph['classification'] = 'WebPage',
 ): RecommendedGraph {
-    return { classification, siteUrl: 'https://example.com', entities };
+    return {
+        classification,
+        organizationType: 'Organization',
+        siteUrl: 'https://example.com',
+        entities,
+    };
 }
 
 describe('flattenLiveEntities', () => {
