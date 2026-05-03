@@ -9,10 +9,13 @@ import {
     extractTitle,
     extractMetaDescription,
     findImagesWithoutAlt,
+    findMarkdownAlternateLink,
     htmlFileToPath,
     isDefaultExcludedFromIndexNow,
     parseNetlifyRedirects,
+    resolveMarkdownAlternatePath,
     resolveMetadataLengthBounds,
+    stripMarkdownAlternateLink,
 } from '../src/integration.js';
 
 describe('countH1s', () => {
@@ -519,5 +522,77 @@ describe('isDefaultExcludedFromIndexNow', () => {
 
     it('returns false for unparseable input rather than throwing', () => {
         expect(isDefaultExcludedFromIndexNow('not a url')).toBe(false);
+    });
+});
+
+describe('findMarkdownAlternateLink', () => {
+    it('finds the auto-emitted Seo link', () => {
+        const html =
+            '<head><link rel="canonical" href="https://example.com/p/"><link rel="alternate" type="text/markdown" href="https://example.com/p.md"></head>';
+        expect(findMarkdownAlternateLink(html)).toEqual({
+            match: '<link rel="alternate" type="text/markdown" href="https://example.com/p.md">',
+            href: 'https://example.com/p.md',
+        });
+    });
+
+    it('tolerates a self-closing slash', () => {
+        const html = '<link rel="alternate" type="text/markdown" href="/p.md" />';
+        expect(findMarkdownAlternateLink(html)).toEqual({
+            match: '<link rel="alternate" type="text/markdown" href="/p.md" />',
+            href: '/p.md',
+        });
+    });
+
+    it('returns null when absent', () => {
+        expect(
+            findMarkdownAlternateLink('<link rel="alternate" hreflang="fr" href="/fr/">'),
+        ).toBeNull();
+        expect(findMarkdownAlternateLink('<title>Hi</title>')).toBeNull();
+    });
+});
+
+describe('stripMarkdownAlternateLink', () => {
+    it('removes the link tag and a trailing newline', () => {
+        const tag = '<link rel="alternate" type="text/markdown" href="/p.md">';
+        const html = `<head>\n<title>x</title>\n${tag}\n<meta name="x" content="y">\n</head>`;
+        expect(stripMarkdownAlternateLink(html, tag)).toBe(
+            `<head>\n<title>x</title>\n<meta name="x" content="y">\n</head>`,
+        );
+    });
+
+    it('is a no-op when the match is not present', () => {
+        const html = '<head></head>';
+        expect(stripMarkdownAlternateLink(html, '<link rel="x">')).toBe(html);
+    });
+});
+
+describe('resolveMarkdownAlternatePath', () => {
+    it('resolves an absolute same-origin href to the relative build path', () => {
+        expect(
+            resolveMarkdownAlternatePath('https://example.com/blog/post.md', 'https://example.com'),
+        ).toBe('blog/post.md');
+    });
+
+    it('resolves a root-relative href without a site origin', () => {
+        expect(resolveMarkdownAlternatePath('/blog/post.md', undefined)).toBe('blog/post.md');
+    });
+
+    it('returns null for cross-origin hrefs', () => {
+        expect(
+            resolveMarkdownAlternatePath('https://other.example/p.md', 'https://example.com'),
+        ).toBeNull();
+    });
+
+    it('returns null when origin is unknown for an absolute href', () => {
+        expect(resolveMarkdownAlternatePath('https://example.com/p.md', undefined)).toBeNull();
+    });
+
+    it('returns null for unparseable or unsupported shapes', () => {
+        expect(resolveMarkdownAlternatePath('mailto:foo@example.com', undefined)).toBeNull();
+        expect(resolveMarkdownAlternatePath('relative/path.md', undefined)).toBeNull();
+    });
+
+    it('strips query and fragment from a root-relative href', () => {
+        expect(resolveMarkdownAlternatePath('/blog/post.md?v=1#x', undefined)).toBe('blog/post.md');
     });
 });

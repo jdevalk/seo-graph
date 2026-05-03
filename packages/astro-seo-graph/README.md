@@ -358,6 +358,8 @@ seoGraph({ markdownAlternate: true });
 
 `<Seo>` then emits `<link rel="alternate" type="text/markdown" href="…">` on every page, with `href` derived from the canonical URL (e.g. `/blog/post/` → `/blog/post.md`). Default is `false` — enable it only after the endpoint is live, or the link will 404.
 
+After the build, the integration walks the output directory and strips any link whose target `.md` isn't on disk, with a per-occurrence `warn` so misconfigured endpoints stay visible. SSR users whose `.md` endpoints aren't prerendered should leave this off and emit the link themselves — the verification will otherwise strip every link.
+
 ### 3. `Accept: text/markdown` content negotiation (Cloudflare)
 
 Static sites can still honour `Accept: text/markdown` by adding a **Cloudflare Transform Rule** — no SSR, no middleware, dashboard-configured, and works on the free plan (`regex_replace` is paid-only; the rule below uses `wildcard_replace` instead).

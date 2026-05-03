@@ -264,9 +264,16 @@ export interface SeoGraphIntegrationOptions {
      * discovery link, not whether the endpoint exists.
      *
      * Default: `false`. Enable explicitly once you've added
-     * `createMarkdownEndpoint` at the matching path — otherwise the link
-     * will point at a 404. Implemented via a Vite `define` that replaces
-     * a sentinel token in the compiled `<Seo>` component at build time.
+     * `createMarkdownEndpoint` at the matching path. Implemented via a
+     * Vite `define` that replaces a sentinel token in the compiled
+     * `<Seo>` component at build time.
+     *
+     * After the build, the integration walks the output directory and
+     * strips any link whose target `.md` isn't on disk — so dangling
+     * discovery links (collection entries that didn't get prerendered,
+     * routes that don't cover this page) don't ship to production. SSR
+     * users whose `.md` endpoints aren't prerendered should leave this
+     * flag off and emit the link themselves.
      */
     markdownAlternate?: boolean;
 }
@@ -549,6 +556,68 @@ export function extractMetaDescription(html: string): string | null {
     return decodeHtmlEntities(raw);
 }
 
+/**
+ * Locate the auto-emitted `<link rel="alternate" type="text/markdown">`
+ * tag in a built HTML file. Returns the full match text and the raw
+ * `href` attribute value, or `null` when absent. Matches the exact
+ * shape `<Seo>` produces — a simple regex is fine because we control
+ * the source.
+ */
+export function findMarkdownAlternateLink(html: string): { match: string; href: string } | null {
+    const re = /<link\s+rel="alternate"\s+type="text\/markdown"\s+href="([^"]*)"\s*\/?>/;
+    const m = re.exec(html);
+    if (!m) return null;
+    return { match: m[0], href: m[1]! };
+}
+
+/**
+ * Remove a previously-located markdown-alternate `<link>` tag from
+ * `html`. Also trims one trailing newline if present, so the surrounding
+ * `<head>` whitespace stays clean. No-op if `match` isn't found
+ * verbatim.
+ */
+export function stripMarkdownAlternateLink(html: string, match: string): string {
+    const idx = html.indexOf(match);
+    if (idx === -1) return html;
+    let end = idx + match.length;
+    if (html[end] === '\n') end += 1;
+    return html.slice(0, idx) + html.slice(end);
+}
+
+/**
+ * Resolve a markdown-alternate `href` (as emitted by `<Seo>`) to its
+ * expected build-output path, relative to `outDir`. Returns `null`
+ * when the href is cross-origin (different origin than `siteOrigin`)
+ * or otherwise unverifiable — caller should leave such links alone.
+ *
+ * `siteOrigin` may be undefined (no `config.site` in astro.config); in
+ * that case only root-relative hrefs (starting with `/`) are resolvable.
+ */
+export function resolveMarkdownAlternatePath(
+    href: string,
+    siteOrigin: string | undefined,
+): string | null {
+    let pathname: string;
+    if (href.startsWith('/') && !href.startsWith('//')) {
+        pathname = href.split('#')[0]!.split('?')[0]!;
+    } else if (/^https?:\/\//i.test(href)) {
+        if (!siteOrigin) return null;
+        let parsed: URL;
+        let ours: URL;
+        try {
+            parsed = new URL(href);
+            ours = new URL(siteOrigin);
+        } catch {
+            return null;
+        }
+        if (parsed.origin !== ours.origin) return null;
+        pathname = parsed.pathname;
+    } else {
+        return null;
+    }
+    return pathname.replace(/^\/+/, '');
+}
+
 async function collectBuildFiles(dir: string, base: string = dir): Promise<string[]> {
     const entries = await readdir(dir, { withFileTypes: true });
     const files: string[] = [];
@@ -642,11 +711,19 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                     validateImageAlt ||
                     lengthBounds !== null ||
                     internalLinksEnabled ||
-                    autoLlmsTxt;
+                    autoLlmsTxt ||
+                    markdownAlternate;
                 const needsAnyFiles =
-                    needsContentScan || indexNow || llmsTxt || internalLinksEnabled;
+                    needsContentScan ||
+                    indexNow ||
+                    llmsTxt ||
+                    internalLinksEnabled ||
+                    markdownAlternate;
                 const allFiles = needsAnyFiles ? await collectBuildFiles(buildDir) : [];
                 const htmlFiles = allFiles.filter((f) => f.endsWith('.html'));
+                const builtFilesSet = markdownAlternate
+                    ? new Set(allFiles.map((f) => f.split(/[\\/]/).join('/')))
+                    : null;
                 let builtPaths: Set<string> | null = null;
                 if (internalLinksEnabled) {
                     // Include every build artefact, not just HTML pages.
@@ -697,10 +774,31 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                     limit: number;
                     value: string;
                 }> = [];
+                const mdAltStripped: Array<{ file: string; href: string }> = [];
+                let mdAltVerified = 0;
 
                 if (needsContentScan) {
                     for (const file of htmlFiles) {
-                        const content = await readFile(join(buildDir, file), 'utf8');
+                        let content = await readFile(join(buildDir, file), 'utf8');
+
+                        if (markdownAlternate && builtFilesSet !== null) {
+                            const link = findMarkdownAlternateLink(content);
+                            if (link) {
+                                const expected = resolveMarkdownAlternatePath(
+                                    link.href,
+                                    siteOrigin,
+                                );
+                                if (expected !== null) {
+                                    if (builtFilesSet.has(expected)) {
+                                        mdAltVerified += 1;
+                                    } else {
+                                        content = stripMarkdownAlternateLink(content, link.match);
+                                        await writeFile(join(buildDir, file), content);
+                                        mdAltStripped.push({ file, href: link.href });
+                                    }
+                                }
+                            }
+                        }
 
                         if (validateH1) {
                             const count = countH1s(content);
@@ -906,6 +1004,20 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                                     : description;
                             logger.warn(
                                 `Metadata uniqueness: description ${JSON.stringify(preview)} appears on ${files.length} pages: ${files.join(', ')}`,
+                            );
+                        }
+                    }
+                }
+
+                if (markdownAlternate) {
+                    if (mdAltStripped.length === 0) {
+                        logger.info(
+                            `Markdown alternate: ${mdAltVerified} link(s) verified against build output.`,
+                        );
+                    } else {
+                        for (const { file, href } of mdAltStripped) {
+                            logger.warn(
+                                `Markdown alternate: stripped link from ${file} — ${JSON.stringify(href)} is not in the build output (would 404).`,
                             );
                         }
                     }
