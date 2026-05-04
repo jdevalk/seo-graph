@@ -69,9 +69,7 @@ describe('gitLastmod', () => {
     });
 
     it('returns null when every commit in the window is excluded', () => {
-        expect(
-            gitLastmod('a.md', { excludeCommits: [oldHash, newestHash, bulkHash] }),
-        ).toBeNull();
+        expect(gitLastmod('a.md', { excludeCommits: [oldHash, newestHash, bulkHash] })).toBeNull();
     });
 
     it('returns null for a file with no git history', () => {

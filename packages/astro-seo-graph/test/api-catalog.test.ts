@@ -140,10 +140,7 @@ describe('createApiCatalog', () => {
                 { href: 'https://example.com/docs/a' },
                 { href: 'https://example.com/docs/b' },
             ],
-            type: [
-                { href: 'https://schema.org/Action' },
-                { href: 'https://schema.org/Service' },
-            ],
+            type: [{ href: 'https://schema.org/Action' }, { href: 'https://schema.org/Service' }],
         });
     });
 

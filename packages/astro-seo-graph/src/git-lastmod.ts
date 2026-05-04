@@ -19,11 +19,9 @@ export function gitLastmod(filePath: string, options: GitLastmodOptions = {}): D
     const { excludeCommits = [], depth = 10 } = options;
     const excluded = new Set(excludeCommits.map((h) => h.slice(0, 7)));
     try {
-        const log = execFileSync(
-            'git',
-            ['log', `-${depth}`, '--format=%H\t%cI', '--', filePath],
-            { encoding: 'utf-8' },
-        ).trim();
+        const log = execFileSync('git', ['log', `-${depth}`, '--format=%H\t%cI', '--', filePath], {
+            encoding: 'utf-8',
+        }).trim();
         if (!log) return null;
         for (const line of log.split('\n')) {
             const [hash, date] = line.split('\t') as [string, string | undefined];
