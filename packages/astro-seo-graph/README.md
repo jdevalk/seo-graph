@@ -32,6 +32,7 @@ schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-gra
 | **`createIndexNowKeyRoute`**   | Factory returning an `APIRoute` that serves the IndexNow key-verification file at `/<key>.txt`. Pair with the `indexNow` option on the integration to auto-submit built URLs on `astro:build:done`.                                                                     |
 | **`createMarkdownEndpoint`**   | Factory returning an `APIRoute` that serves a clean markdown version of a content-collection entry (frontmatter + body + token count). Pair with the auto-emitted `<link rel="alternate" type="text/markdown">` on `<Seo>` for AI-agent discovery.                      |
 | **`renderMarkdownAlternate`**  | Pure renderer behind the endpoint. Importable from non-Astro code for the same markdown output.                                                                                                                                                                         |
+| **`gitLastmod`**               | Reads the committer date of the most recent git commit that touched a file, skipping caller-supplied bulk commits. Use it to derive trustworthy `dateModified` / `<lastmod>` values from git history.                                                                   |
 
 ## Installation
 
@@ -395,6 +396,50 @@ const { markdown, tokenCount, canonicalHref } = renderMarkdownAlternate({
     body: '# Hello\n\nWorld.',
 });
 ```
+
+## Last-modified dates from git
+
+`gitLastmod` reads the committer date of the most recent git commit that
+touched a file. Use it to feed `dateModified` on JSON-LD pieces or
+`<lastmod>` in sitemaps without trusting filesystem `mtime` (which gets
+rewritten on every CI checkout).
+
+```ts
+import { gitLastmod } from '@jdevalk/astro-seo-graph';
+
+const last = gitLastmod(`src/content/blog/${entry.id}/index.md`, {
+    // Hashes of bulk commits (imports, reformats, renames) that
+    // shouldn't count as a "real" content update. Short or full SHAs.
+    excludeCommits: ['52130a9', '989dc47'],
+    // How many commits back to inspect. Default: 10.
+    depth: 20,
+});
+```
+
+Returns `null` when the file has no git history, when git isn't on the
+PATH, or when every commit in the inspected window is excluded — callers
+should fall back to `publishDate` (or skip the field) in that case.
+
+`excludeCommits` matches on the first 7 characters of the SHA, so short
+hashes from `git log --oneline` work directly. Increase `depth` if your
+exclusion list could shadow the real last-modified commit; the default
+of 10 is enough for most blogs.
+
+A common pattern is to use `gitLastmod` to compute an effective
+"updated" date only when it materially differs from the publish date:
+
+```ts
+function computeUpdatedDate(filePath: string, publishDate: Date): Date | null {
+    const last = gitLastmod(filePath);
+    if (!last) return null;
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    return last.getTime() - publishDate.getTime() > ONE_DAY ? last : null;
+}
+```
+
+`gitLastmod` shells out to the `git` binary, so it only works during
+build (Node) — not in browser bundles or edge runtimes that lack
+`child_process`. Resolve the path relative to your build CWD.
 
 ## Schema map discovery
 

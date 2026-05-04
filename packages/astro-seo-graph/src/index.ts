@@ -37,3 +37,6 @@ export type {
 
 export { createMarkdownEndpoint } from './markdown-routes.js';
 export type { MarkdownEndpointOptions } from './markdown-routes.js';
+
+export { gitLastmod } from './git-lastmod.js';
+export type { GitLastmodOptions } from './git-lastmod.js';
