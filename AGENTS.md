@@ -2521,6 +2521,76 @@ export const GET = createSchemaMap({
 | `changeFreq` | Sitemap frequency string | `'daily'` | Update frequency hint |
 | `priority` | `number` | `0.8` | Priority hint (0.0-1.0) |
 
+### API catalog (RFC 9727)
+
+Serve a standards-compliant API catalog at `/.well-known/api-catalog`
+([RFC 9727](https://www.rfc-editor.org/rfc/rfc9727)) so agent crawlers
+can discover the site's APIs in one fetch:
+
+```ts
+// src/pages/.well-known/api-catalog.ts
+import { createApiCatalog } from '@jdevalk/astro-seo-graph';
+
+export const GET = createApiCatalog({
+    siteUrl: 'https://example.com',
+    schemaEndpoints: [
+        { path: '/schema/post.json', schemaType: 'BlogPosting', serviceDoc: '/seo-graph/' },
+        { path: '/schema/page.json', schemaType: 'WebPage', serviceDoc: '/seo-graph/' },
+    ],
+    schemaMap: { path: '/schemamap.xml', serviceDoc: '/seo-graph/' },
+    additional: [
+        { anchor: '/ask', serviceDoc: '/ask-docs/', type: 'https://schema.org/SearchAction' },
+    ],
+});
+```
+
+Output is `application/linkset+json` ([RFC 9264](https://www.rfc-editor.org/rfc/rfc9264)).
+`schemaEndpoints` get auto-typed as `https://schema.org/<schemaType>`;
+`schemaMap` is emitted without a `type` (no standard one exists);
+`additional` accepts free-form `anchor`/`serviceDoc`/`type` (each
+either `string` or `string[]`). Relative paths are absolutized against
+`siteUrl`; absolute URLs pass through unchanged.
+
+The package also exports a `CATALOG_PATH` constant
+(`'/.well-known/api-catalog'`) so callers can reference the canonical
+location without duplicating the string.
+
+**Options:**
+| Option | Type | Default | Purpose |
+|---|---|---|---|
+| `siteUrl` | `string` | — | Canonical origin. Trailing slash stripped. |
+| `schemaEndpoints` | `ApiCatalogSchemaEndpointEntry[]` | — | Schema.org JSON endpoints with `path` + `schemaType`. |
+| `schemaMap` | `ApiCatalogSchemaMapEntry` | — | Path of the `createSchemaMap` route. |
+| `additional` | `ApiCatalogEntry[]` | — | Site-specific APIs not covered by the package factories. |
+| `cacheControl` | `string \| null` | `'max-age=300'` | Cache-Control header. `null` to omit. |
+| `contentType` | `string` | `'application/linkset+json'` | Override only with reason. |
+| `indent` | `number` | `2` | JSON indentation. `0` for compact. |
+
+### Last-modified dates from git
+
+`gitLastmod` reads the committer date of the most recent git commit
+that touched a file, with configurable `excludeCommits` (skip bulk
+imports / reformats / renames) and `depth` (how many commits to
+inspect). Use it to feed `dateModified` on JSON-LD pieces or
+`<lastmod>` in sitemaps without trusting filesystem `mtime` (which
+gets rewritten on every CI checkout):
+
+```ts
+import { gitLastmod } from '@jdevalk/astro-seo-graph';
+
+const last = gitLastmod(`src/content/blog/${entry.id}/index.md`, {
+    excludeCommits: ['52130a9', '989dc47'],
+    depth: 20,
+});
+```
+
+Returns `null` when the file has no git history, git isn't on the
+PATH, or every commit in the inspected window is excluded — fall back
+to `publishDate` in that case. `excludeCommits` matches on the first 7
+characters of the SHA, so short hashes from `git log --oneline` work
+directly. Build-time only — shells out to the `git` binary via
+`execFileSync`.
+
 ### The `aggregate` function
 
 The engine behind `createSchemaEndpoint`. Use directly when you need custom
