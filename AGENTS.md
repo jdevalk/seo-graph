@@ -2516,10 +2516,19 @@ export const GET = createSchemaMap({
 **Schema map entry options:**
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `path` | `string` | — | Relative path to schema endpoint |
-| `lastModified` | `Date` | — | Last modification date |
-| `changeFreq` | Sitemap frequency string | `'daily'` | Update frequency hint |
-| `priority` | `number` | `0.8` | Priority hint (0.0-1.0) |
+| `path` | `string` | — | Path of the schema endpoint. Leading slash optional. |
+| `lastModified` | `Date` | — | Last-modified date. Rendered as `YYYY-MM-DD`. |
+
+**`createSchemaMap` options:**
+| Option | Type | Default | Purpose |
+|---|---|---|---|
+| `siteUrl` | `string` | — | Canonical origin. Trailing slash stripped. |
+| `entries` | `SchemaMapEntry[]` | — | One entry per schema endpoint. |
+| `cacheControl` | `string \| null` | `'max-age=300'` | Cache-Control header. `null` to omit. |
+
+`<changefreq>` and `<priority>` are deliberately not emitted —
+Google and other major crawlers ignore them, and fabricating defaults
+is worse than omitting.
 
 ### API catalog (RFC 9727)
 
