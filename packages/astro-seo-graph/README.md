@@ -33,6 +33,7 @@ schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-gra
 | **`createMarkdownEndpoint`**   | Factory returning an `APIRoute` that serves a clean markdown version of a content-collection entry (frontmatter + body + token count). Pair with the auto-emitted `<link rel="alternate" type="text/markdown">` on `<Seo>` for AI-agent discovery.                      |
 | **`renderMarkdownAlternate`**  | Pure renderer behind the endpoint. Importable from non-Astro code for the same markdown output.                                                                                                                                                                         |
 | **`gitLastmod`**               | Reads the committer date of the most recent git commit that touched a file, skipping caller-supplied bulk commits. Use it to derive trustworthy `dateModified` / `<lastmod>` values from git history.                                                                   |
+| **`createApiCatalog`**         | Factory returning an `APIRoute` that serves an [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) API catalog at `/.well-known/api-catalog`. Lists schema endpoints, the schema map, and any additional APIs as `application/linkset+json`.                             |
 
 ## Installation
 
@@ -455,6 +456,60 @@ export const GET = createSchemaMap({
     ],
 });
 ```
+
+## API catalog (RFC 9727)
+
+[RFC 9727](https://www.rfc-editor.org/rfc/rfc9727) defines
+`/.well-known/api-catalog` as the standard discovery point for a site's
+APIs. `createApiCatalog` returns an `APIRoute` that serves an
+`application/linkset+json` document ([RFC 9264](https://www.rfc-editor.org/rfc/rfc9264))
+listing each endpoint with its anchor URL, optional documentation
+links, and optional type pointers.
+
+```ts
+// src/pages/.well-known/api-catalog.ts
+import { createApiCatalog } from '@jdevalk/astro-seo-graph';
+
+export const GET = createApiCatalog({
+    siteUrl: 'https://example.com',
+    schemaEndpoints: [
+        { path: '/schema/post.json', schemaType: 'BlogPosting', serviceDoc: '/seo-graph/' },
+        { path: '/schema/page.json', schemaType: 'WebPage', serviceDoc: '/seo-graph/' },
+    ],
+    schemaMap: { path: '/schemamap.xml', serviceDoc: '/seo-graph/' },
+    additional: [
+        {
+            anchor: '/ask',
+            serviceDoc: '/ask-docs/',
+            type: 'https://schema.org/SearchAction',
+        },
+    ],
+});
+```
+
+Three categories of entry:
+
+- **`schemaEndpoints`** — the same set you wired into `createSchemaEndpoint`. Each becomes a linkset entry with `type: [{ href: 'https://schema.org/<schemaType>' }]` filled in for you.
+- **`schemaMap`** — the path of the route from `createSchemaMap`. Emitted without a `type` (no standard type exists for the schemamap format).
+- **`additional`** — site-specific APIs not covered by the package's own factories. Pass `anchor`, optional `serviceDoc`, and optional `type` (each accepting `string` or `string[]`).
+
+Relative paths in any field are absolutized against `siteUrl`; absolute
+URLs pass through unchanged. The trailing slash on `siteUrl` is
+stripped, mirroring `createSchemaMap`.
+
+The package also exports a `CATALOG_PATH` constant
+(`'/.well-known/api-catalog'`) for callers who want to reference the
+catalog from `_headers` files, the schemamap, or documentation links
+without duplicating the string.
+
+Response headers:
+
+- `Content-Type: application/linkset+json`
+- `Cache-Control: max-age=300` (override or pass `null` to omit)
+- `X-Robots-Tag: noindex, follow`
+
+Empty options yield `{ "linkset": [] }` — valid per RFC 9727 §3 and
+useful for sites that want to declare "no APIs" explicitly.
 
 ## Zod content helpers
 

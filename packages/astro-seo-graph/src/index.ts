@@ -40,3 +40,11 @@ export type { MarkdownEndpointOptions } from './markdown-routes.js';
 
 export { gitLastmod } from './git-lastmod.js';
 export type { GitLastmodOptions } from './git-lastmod.js';
+
+export { createApiCatalog, CATALOG_PATH } from './api-catalog.js';
+export type {
+    ApiCatalogOptions,
+    ApiCatalogEntry,
+    ApiCatalogSchemaEndpointEntry,
+    ApiCatalogSchemaMapEntry,
+} from './api-catalog.js';
