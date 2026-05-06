@@ -46,7 +46,7 @@ missing pieces during development.
 | --------------------------- | ------------------------------------------------------------------------------ |
 | `submitToIndexNow`          | POST URLs to the IndexNow aggregator. Filters by host, dedupes, chunks at 10k. |
 | `generateIndexNowKey`       | Generate a random hex key (Web Crypto).                                        |
-| `validateIndexNowKey`       | Verify a key is 8–128 hex chars.                                               |
+| `validateIndexNowKey`       | Verify a key is 8–128 chars from `[A-Za-z0-9-]` (IndexNow spec allow-list).    |
 | `getIndexNowKeyFileContent` | Body to serve at `/<key>.txt` for host verification.                           |
 
 ### Piece builders

@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { getIndexNowKeyFileContent } from '@jdevalk/seo-graph-core';
 
 export interface IndexNowKeyRouteOptions {
-    /** IndexNow key (8–128 hex characters). */
+    /** IndexNow key (8–128 characters from `[A-Za-z0-9-]`). */
     key: string;
     /** Defaults to `public, max-age=86400`. Pass `null` to omit. */
     cacheControl?: string | null;

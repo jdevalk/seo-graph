@@ -2800,7 +2800,7 @@ import {
 ```js
 seoGraph({
     indexNow: {
-        key: process.env.INDEXNOW_KEY!, // 8–128 hex chars
+        key: process.env.INDEXNOW_KEY!, // 8–128 chars from [A-Za-z0-9-]
         host: 'example.com',
         siteUrl: 'https://example.com',
         // keyLocation?: defaults to https://<host>/<key>.txt

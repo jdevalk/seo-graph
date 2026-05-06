@@ -587,7 +587,7 @@ Options:
 | `indexNow`               | —       | Submit built URLs to IndexNow. See below for sub-options.                      |
 | `llmsTxt`                | —       | Generate `llms.txt` at the build root. See below for sub-options.              |
 
-`indexNow` sub-options: `key` (8–128 hex chars), `host` (bare host, e.g.
+`indexNow` sub-options: `key` (8–128 chars from `[A-Za-z0-9-]`), `host` (bare host, e.g.
 `example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
 `https://<host>/<key>.txt`), `endpoint?` (defaults to `api.indexnow.org`),
 `filter?` (drop URLs for which the callback returns `false`; composed on

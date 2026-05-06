@@ -37,7 +37,7 @@ interface AstroIntegrationLike {
 }
 
 export interface IndexNowIntegrationOptions {
-    /** IndexNow key (8–128 hex chars). Required to enable submission. */
+    /** IndexNow key (8–128 chars from `[A-Za-z0-9-]`). Required to enable submission. */
     key: string;
     /** Bare host, e.g. `example.com`. */
     host: string;

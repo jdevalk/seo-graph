@@ -11,12 +11,18 @@ export const INDEXNOW_MAX_URLS_PER_REQUEST = 10_000;
 /** Key length constraints per the spec. */
 const MIN_KEY_LENGTH = 8;
 const MAX_KEY_LENGTH = 128;
-const HEX_KEY_RE = /^[a-f0-9]+$/i;
+// Per the IndexNow spec the key may contain [A-Za-z0-9-]. The wording at
+// indexnow.org calls these "hexadecimal characters" but the explicit
+// allow-list is the broader set, and Bing / Yandex both issue and accept
+// non-hex keys (Yandex's own docs use a mixed-case example).
+// Refs: https://www.indexnow.org/documentation
+//       https://yandex.com/support/webmaster/en/indexnow/key
+const KEY_RE = /^[A-Za-z0-9-]+$/;
 
 export interface SubmitToIndexNowOptions {
     /** Bare host, e.g. `example.com`. No scheme, no trailing slash. */
     host: string;
-    /** 8–128 hex-character key. Must match the key file served on the host. */
+    /** 8–128 character key from `[A-Za-z0-9-]`. Must match the key file served on the host. */
     key: string;
     /**
      * Optional absolute URL where the key file is hosted. Defaults to
@@ -53,7 +59,9 @@ export async function submitToIndexNow(
 ): Promise<IndexNowSubmitResult[]> {
     const { host, key, urls } = options;
     if (!validateIndexNowKey(key)) {
-        throw new Error(`IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} hex characters.`);
+        throw new Error(
+            `IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} characters from [A-Za-z0-9-].`,
+        );
     }
     if (!host || host.includes('/') || host.includes(':')) {
         throw new Error(`IndexNow host must be a bare host (got: ${host}).`);
@@ -122,11 +130,11 @@ function filterUrlsForHost(urls: readonly string[], host: string): string[] {
     return out;
 }
 
-/** Returns true when `key` is 8–128 hexadecimal characters. */
+/** Returns true when `key` is 8–128 characters drawn from `[A-Za-z0-9-]`. */
 export function validateIndexNowKey(key: string): boolean {
     if (typeof key !== 'string') return false;
     if (key.length < MIN_KEY_LENGTH || key.length > MAX_KEY_LENGTH) return false;
-    return HEX_KEY_RE.test(key);
+    return KEY_RE.test(key);
 }
 
 /**
@@ -154,7 +162,9 @@ export function generateIndexNowKey(length = 32): string {
  */
 export function getIndexNowKeyFileContent(key: string): string {
     if (!validateIndexNowKey(key)) {
-        throw new Error(`IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} hex characters.`);
+        throw new Error(
+            `IndexNow key must be ${MIN_KEY_LENGTH}–${MAX_KEY_LENGTH} characters from [A-Za-z0-9-].`,
+        );
     }
     return key;
 }

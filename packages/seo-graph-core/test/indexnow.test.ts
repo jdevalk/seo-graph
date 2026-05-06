@@ -9,17 +9,32 @@ import {
 } from '../src/indexnow.js';
 
 describe('validateIndexNowKey', () => {
-    it('accepts 8–128 hex characters', () => {
+    it('accepts 8–128 characters from [A-Za-z0-9-]', () => {
         expect(validateIndexNowKey('a'.repeat(8))).toBe(true);
         expect(validateIndexNowKey('f'.repeat(128))).toBe(true);
         expect(validateIndexNowKey('ABCDEF0123456789')).toBe(true);
     });
 
-    it('rejects too short, too long, or non-hex', () => {
+    it('accepts non-hex keys per the IndexNow spec', () => {
+        // Ahrefs Site Audit-issued key (mixed letters past f, some digits).
+        expect(validateIndexNowKey('f37uz8z9ffyjaa42pbnbqyn95qvbz4jz')).toBe(true);
+        // Yandex Webmaster docs example (mixed case).
+        expect(validateIndexNowKey('EdD8dkmdNLlxREi2LkhJjYOH2kyQbJqM3cBKT5fX')).toBe(true);
+        // Dashes are allowed.
+        expect(validateIndexNowKey('abc-def-ghi-jkl')).toBe(true);
+    });
+
+    it('rejects keys that are too short, too long, or empty', () => {
         expect(validateIndexNowKey('a'.repeat(7))).toBe(false);
         expect(validateIndexNowKey('a'.repeat(129))).toBe(false);
-        expect(validateIndexNowKey('not-hex-zzzzzz')).toBe(false);
         expect(validateIndexNowKey('')).toBe(false);
+    });
+
+    it('rejects characters outside [A-Za-z0-9-]', () => {
+        expect(validateIndexNowKey('underscore_chars')).toBe(false);
+        expect(validateIndexNowKey('has spaces here ')).toBe(false);
+        expect(validateIndexNowKey('special!@chars')).toBe(false);
+        expect(validateIndexNowKey('dotted.key.value')).toBe(false);
     });
 });
 
