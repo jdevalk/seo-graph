@@ -51,12 +51,12 @@
         "test": "vitest run"
     },
     "peerDependencies": {
-        "astro": "^5.0.0 || ^6.0.0"
+        "astro": "^6.0.0"
     },
     "dependencies": {
         "@jdevalk/seo-graph-core": "workspace:*",
         "schema-dts": "^2.0.0",
-        "zod": "^3.24.0"
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "@types/node": "^22.0.0",
