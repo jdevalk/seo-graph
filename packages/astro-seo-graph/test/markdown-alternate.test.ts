@@ -155,8 +155,12 @@ describe('deriveMdUrl', () => {
         expect(deriveMdUrl('https://ex.com/blog/post.html')).toBe('https://ex.com/blog/post.md');
     });
 
-    it('handles the root URL', () => {
-        expect(deriveMdUrl('https://ex.com/')).toBe('https://ex.com/.md');
+    it('maps the root URL to /index.md (matches Astro src/pages/index.md.ts)', () => {
+        expect(deriveMdUrl('https://ex.com/')).toBe('https://ex.com/index.md');
+    });
+
+    it('preserves query and hash on the root URL', () => {
+        expect(deriveMdUrl('https://ex.com/?q=1#a')).toBe('https://ex.com/index.md?q=1#a');
     });
 
     it('preserves query and hash', () => {

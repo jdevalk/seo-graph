@@ -142,6 +142,9 @@ export function renderMarkdownAlternate(
  * for testing and so `<Seo>` can reuse the same algorithm.
  *
  * Rules:
+ *   - Root (`/`) → `/index.md`. Matches Astro's filesystem routing for
+ *     `src/pages/index.md.ts`. Without this special case the trailing-
+ *     slash rule below would yield `/.md`, which Astro never produces.
  *   - Trailing `/` → `.md` (e.g. `/blog/post/` → `/blog/post.md`).
  *   - Existing extension → replaced with `.md`.
  *   - No trailing slash, no extension → `.md` appended.
@@ -157,7 +160,9 @@ export function deriveMdUrl(canonical: string | URL): string {
     }
     const { pathname } = url;
     let newPath: string;
-    if (pathname.endsWith('/')) {
+    if (pathname === '/') {
+        newPath = '/index.md';
+    } else if (pathname.endsWith('/')) {
         newPath = `${pathname.slice(0, -1)}.md`;
     } else if (/\.[a-z0-9]+$/i.test(pathname)) {
         newPath = pathname.replace(/\.[a-z0-9]+$/i, '.md');
