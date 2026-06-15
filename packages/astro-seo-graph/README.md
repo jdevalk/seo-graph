@@ -86,6 +86,47 @@ const graph = buildSchemaGraph({
 </html>
 ```
 
+### Props
+
+All props are optional except `title`.
+
+| Prop                  | Type                                            | Default                     | Description                                                                                             |
+| --------------------- | ----------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `title`               | `string`                                        | —                           | Page title. **Required.**                                                                               |
+| `titleTemplate`       | `string`                                        | raw `title`                 | Template for the full `<title>`; `%s` is replaced with `title` (e.g. `"%s \| Joost.blog"`).             |
+| `description`         | `string`                                        | —                           | Meta description.                                                                                       |
+| `canonical`           | `string \| URL`                                 | current URL, query stripped | Explicit canonical override. Omitted entirely when `noindex`.                                           |
+| `preserveQueryParams` | `boolean`                                       | `false`                     | Keep the query string on the default canonical. No effect when `canonical` is set.                      |
+| `ogType`              | `'website' \| 'article' \| 'profile' \| 'book'` | `'website'`                 | Open Graph type.                                                                                        |
+| `ogImage`             | `string`                                        | —                           | Absolute URL of the share image.                                                                        |
+| `ogImageAlt`          | `string`                                        | —                           | Alt text for the share image.                                                                           |
+| `ogImageWidth`        | `number`                                        | —                           | Share image width in pixels.                                                                            |
+| `ogImageHeight`       | `number`                                        | —                           | Share image height in pixels.                                                                           |
+| `siteName`            | `string`                                        | —                           | Site name shown in OG tags.                                                                             |
+| `locale`              | `string`                                        | `'en_US'`                   | OG locale.                                                                                              |
+| `twitter`             | `object`                                        | —                           | Twitter card metadata — see [below](#twitter-and-article-sub-objects).                                  |
+| `article`             | `object`                                        | —                           | Article OG metadata — see [below](#twitter-and-article-sub-objects). Only when `ogType` is `'article'`. |
+| `noindex`             | `boolean`                                       | `false`                     | Emit `noindex` in the robots meta (also drops the canonical).                                           |
+| `nofollow`            | `boolean`                                       | `false`                     | Emit `nofollow` in the robots meta.                                                                     |
+| `articlePublisher`    | `string`                                        | —                           | Facebook page URL; emitted as `article:publisher` when `ogType` is `'article'`.                         |
+| `author`              | `string`                                        | `article.authors[0]`        | Value for `<meta name="author">`.                                                                       |
+| `graph`               | `Record<string, unknown> \| null`               | —                           | JSON-LD `@graph` to inject as `<script type="application/ld+json">`. `null`/omit skips it.              |
+| `extraLinks`          | `Array<Record<string, string>>`                 | —                           | Extra `<link>` tags (icons, sitemap, RSS alternate, …).                                                 |
+| `extraMeta`           | `Array<Record<string, string>>`                 | —                           | Extra `<meta>` tags.                                                                                    |
+| `alternates`          | `BuildAlternateLinksInput`                      | —                           | hreflang alternate-language annotations — see [hreflang alternates](#hreflang-alternates).              |
+
+#### `twitter` and `article` sub-objects
+
+`twitter` (all fields optional): `site`, `creator`,
+`card` (`'summary' \| 'summary_large_image' \| 'app' \| 'player'`, default
+`'summary_large_image'`), `title`, `description`, `image`, `imageAlt`. The four
+content fields fall back to their `og:` counterparts when omitted — see the
+Twitter tag dedup note below.
+
+`article` (all fields optional; emitted only when `ogType` is `'article'`):
+`publishedTime`, `modifiedTime`, `expirationTime` (`Date \| string`), `authors`
+(`string[]`), `tags` (`string[]`), `section`.
+
 ### `<Seo>` behavior notes
 
 - **Robots defaults.** `max-snippet:-1`, `max-image-preview:large`, and
