@@ -398,6 +398,24 @@ describe('buildArticle', () => {
         expect(article.wordCount).toBe(100);
         expect(article.articleBody).toBe('Hello world');
     });
+
+    it('accepts an array of isPartOf references and emits them verbatim', () => {
+        const blogId = `${siteUrl}#blog`;
+        const isPartOf = [{ '@id': ids.webPage(postUrl) }, { '@id': blogId }];
+        const article = buildArticle(
+            {
+                url: postUrl,
+                isPartOf,
+                author: { '@id': ids.person },
+                publisher: { '@id': ids.person },
+                headline: 'Hello',
+                description: 'World',
+                datePublished: new Date('2026-01-01T00:00:00.000Z'),
+            },
+            ids,
+        );
+        expect(article.isPartOf).toEqual(isPartOf);
+    });
 });
 
 describe('buildBreadcrumbList', () => {
