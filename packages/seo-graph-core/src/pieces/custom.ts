@@ -1,5 +1,7 @@
 import type { Thing } from 'schema-dts';
 
+import type { GraphEntity } from '../types.js';
+
 /**
  * Build an arbitrary schema.org piece from a raw object.
  *
@@ -26,13 +28,15 @@ export function buildPiece<T extends Thing, TType extends string = string>(
         '@type': TType;
         '@id'?: string;
     },
-): Record<string, unknown>;
+): GraphEntity;
 export function buildPiece(
     raw: Record<string, unknown> & {
         '@type': string | readonly string[];
         '@id'?: string;
     },
-): Record<string, unknown>;
-export function buildPiece(raw: Record<string, unknown>): Record<string, unknown> {
-    return raw;
+): GraphEntity;
+export function buildPiece(raw: Record<string, unknown>): GraphEntity {
+    // The public overloads both require `@type` on `raw`, so the result
+    // always satisfies GraphEntity; the implementation signature is wider.
+    return raw as GraphEntity;
 }

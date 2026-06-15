@@ -1,7 +1,7 @@
 import type { VideoObjectLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
-import type { Reference } from '../types.js';
+import type { Reference, GraphEntity } from '../types.js';
 import { spreadRemainingProperties } from '../types.js';
 
 interface VideoObjectCoreFields {
@@ -36,8 +36,8 @@ const HANDLED_KEYS = new Set<string>([
 /**
  * Build a schema.org VideoObject piece.
  */
-export function buildVideoObject(input: VideoObjectInput, ids: IdFactory): Record<string, unknown> {
-    const piece: Record<string, unknown> = {
+export function buildVideoObject(input: VideoObjectInput, ids: IdFactory): GraphEntity {
+    const piece: GraphEntity = {
         '@type': 'VideoObject',
         '@id': ids.videoObject(input.url),
         name: input.name,

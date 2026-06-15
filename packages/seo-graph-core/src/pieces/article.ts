@@ -1,7 +1,7 @@
 import type { ArticleLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
-import type { Reference, CreativeWorkFields } from '../types.js';
+import type { Reference, CreativeWorkFields, GraphEntity } from '../types.js';
 import {
     applyCreativeWorkFields,
     spreadRemainingProperties,
@@ -72,8 +72,8 @@ export function buildArticle(
     input: ArticleInput,
     ids: IdFactory,
     type: ArticleType = 'Article',
-): Record<string, unknown> {
-    const piece: Record<string, unknown> = {
+): GraphEntity {
+    const piece: GraphEntity = {
         '@type': type,
         '@id': ids.article(input.url),
         isPartOf: input.isPartOf,
