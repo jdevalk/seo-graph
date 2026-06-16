@@ -591,7 +591,8 @@ Options:
 `example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
 `https://<host>/<key>.txt`), `endpoint?` (defaults to `api.indexnow.org`),
 `filter?` (drop URLs for which the callback returns `false`; composed on
-top of the built-in `/404` exclusion).
+top of the built-in `/404` exclusion), `incremental?` (submit only changed
+URLs — see [Incremental IndexNow submission](#incremental-indexnow-submission)).
 
 `validateMetadataLength` accepts `true`/`false` for the defaults, or an
 object to override bounds. Length is measured on the whitespace-collapsed,
@@ -677,6 +678,47 @@ own deploy hook.
 > (HTTP 403) and the key is treated as invalid going forward — you'll
 > have to rotate it. Ship the route, deploy, confirm the `.txt` loads
 > over HTTPS, _then_ enable `indexNow` in the integration.
+
+## Incremental IndexNow submission
+
+By default the integration submits **every** eligible URL on every build. The
+[IndexNow spec](https://www.indexnow.org/documentation) asks senders to submit
+only URLs that were **added, updated, or deleted**, and full resubmits can trip
+a host's rate limit (HTTP 429). Set `indexNow.incremental` to submit just the
+difference:
+
+```js
+seoGraph({
+    indexNow: {
+        key: process.env.INDEXNOW_KEY,
+        host: 'example.com',
+        siteUrl: 'https://example.com',
+        incremental: true,
+    },
+});
+```
+
+On each build the integration hashes every eligible page into a manifest,
+**fetches the previously published manifest from the live site**, diffs the two,
+and submits only the changed URLs (added + updated + deleted). It then writes
+the new manifest into the build output (default `indexnow-manifest.json` at the
+site root) so it ships with the deploy and becomes the next build's baseline.
+
+Because the previous state lives on the live site — not local disk or a
+key/value store — this behaves identically whether you build locally or in CI,
+and adds no infrastructure (the manifest is a static file; the only network call
+is one `GET` at build time). The manifest just lists URLs and opaque hashes —
+the same URLs your sitemap already exposes.
+
+`incremental` sub-options (all optional): `manifestPath` (build-output path and
+served URL path; default `indexnow-manifest.json`), `manifestUrl` (absolute URL
+to fetch the previous manifest from; default `<siteUrl>/<manifestPath>`),
+`normalize` (`(html, url) => string` to strip per-build volatile markup — CSP
+nonces, timestamps — before hashing, so unchanged pages don't read as modified),
+and `onError` (`'skip'` (default) or `'full'` — what to do when the previous
+manifest can't be fetched or parsed for a reason other than a clean `404`; a
+`404` is always treated as a first run and submits everything once). `'skip'`
+means a transient fetch failure can never trigger an accidental full resubmit.
 
 ## Validating your output
 

@@ -3,6 +3,16 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { submitToIndexNow } from '@jdevalk/seo-graph-core';
 import { renderLlmsTxt, type LlmsTxtSection } from './llms-txt.js';
+import {
+    buildUrlManifest,
+    changedUrls,
+    diffManifests,
+    hashContent,
+    parseManifest,
+    serializeManifest,
+    type ManifestEntry,
+    type UrlManifest,
+} from './indexnow-manifest.js';
 
 // Narrow shape of the Astro integration hook we use. We don't import
 // Astro types here to keep this package installable without `astro`
@@ -68,6 +78,55 @@ export interface IndexNowIntegrationOptions {
      * ```
      */
     filter?: (url: string) => boolean;
+    /**
+     * Submit only URLs that changed since the last build, instead of the
+     * whole site every time (the IndexNow spec asks for added/updated/
+     * deleted URLs only, and full resubmits can trip per-host rate limits).
+     *
+     * Enabled with `true` (defaults) or an options object. On each build the
+     * integration hashes every eligible page into a manifest, fetches the
+     * previously published manifest from the live site, diffs them, and
+     * submits only the difference — then writes the new manifest into the
+     * build output so it ships with this deploy and becomes the next baseline.
+     *
+     * The previous state lives on the live site (not local disk or a
+     * key/value store), so this works the same whether you build locally or
+     * in CI, and adds no infrastructure. Default is off (full submit).
+     */
+    incremental?: boolean | IndexNowIncrementalOptions;
+}
+
+/**
+ * Options for incremental IndexNow submission (`indexNow.incremental`).
+ */
+export interface IndexNowIncrementalOptions {
+    /**
+     * Build-output path the manifest is written to, and the URL path it is
+     * served from. Defaults to `indexnow-manifest.json` at the site root.
+     */
+    manifestPath?: string;
+    /**
+     * Absolute URL to fetch the previous manifest from. Defaults to
+     * `<siteUrl>/<manifestPath>`. Override if the manifest is served from a
+     * different host or path than where it's written.
+     */
+    manifestUrl?: string;
+    /**
+     * Normalize a page's HTML before hashing, to strip per-build volatile
+     * markup (CSP nonces, timestamps, build ids) that would otherwise make
+     * unchanged pages look modified. Receives the raw HTML and the page URL.
+     */
+    normalize?: (html: string, url: string) => string;
+    /**
+     * What to do when the previous manifest can't be fetched or parsed for a
+     * reason other than a clean 404 (network error, 5xx, malformed body). A
+     * 404 is always treated as "first run" (submit everything once).
+     *
+     * - `'skip'` (default): submit nothing this build, so a transient fetch
+     *   failure can't trigger an accidental full resubmit.
+     * - `'full'`: fall back to submitting every eligible URL.
+     */
+    onError?: 'skip' | 'full';
 }
 
 /**
@@ -1024,14 +1083,16 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                 }
 
                 if (indexNow) {
-                    const urls = htmlFiles
-                        .map((f) => htmlFileToUrl(f, indexNow.siteUrl))
-                        .filter((u) => !isDefaultExcludedFromIndexNow(u))
-                        .filter((u) => (indexNow.filter ? indexNow.filter(u) : true));
+                    const eligible = htmlFiles
+                        .map((f) => ({ file: f, url: htmlFileToUrl(f, indexNow.siteUrl) }))
+                        .filter((e) => !isDefaultExcludedFromIndexNow(e.url))
+                        .filter((e) => (indexNow.filter ? indexNow.filter(e.url) : true));
 
-                    if (urls.length === 0) {
-                        logger.info('IndexNow: no URLs to submit.');
-                    } else {
+                    const submit = async (urls: string[]) => {
+                        if (urls.length === 0) {
+                            logger.info('IndexNow: no URLs to submit.');
+                            return;
+                        }
                         const results = await submitToIndexNow({
                             host: indexNow.host,
                             key: indexNow.key,
@@ -1049,6 +1110,76 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                                     `IndexNow: submission failed (status ${r.status}): ${r.message}`,
                                 );
                             }
+                        }
+                    };
+
+                    if (!indexNow.incremental) {
+                        await submit(eligible.map((e) => e.url));
+                    } else {
+                        const opts: IndexNowIncrementalOptions =
+                            indexNow.incremental === true ? {} : indexNow.incremental;
+                        const manifestRelPath = (
+                            opts.manifestPath ?? 'indexnow-manifest.json'
+                        ).replace(/^\//, '');
+                        const siteBase = indexNow.siteUrl.replace(/\/$/, '');
+                        const manifestUrl = opts.manifestUrl ?? `${siteBase}/${manifestRelPath}`;
+                        const onError = opts.onError ?? 'skip';
+                        const normalize = opts.normalize;
+
+                        // Current manifest: hash every eligible page's built HTML.
+                        const entries: ManifestEntry[] = [];
+                        for (const e of eligible) {
+                            const html = await readFile(join(buildDir, e.file), 'utf8');
+                            entries.push({ url: e.url, content: html });
+                        }
+                        const current = buildUrlManifest(
+                            entries,
+                            normalize
+                                ? (content, url) => hashContent(normalize(content, url))
+                                : undefined,
+                        );
+
+                        // Previous state lives on the live site. A clean 404 means
+                        // "first run" (baseline). Any other failure leaves `previous`
+                        // null so we never accidentally full-resubmit on a transient
+                        // network blip.
+                        let previous: UrlManifest | null = null;
+                        try {
+                            const res = await fetch(manifestUrl);
+                            if (res.status === 404) {
+                                previous = {};
+                            } else if (res.ok) {
+                                previous = parseManifest(await res.text());
+                            }
+                        } catch {
+                            previous = null;
+                        }
+
+                        // Always publish the new manifest so it ships with this
+                        // deploy and becomes the next build's baseline.
+                        await writeFile(
+                            join(buildDir, manifestRelPath),
+                            serializeManifest(current),
+                            'utf8',
+                        );
+
+                        if (previous === null) {
+                            if (onError === 'full') {
+                                logger.warn(
+                                    `IndexNow: could not read previous manifest at ${manifestUrl}; submitting all URLs.`,
+                                );
+                                await submit(Object.keys(current));
+                            } else {
+                                logger.warn(
+                                    `IndexNow: could not read previous manifest at ${manifestUrl}; skipping submission this build.`,
+                                );
+                            }
+                        } else {
+                            const diff = diffManifests(previous, current);
+                            logger.info(
+                                `IndexNow: ${diff.added.length} added, ${diff.updated.length} updated, ${diff.deleted.length} deleted.`,
+                            );
+                            await submit(changedUrls(diff));
                         }
                     }
                 }
