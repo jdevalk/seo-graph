@@ -14,3 +14,9 @@ packages/*/AGENTS.md
 # Scanner output files
 packages/seo-graph-scanner/report.json
 packages/seo-graph-scanner/*.report.json
+
+# IntelliJ build files
+.idea/
+
+# Local Claude stuff
+.claude/settings.local.json

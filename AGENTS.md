@@ -2833,6 +2833,51 @@ export const GET = createIndexNowKeyRoute({ key: 'your-key-here' });
 
 The filename (minus `.txt.ts`) must equal the key.
 
+#### Gating submission to the production branch
+
+Preview and feature-branch deploys share the same IndexNow key as
+production but shouldn't notify search engines — submitting preview
+URLs wastes daily quota and can get the key flagged invalid (the host
+hasn't served those URLs yet).
+
+`indexNowOnBranch(branch, options, productionBranch?)` passes the
+options through unchanged when `branch` matches `productionBranch`
+(default `"main"`) and returns `undefined` otherwise, so `seoGraph()`
+skips submission entirely on non-production deploys.
+
+> **`import.meta.env` is not available in `astro.config.mjs`.** Astro
+> only exposes `import.meta.env` inside components and pages processed
+> by the Vite pipeline. Config files run in Node.js before Vite
+> starts, so you must read branch variables via `process.env` instead.
+
+```js
+import { defineConfig } from 'astro/config';
+import seoGraph, { indexNowOnBranch } from '@jdevalk/astro-seo-graph/integration';
+
+export default defineConfig({
+    integrations: [
+        seoGraph({
+            indexNow: indexNowOnBranch(process.env.CF_PAGES_BRANCH ?? '', {
+                key: process.env.INDEXNOW_KEY,
+                host: 'example.com',
+                siteUrl: 'https://example.com',
+            }),
+        }),
+    ],
+});
+```
+
+Platform branch variables:
+- Cloudflare Pages: `process.env.CF_PAGES_BRANCH`
+- Vercel:           `process.env.VERCEL_GIT_COMMIT_REF`
+- Netlify:          `process.env.BRANCH`
+
+Pass a third argument to use a branch name other than `"main"`:
+
+```js
+indexNowOnBranch(process.env.CF_PAGES_BRANCH ?? '', options, 'production')
+```
+
 ### llms.txt generation
 
 Generates an [`llms.txt`](https://llmstxt.org) file — a markdown summary

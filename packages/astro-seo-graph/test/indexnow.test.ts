@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createIndexNowKeyRoute } from '../src/indexnow.js';
-import { htmlFileToUrl } from '../src/integration.js';
+import { htmlFileToUrl, indexNowOnBranch } from '../src/integration.js';
 
 const VALID_KEY = 'abcdef0123456789abcdef0123456789';
 
@@ -21,6 +21,27 @@ describe('createIndexNowKeyRoute', () => {
 
     it('rejects invalid keys up front', () => {
         expect(() => createIndexNowKeyRoute({ key: 'nope' })).toThrow();
+    });
+});
+
+describe('indexNowOnBranch', () => {
+    const opts = { key: VALID_KEY, host: 'example.com', siteUrl: 'https://example.com' };
+
+    it('returns options on the production branch', () => {
+        expect(indexNowOnBranch('main', opts)).toBe(opts);
+    });
+
+    it('returns undefined on a non-production branch', () => {
+        expect(indexNowOnBranch('feature/my-change', opts)).toBeUndefined();
+    });
+
+    it('returns undefined on an empty branch string', () => {
+        expect(indexNowOnBranch('', opts)).toBeUndefined();
+    });
+
+    it('respects a custom productionBranch', () => {
+        expect(indexNowOnBranch('master', opts, 'master')).toBe(opts);
+        expect(indexNowOnBranch('main', opts, 'master')).toBeUndefined();
     });
 });
 
