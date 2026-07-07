@@ -1,6 +1,7 @@
 import type { BreadcrumbListLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
+import type { GraphEntity } from '../types.js';
 import { spreadRemainingProperties } from '../types.js';
 
 export interface BreadcrumbItem {
@@ -27,10 +28,7 @@ const HANDLED_KEYS = new Set<string>(['url', 'items']);
 /**
  * Build a schema.org BreadcrumbList piece.
  */
-export function buildBreadcrumbList(
-    input: BreadcrumbListInput,
-    ids: IdFactory,
-): Record<string, unknown> {
+export function buildBreadcrumbList(input: BreadcrumbListInput, ids: IdFactory): GraphEntity {
     const lastIndex = input.items.length - 1;
     const itemListElement = input.items.map((item, index) => ({
         '@type': 'ListItem',
@@ -43,7 +41,7 @@ export function buildBreadcrumbList(
               : item.url,
     }));
 
-    const piece: Record<string, unknown> = {
+    const piece: GraphEntity = {
         '@type': 'BreadcrumbList',
         '@id': ids.breadcrumb(input.url),
         itemListElement,

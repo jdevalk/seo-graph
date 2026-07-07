@@ -1,7 +1,7 @@
 import type { WebSiteLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
-import type { Reference, CreativeWorkFields } from '../types.js';
+import type { Reference, CreativeWorkFields, GraphEntity } from '../types.js';
 import {
     applyCreativeWorkFields,
     spreadRemainingProperties,
@@ -33,8 +33,8 @@ const HANDLED_KEYS = new Set<string>([
  * Build a schema.org WebSite piece. This is the site-wide singleton;
  * every page's WebPage should reference it via `isPartOf`.
  */
-export function buildWebSite(input: WebSiteInput, ids: IdFactory): Record<string, unknown> {
-    const piece: Record<string, unknown> = {
+export function buildWebSite(input: WebSiteInput, ids: IdFactory): GraphEntity {
+    const piece: GraphEntity = {
         '@type': 'WebSite',
         '@id': ids.website,
         url: input.url,

@@ -2868,14 +2868,15 @@ export default defineConfig({
 ```
 
 Platform branch variables:
+
 - Cloudflare Pages: `process.env.CF_PAGES_BRANCH`
-- Vercel:           `process.env.VERCEL_GIT_COMMIT_REF`
-- Netlify:          `process.env.BRANCH`
+- Vercel: `process.env.VERCEL_GIT_COMMIT_REF`
+- Netlify: `process.env.BRANCH`
 
 Pass a third argument to use a branch name other than `"main"`:
 
 ```js
-indexNowOnBranch(process.env.CF_PAGES_BRANCH ?? '', options, 'production')
+indexNowOnBranch(process.env.CF_PAGES_BRANCH ?? '', options, 'production');
 ```
 
 ### llms.txt generation

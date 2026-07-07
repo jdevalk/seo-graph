@@ -20,7 +20,7 @@ schema.org best practices — see [AGENTS.md](https://github.com/jdevalk/seo-gra
 
 | API                            | Purpose                                                                                                                                                                                                                                                                 |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`<Seo>`** (`./Seo.astro`)    | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, hreflang alternates, and optional JSON-LD `@graph`. Wraps [`astro-seo`](https://github.com/jonasmerlin/astro-seo) for the meta tags.                                   |
+| **`<Seo>`** (`./Seo.astro`)    | Single head component covering `<title>`, meta description, canonical, Open Graph, Twitter card, hreflang alternates, and optional JSON-LD `@graph`. Renders every `<head>` tag directly — no `astro-seo` dependency.                                                   |
 | **`createSchemaEndpoint`**     | Factory returning an Astro `APIRoute` handler that serves a corpus-wide JSON-LD `@graph` for a content collection.                                                                                                                                                      |
 | **`createSchemaMap`**          | Factory returning an `APIRoute` handler that emits a sitemap-style XML listing of your site's schema endpoints — the discovery point for agent crawlers.                                                                                                                |
 | **`aggregate`**                | Shared engine behind the endpoint factories. Walks a list of entries, runs a caller-supplied mapper, deduplicates by `@id`.                                                                                                                                             |
@@ -85,6 +85,47 @@ const graph = buildSchemaGraph({
     <body>...</body>
 </html>
 ```
+
+### Props
+
+All props are optional except `title`.
+
+| Prop                  | Type                                            | Default                     | Description                                                                                             |
+| --------------------- | ----------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `title`               | `string`                                        | —                           | Page title. **Required.**                                                                               |
+| `titleTemplate`       | `string`                                        | raw `title`                 | Template for the full `<title>`; `%s` is replaced with `title` (e.g. `"%s \| Joost.blog"`).             |
+| `description`         | `string`                                        | —                           | Meta description.                                                                                       |
+| `canonical`           | `string \| URL`                                 | current URL, query stripped | Explicit canonical override. Omitted entirely when `noindex`.                                           |
+| `preserveQueryParams` | `boolean`                                       | `false`                     | Keep the query string on the default canonical. No effect when `canonical` is set.                      |
+| `ogType`              | `'website' \| 'article' \| 'profile' \| 'book'` | `'website'`                 | Open Graph type.                                                                                        |
+| `ogImage`             | `string`                                        | —                           | Absolute URL of the share image.                                                                        |
+| `ogImageAlt`          | `string`                                        | —                           | Alt text for the share image.                                                                           |
+| `ogImageWidth`        | `number`                                        | —                           | Share image width in pixels.                                                                            |
+| `ogImageHeight`       | `number`                                        | —                           | Share image height in pixels.                                                                           |
+| `siteName`            | `string`                                        | —                           | Site name shown in OG tags.                                                                             |
+| `locale`              | `string`                                        | `'en_US'`                   | OG locale.                                                                                              |
+| `twitter`             | `object`                                        | —                           | Twitter card metadata — see [below](#twitter-and-article-sub-objects).                                  |
+| `article`             | `object`                                        | —                           | Article OG metadata — see [below](#twitter-and-article-sub-objects). Only when `ogType` is `'article'`. |
+| `noindex`             | `boolean`                                       | `false`                     | Emit `noindex` in the robots meta (also drops the canonical).                                           |
+| `nofollow`            | `boolean`                                       | `false`                     | Emit `nofollow` in the robots meta.                                                                     |
+| `articlePublisher`    | `string`                                        | —                           | Facebook page URL; emitted as `article:publisher` when `ogType` is `'article'`.                         |
+| `author`              | `string`                                        | `article.authors[0]`        | Value for `<meta name="author">`.                                                                       |
+| `graph`               | `Record<string, unknown> \| null`               | —                           | JSON-LD `@graph` to inject as `<script type="application/ld+json">`. `null`/omit skips it.              |
+| `extraLinks`          | `Array<Record<string, string>>`                 | —                           | Extra `<link>` tags (icons, sitemap, RSS alternate, …).                                                 |
+| `extraMeta`           | `Array<Record<string, string>>`                 | —                           | Extra `<meta>` tags.                                                                                    |
+| `alternates`          | `BuildAlternateLinksInput`                      | —                           | hreflang alternate-language annotations — see [hreflang alternates](#hreflang-alternates).              |
+
+#### `twitter` and `article` sub-objects
+
+`twitter` (all fields optional): `site`, `creator`,
+`card` (`'summary' \| 'summary_large_image' \| 'app' \| 'player'`, default
+`'summary_large_image'`), `title`, `description`, `image`, `imageAlt`. The four
+content fields fall back to their `og:` counterparts when omitted — see the
+Twitter tag dedup note below.
+
+`article` (all fields optional; emitted only when `ogType` is `'article'`):
+`publishedTime`, `modifiedTime`, `expirationTime` (`Date \| string`), `authors`
+(`string[]`), `tags` (`string[]`), `section`.
 
 ### `<Seo>` behavior notes
 
@@ -591,7 +632,8 @@ Options:
 `example.com`), `siteUrl` (absolute origin), `keyLocation?` (defaults to
 `https://<host>/<key>.txt`), `endpoint?` (defaults to `api.indexnow.org`),
 `filter?` (drop URLs for which the callback returns `false`; composed on
-top of the built-in `/404` exclusion).
+top of the built-in `/404` exclusion), `incremental?` (submit only changed
+URLs — see [Incremental IndexNow submission](#incremental-indexnow-submission)).
 
 `validateMetadataLength` accepts `true`/`false` for the defaults, or an
 object to override bounds. Length is measured on the whitespace-collapsed,
@@ -713,15 +755,57 @@ export default defineConfig({
 ```
 
 Platform branch variables:
+
 - Cloudflare Pages: `process.env.CF_PAGES_BRANCH`
-- Vercel:           `process.env.VERCEL_GIT_COMMIT_REF`
-- Netlify:          `process.env.BRANCH`
+- Vercel: `process.env.VERCEL_GIT_COMMIT_REF`
+- Netlify: `process.env.BRANCH`
 
 Pass a third argument to use a branch name other than `"main"`:
 
 ```js
-indexNowOnBranch(process.env.CF_PAGES_BRANCH ?? '', options, 'production')
+indexNowOnBranch(process.env.CF_PAGES_BRANCH ?? '', options, 'production');
 ```
+
+## Incremental IndexNow submission
+
+By default the integration submits **every** eligible URL on every build. The
+[IndexNow spec](https://www.indexnow.org/documentation) asks senders to submit
+only URLs that were **added, updated, or deleted**, and full resubmits can trip
+a host's rate limit (HTTP 429). Set `indexNow.incremental` to submit just the
+difference:
+
+```js
+seoGraph({
+    indexNow: {
+        key: process.env.INDEXNOW_KEY,
+        host: 'example.com',
+        siteUrl: 'https://example.com',
+        incremental: true,
+    },
+});
+```
+
+On each build the integration hashes every eligible page into a manifest,
+**fetches the previously published manifest from the live site**, diffs the two,
+and submits only the changed URLs (added + updated + deleted). It then writes
+the new manifest into the build output (default `indexnow-manifest.json` at the
+site root) so it ships with the deploy and becomes the next build's baseline.
+
+Because the previous state lives on the live site — not local disk or a
+key/value store — this behaves identically whether you build locally or in CI,
+and adds no infrastructure (the manifest is a static file; the only network call
+is one `GET` at build time). The manifest just lists URLs and opaque hashes —
+the same URLs your sitemap already exposes.
+
+`incremental` sub-options (all optional): `manifestPath` (build-output path and
+served URL path; default `indexnow-manifest.json`), `manifestUrl` (absolute URL
+to fetch the previous manifest from; default `<siteUrl>/<manifestPath>`),
+`normalize` (`(html, url) => string` to strip per-build volatile markup — CSP
+nonces, timestamps — before hashing, so unchanged pages don't read as modified),
+and `onError` (`'skip'` (default) or `'full'` — what to do when the previous
+manifest can't be fetched or parsed for a reason other than a clean `404`; a
+`404` is always treated as a first run and submits everything once). `'skip'`
+means a transient fetch failure can never trigger an accidental full resubmit.
 
 ## Validating your output
 

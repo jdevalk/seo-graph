@@ -1,6 +1,7 @@
 import type { ImageObjectLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
+import type { GraphEntity } from '../types.js';
 import { spreadRemainingProperties } from '../types.js';
 
 interface ImageObjectCoreFields {
@@ -32,14 +33,14 @@ const HANDLED_KEYS = new Set<string>([
  * primary image (id = `${pageUrl}#primaryimage`), or `id` for a site-
  * wide image like a personal logo.
  */
-export function buildImageObject(input: ImageObjectInput, ids: IdFactory): Record<string, unknown> {
+export function buildImageObject(input: ImageObjectInput, ids: IdFactory): GraphEntity {
     const resolvedId =
         input.id ?? (input.pageUrl !== undefined ? ids.primaryImage(input.pageUrl) : undefined);
     if (resolvedId === undefined) {
         throw new Error('buildImageObject: either `id` or `pageUrl` is required');
     }
 
-    const piece: Record<string, unknown> = {
+    const piece: GraphEntity = {
         '@type': 'ImageObject',
         '@id': resolvedId,
         url: input.url,

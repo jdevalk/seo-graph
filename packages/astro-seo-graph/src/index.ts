@@ -27,6 +27,22 @@ export type { IndexNowKeyRouteOptions, IndexNowSubmitResult } from './indexnow.j
 
 export { indexNowOnBranch } from './integration.js';
 export type { IndexNowIntegrationOptions } from './integration.js';
+export {
+    buildUrlManifest,
+    diffManifests,
+    changedUrls,
+    hashContent,
+    serializeManifest,
+    parseManifest,
+    DEFAULT_HASH_ALGORITHM,
+    MANIFEST_VERSION,
+} from './indexnow-manifest.js';
+export type {
+    UrlManifest,
+    ManifestEntry,
+    ManifestDiff,
+    SerializedManifest,
+} from './indexnow-manifest.js';
 
 export { renderLlmsTxt } from './llms-txt.js';
 export type { LlmsTxtInput, LlmsTxtSection, LlmsTxtLink } from './llms-txt.js';

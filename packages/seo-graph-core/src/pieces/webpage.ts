@@ -1,7 +1,7 @@
 import type { WebPageLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
-import type { Reference, CreativeWorkFields } from '../types.js';
+import type { Reference, CreativeWorkFields, GraphEntity } from '../types.js';
 import {
     applyCreativeWorkFields,
     spreadRemainingProperties,
@@ -52,12 +52,12 @@ export function buildWebPage(
     input: WebPageInput,
     ids: IdFactory,
     type: WebPageType = 'WebPage',
-): Record<string, unknown> {
+): GraphEntity {
     const potentialAction: ReadonlyArray<Record<string, unknown>> = input.potentialAction ?? [
         { '@type': 'ReadAction', target: [input.url] },
     ];
 
-    const piece: Record<string, unknown> = {
+    const piece: GraphEntity = {
         '@type': type,
         '@id': ids.webPage(input.url),
         url: input.url,
