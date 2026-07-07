@@ -7,15 +7,32 @@ on:
         branches: [main]
 
 jobs:
+    # Primary gate. Runs against the committed lockfile (Astro 7) with the
+    # integrity check intact, so lockfile drift still fails CI.
     check:
         runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                # Exercise the full supported Astro peer range (latest of
-                # each major). The lockfile can only pin one version, so the
-                # non-baseline leg re-resolves astro and can't be frozen.
-                astro: ['6', '7']
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 22
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            # Build first: packages downstream from seo-graph-core need its
+            # dist/*.d.ts to exist before their typecheck can resolve the
+            # workspace dep.
+            - run: pnpm build
+            - run: pnpm typecheck
+            - run: pnpm test
+            - run: pnpm format:check
+
+    # Astro 6 compatibility leg. The committed lockfile pins Astro 7, so this
+    # job re-resolves astro@^6 and therefore can't use --frozen-lockfile. It
+    # verifies the widened peer range still builds/typechecks/tests on the
+    # older major; formatting is major-independent and covered by `check`.
+    astro6-compat:
+        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
@@ -24,12 +41,8 @@ jobs:
                   node-version: 22
                   cache: 'pnpm'
             - run: pnpm install --no-frozen-lockfile
-            - name: Pin Astro ${{ matrix.astro }}
-              run: pnpm --filter @jdevalk/astro-seo-graph add -D astro@^${{ matrix.astro }}
-            # Build first: packages downstream from seo-graph-core need its
-            # dist/*.d.ts to exist before their typecheck can resolve the
-            # workspace dep.
+            - name: Pin Astro 6
+              run: pnpm --filter @jdevalk/astro-seo-graph add -D astro@^6
             - run: pnpm build
             - run: pnpm typecheck
             - run: pnpm test
-            - run: pnpm format:check
