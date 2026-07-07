@@ -1,5 +1,49 @@
 # @jdevalk/astro-seo-graph
 
+## 2.1.0
+
+### Minor Changes
+
+- 110fc2b: **Incremental IndexNow submission via a published content-hash manifest.**
+
+    The `indexNow` integration option submitted every URL on the site on every
+    build. The IndexNow spec asks senders to submit only added/updated/deleted
+    URLs, and full resubmits can trip per-host rate limits (HTTP 429).
+
+    New opt-in `indexNow.incremental` (`true` or an options object). When enabled,
+    each build hashes every eligible page into a manifest, fetches the previously
+    published manifest from the live site, diffs them, and submits only the URLs
+    that changed (added + updated + deleted) — then writes the new manifest into
+    the build output so it ships with the deploy and becomes the next baseline.
+
+    The previous state lives on the live site, so this works identically whether
+    you build locally or in CI and needs no external store. A clean `404` is
+    treated as a first run (baseline); any other fetch/parse failure is handled by
+    `onError` (`'skip'` by default, so a transient blip can't trigger a full
+    resubmit; `'full'` to fall back to submitting everything). A `normalize` hook
+    lets you strip per-build volatile markup (nonces, timestamps) before hashing.
+
+    Default behavior is unchanged — without `incremental`, the integration still
+    submits the full set.
+
+    Also exports the underlying pure helpers (`buildUrlManifest`, `diffManifests`,
+    `changedUrls`, `hashContent`, `serializeManifest`, `parseManifest`) for callers
+    who want to compute the changed set themselves.
+
+### Patch Changes
+
+- 497a720: Fix `validateImageAlt` false-positives on `alt=""` after HTML minification.
+
+    Astro's build pipeline (via Vite's HTML minifier) implements HTML5 §2.3.2 and drops the value from empty boolean-form attributes, so `<img alt="">` in source becomes `<img ... alt ...>` in the rendered output. The previous regex (`/\balt\s*=/i`) required a literal `=`, so it missed the minified form and warned on every decorative image marked with `alt=""` — defeating the documented decorative-image escape hatch for any consumer using `astro:assets`.
+
+    The new regex (`/\salt(?:\s*=|\s|\/?>|$)/i`) accepts both `alt="..."` and bare-boolean `alt`. The leading whitespace anchor also closes a latent false-skip on attribute names like `data-alt` (which the old regex matched as an `alt` attribute).
+
+- 3d510e2: Embed TypeScript sources into emitted `.js.map` files via `inlineSources: true`. Without this, the published maps reference `../src/*.ts` paths that aren't included in the npm tarball (`files: ["dist", ...]`), causing Vite to warn `Sourcemap for ... points to missing source files` on every dev start in consumer projects. Inlining the sources keeps sourcemaps usable for debugging without shipping the `src/` directory.
+- Updated dependencies [973a74d]
+- Updated dependencies [973a74d]
+- Updated dependencies [3d510e2]
+    - @jdevalk/seo-graph-core@0.7.0
+
 ## 2.0.0
 
 ### Major Changes
@@ -178,68 +222,68 @@
   and renders every `<head>` tag directly. Net result: cleaner output, two
   silent bugs fixed, lighter install.
 
-                      ### Bug fixes (behavior changes that fix wrong output)
-                      - **`articlePublisher` now actually renders.** Previously the prop typechecked
-                        but was silently dropped — `astro-seo`'s `OpenGraphArticleTags` doesn't
-                        destructure `publisher`, and its `openGraph.article` type doesn't include
-                        the field. Anyone using `articlePublisher` was getting no output. `<Seo>`
-                        now emits `<meta property="article:publisher" content="…">` as documented.
-                        Filed upstream: [jonasmerlin/astro-seo#110](https://github.com/jonasmerlin/astro-seo/issues/110).
-                      - **`<link rel="canonical">` no longer leaks on `noindex` pages.** The
-                        intent ("omit canonical on noindex" per Google recommendation) was
-                        defeated by `astro-seo`'s built-in canonical fallback that reconstructs
-                        the tag from `Astro.url` when the prop is undefined. `<Seo>` now omits
-                        the tag cleanly. Tracked upstream:
-                        [jonasmerlin/astro-seo#107](https://github.com/jonasmerlin/astro-seo/issues/107).
-                      - **Single `og:image` tag instead of `og:image` + `og:image:url`.** The
-                        `astro-seo` path emitted both with the same value — synonymous, harmless,
-                        but noise. `<Seo>` emits just `og:image`.
-                      - **Single `<meta name="robots">` tag.** The `astro-seo` path always
-                        emitted its own default `index, follow` tag that couldn't be suppressed,
-                        while we needed our own to add `max-snippet:-1, max-image-preview:large,
+                        ### Bug fixes (behavior changes that fix wrong output)
+                        - **`articlePublisher` now actually renders.** Previously the prop typechecked
+                          but was silently dropped — `astro-seo`'s `OpenGraphArticleTags` doesn't
+                          destructure `publisher`, and its `openGraph.article` type doesn't include
+                          the field. Anyone using `articlePublisher` was getting no output. `<Seo>`
+                          now emits `<meta property="article:publisher" content="…">` as documented.
+                          Filed upstream: [jonasmerlin/astro-seo#110](https://github.com/jonasmerlin/astro-seo/issues/110).
+                        - **`<link rel="canonical">` no longer leaks on `noindex` pages.** The
+                          intent ("omit canonical on noindex" per Google recommendation) was
+                          defeated by `astro-seo`'s built-in canonical fallback that reconstructs
+                          the tag from `Astro.url` when the prop is undefined. `<Seo>` now omits
+                          the tag cleanly. Tracked upstream:
+                          [jonasmerlin/astro-seo#107](https://github.com/jonasmerlin/astro-seo/issues/107).
+                        - **Single `og:image` tag instead of `og:image` + `og:image:url`.** The
+                          `astro-seo` path emitted both with the same value — synonymous, harmless,
+                          but noise. `<Seo>` emits just `og:image`.
+                        - **Single `<meta name="robots">` tag.** The `astro-seo` path always
+                          emitted its own default `index, follow` tag that couldn't be suppressed,
+                          while we needed our own to add `max-snippet:-1, max-image-preview:large,
 
     max-video-preview:-1`. Result was two robots tags per page. `<Seo>` now
     emits one merged tag with all directives.
 
-                      ### Cosmetic changes (HTML diff but equivalent meaning)
+                        ### Cosmetic changes (HTML diff but equivalent meaning)
 
-                      The byte-for-byte head output differs from 0.x in tag ordering. Search engines
-                      treat these as identical, but consumers running snapshot tests against
-                      `<Seo>` output will see diffs.
-                      - **Tag grouping by concern**: title → canonical → description → robots →
-                        OG basic → OG optional → OG image meta → OG article → twitter →
-                        hreflang → author → extras → JSON-LD. Previously the order was driven
-                        by `astro-seo`'s sub-components.
-                      - **Twitter overrides** follow the same field order as their OG counterparts
-                        (card / site / creator / title / description / image / imageAlt). The
-                        legacy order was card / site / title / image / imageAlt / description / creator.
-                      - **Hreflang link attribute order**: `rel` → `hreflang` → `href`.
-                        The legacy order was `rel` → `href` → `hreflang`.
+                        The byte-for-byte head output differs from 0.x in tag ordering. Search engines
+                        treat these as identical, but consumers running snapshot tests against
+                        `<Seo>` output will see diffs.
+                        - **Tag grouping by concern**: title → canonical → description → robots →
+                          OG basic → OG optional → OG image meta → OG article → twitter →
+                          hreflang → author → extras → JSON-LD. Previously the order was driven
+                          by `astro-seo`'s sub-components.
+                        - **Twitter overrides** follow the same field order as their OG counterparts
+                          (card / site / creator / title / description / image / imageAlt). The
+                          legacy order was card / site / title / image / imageAlt / description / creator.
+                        - **Hreflang link attribute order**: `rel` → `hreflang` → `href`.
+                          The legacy order was `rel` → `href` → `hreflang`.
 
-                      ### Breaking API changes
-                      - **Removed `buildAstroSeoProps`**. Replaced by `buildSeoContext`, which
-                        returns a flat, render-ready normalization (`SeoContext`) rather than the
-                        nested `astro-seo`-shaped adapter. Migration:
+                        ### Breaking API changes
+                        - **Removed `buildAstroSeoProps`**. Replaced by `buildSeoContext`, which
+                          returns a flat, render-ready normalization (`SeoContext`) rather than the
+                          nested `astro-seo`-shaped adapter. Migration:
 
-                          ```diff
-                          - import { buildAstroSeoProps } from '@jdevalk/astro-seo-graph';
-                          - const props = buildAstroSeoProps(seo, Astro.url.href);
-                          - props.openGraph.basic.title // nested
-                          + import { buildSeoContext } from '@jdevalk/astro-seo-graph';
-                          + const ctx = buildSeoContext(seo, Astro.url.href);
-                          + ctx.og.title // flat
-                          ```
+                            ```diff
+                            - import { buildAstroSeoProps } from '@jdevalk/astro-seo-graph';
+                            - const props = buildAstroSeoProps(seo, Astro.url.href);
+                            - props.openGraph.basic.title // nested
+                            + import { buildSeoContext } from '@jdevalk/astro-seo-graph';
+                            + const ctx = buildSeoContext(seo, Astro.url.href);
+                            + ctx.og.title // flat
+                            ```
 
-                      - **Removed `AstroSeoProps` type export**. The intermediate shape no
-                        longer exists. Use `SeoContext` (the new normalized shape) or `SeoProps`
-                        (the public input shape) depending on which side of the boundary you're on.
-                      - **Removed `astro-seo` from dependencies**. If you imported it transitively
-                        through this package, install it directly: `pnpm add astro-seo`.
+                        - **Removed `AstroSeoProps` type export**. The intermediate shape no
+                          longer exists. Use `SeoContext` (the new normalized shape) or `SeoProps`
+                          (the public input shape) depending on which side of the boundary you're on.
+                        - **Removed `astro-seo` from dependencies**. If you imported it transitively
+                          through this package, install it directly: `pnpm add astro-seo`.
 
-                      ### New exports
-                      - `buildSeoContext(props, url): SeoContext` — pure-TS normalization.
-                      - `SeoContext` type — flat render-ready shape.
-                      - `ROBOTS_EXTRAS` constant — the `max-snippet:-1, max-image-preview:large,
+                        ### New exports
+                        - `buildSeoContext(props, url): SeoContext` — pure-TS normalization.
+                        - `SeoContext` type — flat render-ready shape.
+                        - `ROBOTS_EXTRAS` constant — the `max-snippet:-1, max-image-preview:large,
 
     max-video-preview:-1`directives`<Seo>` always appends to the robots tag.
 

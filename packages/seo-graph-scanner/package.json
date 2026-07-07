@@ -1,6 +1,6 @@
 {
     "name": "@jdevalk/seo-graph-scanner",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Scan a live site's JSON-LD against seo-graph conventions. Sitemap-driven, no crawling.",
     "keywords": [
         "schema.org",

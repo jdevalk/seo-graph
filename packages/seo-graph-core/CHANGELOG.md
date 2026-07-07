@@ -1,5 +1,39 @@
 # @jdevalk/seo-graph-core
 
+## 0.7.0
+
+### Minor Changes
+
+- 973a74d: **`buildArticle` now accepts an array for `isPartOf`.**
+
+    `ArticleInput.isPartOf` was typed as a single `Reference`, but the shipped
+    "Personal blog" recipe in `AGENTS.md` links a posting to both its `WebPage`
+    and the `Blog` via `isPartOf: [{ '@id': webPage }, { '@id': blog }]`. The
+    builder already emitted the value verbatim at runtime, so the array worked —
+    but the type rejected it, forcing callers to add an `as` cast.
+
+    The input type is now `Reference | Reference[]`. No runtime change; existing
+    single-reference callers are unaffected.
+
+- 973a74d: **Piece builders now return `GraphEntity` instead of `Record<string, unknown>`.**
+
+    `assembleGraph<T extends GraphEntity>(pieces)` requires each piece to be a
+    `GraphEntity`, whose `@type` is required. The builders (`buildWebSite`,
+    `buildWebPage`, `buildArticle`, `buildBreadcrumbList`, `buildImageObject`,
+    `buildVideoObject`, `buildSiteNavigationElement`, `buildPiece`) were declared
+    to return `Record<string, unknown>`, which lacks `@type` — so the documented
+    pattern `assembleGraph([buildWebSite(...), buildArticle(...)])` failed `tsc` /
+    `astro check` under strict mode and forced callers to cast `as GraphEntity[]`.
+
+    Every builder already produces an object with a literal `@type`, so the return
+    type is widened to `GraphEntity` with no runtime change. Builder results — and
+    the arrays returned by `aggregate`/`createSchemaEndpoint` mappers — now compose
+    with `assembleGraph` without a cast.
+
+### Patch Changes
+
+- 3d510e2: Embed TypeScript sources into emitted `.js.map` files via `inlineSources: true`. Without this, the published maps reference `../src/*.ts` paths that aren't included in the npm tarball (`files: ["dist", ...]`), causing Vite to warn `Sourcemap for ... points to missing source files` on every dev start in consumer projects. Inlining the sources keeps sourcemaps usable for debugging without shipping the `src/` directory.
+
 ## 0.6.2
 
 ### Patch Changes
