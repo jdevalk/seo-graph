@@ -149,6 +149,44 @@ export function isDefaultExcludedFromIndexNow(url: string): boolean {
     return pathname === '/404' || pathname === '/404/';
 }
 
+/**
+ * Return `options` only when `branch` matches `productionBranch` (default
+ * `"main"`), otherwise return `undefined` so that `seoGraph()` skips
+ * IndexNow submission entirely.
+ *
+ * This is useful on CI/CD platforms that expose the current branch as an
+ * environment variable (e.g. `CF_PAGES_BRANCH`, `VERCEL_GIT_COMMIT_REF`,
+ * `BRANCH`) so that preview deployments never submit URLs to IndexNow.
+ *
+ * @example
+ * ```js
+ * // astro.config.mjs
+ * import { seoGraph, indexNowOnBranch } from '@jdevalk/astro-seo-graph/integration';
+ *
+ * export default defineConfig({
+ *     integrations: [
+ *         seoGraph({
+ *             indexNow: indexNowOnBranch(process.env.CF_PAGES_BRANCH ?? '', {
+ *                 key: 'your-key-here',
+ *                 host: 'example.com',
+ *                 siteUrl: 'https://example.com',
+ *             }),
+ *         }),
+ *     ],
+ * });
+ * ```
+ */
+export function indexNowOnBranch(
+    /** Current branch name, e.g. process.env.WORKERS_CI_BRANCH or process.env.VERCEL_GIT_COMMIT_REF or process.env.BRANCH, etc. */
+    branch: string,
+    /** Options for IndexNow submission. */
+    options: IndexNowIntegrationOptions,
+    /** Branch name that triggers production submission, defaults to `"main"` */
+    productionBranch = 'main',
+) {
+    return branch === productionBranch ? options : undefined;
+}
+
 export interface LlmsTxtIntegrationOptions {
     /** H1 of the generated `llms.txt`. */
     title: string;
