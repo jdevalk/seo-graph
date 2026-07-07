@@ -9,6 +9,13 @@ on:
 jobs:
     check:
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                # Exercise the full supported Astro peer range (latest of
+                # each major). The lockfile can only pin one version, so the
+                # non-baseline leg re-resolves astro and can't be frozen.
+                astro: ['6', '7']
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
@@ -16,7 +23,9 @@ jobs:
               with:
                   node-version: 22
                   cache: 'pnpm'
-            - run: pnpm install --frozen-lockfile
+            - run: pnpm install --no-frozen-lockfile
+            - name: Pin Astro ${{ matrix.astro }}
+              run: pnpm --filter @jdevalk/astro-seo-graph add -D astro@^${{ matrix.astro }}
             # Build first: packages downstream from seo-graph-core need its
             # dist/*.d.ts to exist before their typecheck can resolve the
             # workspace dep.
