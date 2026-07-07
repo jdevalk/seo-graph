@@ -30,6 +30,17 @@
     `changedUrls`, `hashContent`, `serializeManifest`, `parseManifest`) for callers
     who want to compute the changed set themselves.
 
+- 29426cb: **Branch-gated IndexNow submission via `indexNowOnBranch`.**
+
+    Preview and feature-branch deploys share the same IndexNow key as production
+    but shouldn't notify search engines — submitting preview URLs wastes daily
+    quota and can get the key flagged invalid. New `indexNowOnBranch(branch,
+    options, productionBranch?)` helper passes the options through unchanged when
+    `branch` matches `productionBranch` (default `"main"`) and returns `undefined`
+    otherwise, so `seoGraph()` skips submission entirely on non-production deploys.
+    Existing configs that pass `IndexNowIntegrationOptions` directly are
+    unaffected.
+
 ### Patch Changes
 
 - 497a720: Fix `validateImageAlt` false-positives on `alt=""` after HTML minification.
