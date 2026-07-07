@@ -117,6 +117,36 @@ describe('assembleGraph', () => {
         expect(warn).not.toHaveBeenCalled();
         warn.mockRestore();
     });
+
+    it('composes builder outputs directly, with no cast', () => {
+        // Type-level regression guard: builders return `GraphEntity`, so
+        // their results flow straight into `assembleGraph<T extends
+        // GraphEntity>` without an `as` cast. When the builders returned
+        // `Record<string, unknown>` this file failed `tsc` (the missing
+        // `@type` made the array incompatible with the constraint).
+        const graph = assembleGraph([
+            buildWebSite({ url: siteUrl, name: 'Example', publisher: { '@id': ids.person } }, ids),
+            buildWebPage({ url: postUrl, name: 'My Post', isPartOf: { '@id': ids.website } }, ids),
+            buildArticle(
+                {
+                    url: postUrl,
+                    isPartOf: { '@id': ids.webPage(postUrl) },
+                    author: { '@id': ids.person },
+                    publisher: { '@id': ids.person },
+                    headline: 'My Post',
+                    description: 'desc',
+                    datePublished: new Date('2026-01-01T00:00:00.000Z'),
+                },
+                ids,
+            ),
+        ]);
+        expect(graph['@graph']).toHaveLength(3);
+        expect(graph['@graph'].map((entity) => entity['@type'])).toEqual([
+            'WebSite',
+            'WebPage',
+            'Article',
+        ]);
+    });
 });
 
 describe('buildWebSite', () => {
@@ -397,6 +427,24 @@ describe('buildArticle', () => {
         expect(article.articleSection).toBe('Tech');
         expect(article.wordCount).toBe(100);
         expect(article.articleBody).toBe('Hello world');
+    });
+
+    it('accepts an array of isPartOf references and emits them verbatim', () => {
+        const blogId = `${siteUrl}#blog`;
+        const isPartOf = [{ '@id': ids.webPage(postUrl) }, { '@id': blogId }];
+        const article = buildArticle(
+            {
+                url: postUrl,
+                isPartOf,
+                author: { '@id': ids.person },
+                publisher: { '@id': ids.person },
+                headline: 'Hello',
+                description: 'World',
+                datePublished: new Date('2026-01-01T00:00:00.000Z'),
+            },
+            ids,
+        );
+        expect(article.isPartOf).toEqual(isPartOf);
     });
 });
 

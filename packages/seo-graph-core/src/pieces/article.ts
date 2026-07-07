@@ -1,7 +1,7 @@
 import type { ArticleLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
-import type { Reference, CreativeWorkFields } from '../types.js';
+import type { Reference, CreativeWorkFields, GraphEntity } from '../types.js';
 import {
     applyCreativeWorkFields,
     spreadRemainingProperties,
@@ -25,8 +25,13 @@ export type ArticleType =
 interface ArticleCoreFields extends CreativeWorkFields {
     /** Canonical URL of the article's page. The @id is `${url}#article`. */
     url: string;
-    /** Reference to the enclosing WebPage (usually ids.webPage(url)). */
-    isPartOf: Reference;
+    /**
+     * Reference to the enclosing entity, usually the WebPage
+     * (`ids.webPage(url)`). Pass an array to link the Article to more than
+     * one parent — e.g. both its WebPage and a Blog
+     * (`[{ '@id': ids.webPage(url) }, { '@id': blogId }]`).
+     */
+    isPartOf: Reference | Reference[];
     /** Author reference. May include a `name` alongside the `@id`. */
     author: Reference;
     /** Publisher reference. Usually the same as the author for personal blogs. */
@@ -67,8 +72,8 @@ export function buildArticle(
     input: ArticleInput,
     ids: IdFactory,
     type: ArticleType = 'Article',
-): Record<string, unknown> {
-    const piece: Record<string, unknown> = {
+): GraphEntity {
+    const piece: GraphEntity = {
         '@type': type,
         '@id': ids.article(input.url),
         isPartOf: input.isPartOf,

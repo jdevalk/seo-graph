@@ -1,7 +1,7 @@
 import type { SiteNavigationElementLeaf } from 'schema-dts';
 
 import type { IdFactory } from '../ids.js';
-import type { Reference } from '../types.js';
+import type { Reference, GraphEntity } from '../types.js';
 import { spreadRemainingProperties } from '../types.js';
 
 export interface NavigationItem {
@@ -27,14 +27,14 @@ const HANDLED_KEYS = new Set<string>(['name', 'isPartOf', 'items']);
 export function buildSiteNavigationElement(
     input: SiteNavigationInput,
     ids: IdFactory,
-): Record<string, unknown> {
+): GraphEntity {
     const hasPart = input.items.map((item) => ({
         '@type': 'SiteNavigationElement',
         name: item.name,
         url: item.url,
     }));
 
-    const piece: Record<string, unknown> = {
+    const piece: GraphEntity = {
         '@type': 'SiteNavigationElement',
         '@id': ids.navigation,
         name: input.name,
