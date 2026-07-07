@@ -488,7 +488,10 @@ export function classifyInternalLink(
  * Two WCAG-sanctioned ways to mark an image as decorative are respected
  * and NOT flagged:
  *
- *   - `alt=""` — the canonical decorative-image pattern.
+ *   - `alt=""` — the canonical decorative-image pattern. Also recognized
+ *     in HTML5 boolean-attribute form `<img ... alt>` (no `=`), which is
+ *     spec-equivalent to `alt=""` and is what Vite's HTML minifier (used
+ *     by Astro) emits when given `alt=""`.
  *   - `role="presentation"` (or `role="none"`) — removes the image from
  *     the accessibility tree; typically paired with `alt=""` but some
  *     codebases use it alone.
@@ -500,7 +503,11 @@ export function findImagesWithoutAlt(html: string): string[] {
     const results: string[] = [];
     for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
         const tag = match[0];
-        if (/\balt\s*=/i.test(tag)) continue;
+        // Match `alt` whether written as `alt="..."`, bare-boolean `alt`,
+        // or self-closed `alt/`. Leading `\s` anchors `alt` to an
+        // attribute slot inside the tag, avoiding false matches on
+        // attribute names like `data-alt` or `data-altitude`.
+        if (/\salt(?:\s*=|\s|\/?>|$)/i.test(tag)) continue;
         if (/\brole\s*=\s*["'](?:presentation|none)["']/i.test(tag)) continue;
         const src = tag.match(/\bsrc\s*=\s*["']([^"']*)["']/i)?.[1] ?? '(no src)';
         results.push(src);

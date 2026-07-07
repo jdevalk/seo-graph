@@ -164,6 +164,18 @@ describe('findImagesWithoutAlt', () => {
         expect(findImagesWithoutAlt(html)).toEqual([]);
     });
 
+    it('accepts bare-boolean alt (HTML5 §2.3.2, what Vite emits for alt="")', () => {
+        expect(findImagesWithoutAlt('<img src="/a.png" alt>')).toEqual([]);
+        expect(findImagesWithoutAlt('<img src="/a.png" alt sizes="100vw">')).toEqual([]);
+        expect(findImagesWithoutAlt('<img alt src="/a.png">')).toEqual([]);
+        expect(findImagesWithoutAlt('<img src="/a.png" alt/>')).toEqual([]);
+    });
+
+    it('does not confuse attribute names that contain alt as a prefix (e.g. data-alt)', () => {
+        expect(findImagesWithoutAlt('<img src="/x.png" data-alt="caption">')).toEqual(['/x.png']);
+        expect(findImagesWithoutAlt('<img src="/x.png" data-alt>')).toEqual(['/x.png']);
+    });
+
     it('accepts role="presentation" as intentional (decorative) and does not flag', () => {
         expect(findImagesWithoutAlt('<img src="/divider.svg" role="presentation">')).toEqual([]);
     });
