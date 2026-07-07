@@ -1,6 +1,6 @@
 {
     "name": "@jdevalk/seo-graph-core",
-    "version": "0.6.2",
+    "version": "0.7.0",
     "description": "Pure schema.org JSON-LD graph builders. Runtime-agnostic core for agent-ready SEO.",
     "keywords": [
         "schema.org",
