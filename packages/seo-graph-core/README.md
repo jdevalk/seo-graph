@@ -51,8 +51,10 @@ missing pieces during development.
 
 ### Piece builders
 
-All builders take an input object and the `IdFactory`, and return a plain
-object with `@type` and `@id`. Builders for CreativeWork subtypes (`WebSite`,
+The dedicated builders take an input object and the `IdFactory`, and return a
+plain object with `@type` and `@id`. `buildPiece` is the exception: it takes
+only the input object — pass `@id` and `@type` inline in that object. Builders
+for CreativeWork subtypes (`WebSite`,
 `WebPage`, `Article`) share a common set of optional fields via
 `CreativeWorkFields`: `description`, `inLanguage`, `datePublished`,
 `dateModified`, `about`, `copyrightHolder`, `copyrightYear`,
