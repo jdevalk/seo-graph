@@ -51,7 +51,7 @@
         "test": "vitest run"
     },
     "peerDependencies": {
-        "astro": "^6.0.0"
+        "astro": "^6.0.0 || ^7.0.0"
     },
     "dependencies": {
         "@jdevalk/seo-graph-core": "workspace:*",
@@ -60,7 +60,7 @@
     },
     "devDependencies": {
         "@types/node": "^25.9.3",
-        "astro": "^6.0.5",
+        "astro": "^7.0.0",
         "typescript": "^6.0.3",
         "vitest": "^4.1.9"
     }
