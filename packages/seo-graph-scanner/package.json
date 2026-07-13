@@ -47,7 +47,7 @@
     "dependencies": {
         "@jdevalk/seo-graph-core": "workspace:*",
         "cheerio": "^1.0.0",
-        "p-queue": "^9.3.0",
+        "p-queue": "^9.3.1",
         "sitemapper": "^4.1.6"
     },
     "devDependencies": {
