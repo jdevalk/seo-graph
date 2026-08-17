@@ -125,7 +125,7 @@ jobs:
             # that loses the OIDC env, so trusted publishing can't
             # complete. Our pack+publish loop runs `npm publish` directly
             # with OIDC intact.
-            - uses: changesets/action@v1
+            - uses: changesets/action@v2
               with:
                   version: pnpm changeset version
               env:
