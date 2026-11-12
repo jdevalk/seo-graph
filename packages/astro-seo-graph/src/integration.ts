@@ -345,7 +345,9 @@ export interface SeoGraphIntegrationOptions {
     /**
      * Submit built URLs to IndexNow after the build completes. Omit to
      * disable. Only URLs on `host` are submitted; URLs with trailing
-     * `index.html` are rewritten to their directory form.
+     * `index.html` are rewritten to their directory form, then put in the
+     * form Astro's `trailingSlash` setting makes canonical (`'never'`
+     * drops the trailing slash, `'always'` keeps it).
      */
     indexNow?: IndexNowIntegrationOptions;
     /**
@@ -395,6 +397,32 @@ export function htmlFileToUrl(relativePath: string, siteUrl: string): string {
         pathname = '/' + normalized;
     }
     return `${origin}${pathname}`;
+}
+
+/**
+ * Put a page URL into the form Astro's `trailingSlash` setting makes
+ * canonical: `'never'` strips the trailing slash, `'always'` adds one, and
+ * `'ignore'` (or no setting) leaves the URL as built. The site root keeps
+ * its slash in every mode.
+ */
+export function applyTrailingSlash(
+    url: string,
+    trailingSlash: 'always' | 'never' | 'ignore' | undefined,
+): string {
+    if (trailingSlash !== 'always' && trailingSlash !== 'never') return url;
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        return url;
+    }
+    if (parsed.pathname === '/') return url;
+    if (trailingSlash === 'never') {
+        parsed.pathname = parsed.pathname.replace(/\/+$/, '');
+    } else if (!parsed.pathname.endsWith('/')) {
+        parsed.pathname += '/';
+    }
+    return parsed.toString();
 }
 
 /**
@@ -779,6 +807,9 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
     // and treat Astro-configured redirect sources as valid link targets.
     let siteOrigin: string | undefined;
     let astroRedirectSources: string[] = [];
+    // Captured in astro:config:setup so IndexNow submits URLs in the
+    // site's canonical form.
+    let trailingSlash: 'always' | 'never' | 'ignore' | undefined;
 
     return {
         name: '@jdevalk/astro-seo-graph',
@@ -806,6 +837,7 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                     }
                 }
                 astroRedirectSources = collectAstroRedirectSources(config.redirects);
+                trailingSlash = config.trailingSlash;
             },
             'astro:build:done': async ({ dir, logger }) => {
                 const buildDir = fileURLToPath(dir);
@@ -1129,7 +1161,13 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
 
                 if (indexNow) {
                     const eligible = htmlFiles
-                        .map((f) => ({ file: f, url: htmlFileToUrl(f, indexNow.siteUrl) }))
+                        .map((f) => ({
+                            file: f,
+                            url: applyTrailingSlash(
+                                htmlFileToUrl(f, indexNow.siteUrl),
+                                trailingSlash,
+                            ),
+                        }))
                         .filter((e) => !isDefaultExcludedFromIndexNow(e.url))
                         .filter((e) => (indexNow.filter ? indexNow.filter(e.url) : true));
 

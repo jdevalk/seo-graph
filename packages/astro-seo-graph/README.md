@@ -694,8 +694,11 @@ given, no pages are auto-collected), `filter?` (drop URLs from the
 auto-generated section), `autoSectionName?` (defaults to `Pages`),
 `outputPath?` (defaults to `llms.txt`).
 
-`index.html` paths are rewritten to their trailing-slash form. Only static
-pages are checked/submitted (SSR pages aren't on disk at build time).
+`index.html` paths are rewritten to their trailing-slash form. IndexNow
+submissions then follow Astro's `trailingSlash` setting, so a site with
+`trailingSlash: 'never'` submits `/blog/post`, matching its canonical URLs.
+Only static pages are checked/submitted (SSR pages aren't on disk at build
+time).
 
 ## IndexNow key route
 
