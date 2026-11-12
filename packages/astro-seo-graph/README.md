@@ -790,6 +790,8 @@ On each build the integration hashes every eligible page into a manifest,
 and submits only the changed URLs (added + updated + deleted). It then writes
 the new manifest into the build output (default `indexnow-manifest.json` at the
 site root) so it ships with the deploy and becomes the next build's baseline.
+If IndexNow refuses the submission, the previous manifest ships instead, so the
+next build sees the same URLs as changed and submits them again.
 
 Because the previous state lives on the live site — not local disk or a
 key/value store — this behaves identically whether you build locally or in CI,

@@ -1133,10 +1133,12 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                         .filter((e) => !isDefaultExcludedFromIndexNow(e.url))
                         .filter((e) => (indexNow.filter ? indexNow.filter(e.url) : true));
 
-                    const submit = async (urls: string[]) => {
+                    // Resolves to true when every batch was accepted (or there
+                    // was nothing to send), false when any batch was refused.
+                    const submit = async (urls: string[]): Promise<boolean> => {
                         if (urls.length === 0) {
                             logger.info('IndexNow: no URLs to submit.');
-                            return;
+                            return true;
                         }
                         const results = await submitToIndexNow({
                             host: indexNow.host,
@@ -1156,6 +1158,7 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                                 );
                             }
                         }
+                        return results.every((r) => r.ok);
                     };
 
                     if (!indexNow.incremental) {
@@ -1200,20 +1203,24 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                             previous = null;
                         }
 
-                        // Always publish the new manifest so it ships with this
-                        // deploy and becomes the next build's baseline.
-                        await writeFile(
-                            join(buildDir, manifestRelPath),
-                            serializeManifest(current),
-                            'utf8',
-                        );
+                        // The manifest shipped with this deploy becomes the next
+                        // build's baseline. Publish the new one only once the
+                        // engines have accepted the change set; after a refused
+                        // submission, keep the previous baseline so the next
+                        // build sees the same URLs as changed and retries them.
+                        let publish: UrlManifest | null = current;
 
                         if (previous === null) {
                             if (onError === 'full') {
                                 logger.warn(
                                     `IndexNow: could not read previous manifest at ${manifestUrl}; submitting all URLs.`,
                                 );
-                                await submit(Object.keys(current));
+                                if (!(await submit(Object.keys(current)))) {
+                                    // No baseline to fall back on: ship no manifest,
+                                    // so the next build reads a 404 and submits
+                                    // everything again.
+                                    publish = null;
+                                }
                             } else {
                                 logger.warn(
                                     `IndexNow: could not read previous manifest at ${manifestUrl}; skipping submission this build.`,
@@ -1224,7 +1231,26 @@ export default function seoGraph(options: SeoGraphIntegrationOptions = {}): Astr
                             logger.info(
                                 `IndexNow: ${diff.added.length} added, ${diff.updated.length} updated, ${diff.deleted.length} deleted.`,
                             );
-                            await submit(changedUrls(diff));
+                            if (!(await submit(changedUrls(diff)))) {
+                                publish = previous;
+                            }
+                        }
+
+                        if (publish === null) {
+                            logger.warn(
+                                'IndexNow: not publishing a manifest, so the next build submits every URL again.',
+                            );
+                        } else {
+                            if (publish !== current) {
+                                logger.warn(
+                                    'IndexNow: keeping the previous manifest so the next build retries these URLs.',
+                                );
+                            }
+                            await writeFile(
+                                join(buildDir, manifestRelPath),
+                                serializeManifest(publish),
+                                'utf8',
+                            );
                         }
                     }
                 }
